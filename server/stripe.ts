@@ -31,6 +31,7 @@ export async function getCustomersByEmail(email: string) {
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
       limit: 100,
+      expand: ['data.default_payment_method'],
     });
 
     // 支払い履歴の取得
@@ -54,15 +55,27 @@ export async function getCustomersByEmail(email: string) {
           currency: price.currency,
           interval: price.recurring?.interval || 'month',
           product: {
-            name: typeof price.product === 'string' 
-              ? 'Product' 
-              : price.product.name,
-            description: typeof price.product === 'string'
-              ? null
-              : price.product.description,
+            name: typeof price.product === 'object' ? price.product.name : 'Product',
+            description: typeof price.product === 'object' ? price.product.description : null,
           }
         };
       }));
+
+      // 支払い方法の情報を取得
+      let paymentMethod = null;
+      if (subscription.default_payment_method && typeof subscription.default_payment_method === 'object') {
+        const card = subscription.default_payment_method.card;
+        if (card) {
+          paymentMethod = {
+            card: {
+              brand: card.brand,
+              last4: card.last4,
+              exp_month: card.exp_month,
+              exp_year: card.exp_year,
+            }
+          };
+        }
+      }
 
       return {
         id: subscription.id,
@@ -71,16 +84,7 @@ export async function getCustomersByEmail(email: string) {
         trial_end: subscription.trial_end,
         trial_start: subscription.trial_start,
         cancel_at_period_end: subscription.cancel_at_period_end,
-        default_payment_method: subscription.default_payment_method
-          ? {
-              card: {
-                brand: (subscription.default_payment_method as Stripe.PaymentMethod).card!.brand,
-                last4: (subscription.default_payment_method as Stripe.PaymentMethod).card!.last4,
-                exp_month: (subscription.default_payment_method as Stripe.PaymentMethod).card!.exp_month,
-                exp_year: (subscription.default_payment_method as Stripe.PaymentMethod).card!.exp_year,
-              }
-            }
-          : null,
+        default_payment_method: paymentMethod,
         plan: itemDetails[0], // 主要なプランを返す
       };
     }));
@@ -186,7 +190,7 @@ export function setupStripeRoutes(app: Express) {
       }
 
       // サブスクリプションを即時キャンセル
-      await stripe.subscriptions.del(subscriptionId);
+      await stripe.subscriptions.cancel(subscriptionId);
 
       res.json({ message: "サブスクリプションをキャンセルしました" });
     } catch (error) {
