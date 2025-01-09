@@ -5,7 +5,10 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
+  typescript: true,
+});
 
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
@@ -215,10 +218,10 @@ export function setupStripeRoutes(app: Express) {
       // 最初の顧客IDを使用
       const customerId = customersData[0].customer.id;
 
-      // Setup Intentを作成 - 基本的な設定でカード決済を有効化
+      // Setup Intentを作成 - 日本向け決済方法を有効化
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card'],
+        payment_method_types: ['card', 'paypay'],
         payment_method_options: {
           card: {
             request_three_d_secure: 'automatic'
