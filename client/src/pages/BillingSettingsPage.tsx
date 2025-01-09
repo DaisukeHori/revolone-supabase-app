@@ -94,10 +94,11 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
 
       <PaymentElement options={{
         layout: {
-          type: 'tabs',
+          type: 'accordion',
           defaultCollapsed: false,
+          spacedAccordionItems: true
         },
-        paymentMethodOrder: ['card', 'paypay', 'konbini', 'bank_transfer'],
+        paymentMethodOrder: ['card'],
       }} />
 
       <Button
