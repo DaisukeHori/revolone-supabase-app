@@ -58,12 +58,16 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* サイドバー */}
       <motion.aside
         initial={false}
-        animate={{ x: isSidebarOpen ? 0 : -240 }}
+        animate={{ 
+          x: isSidebarOpen ? 0 : -240,
+          width: isSidebarOpen ? 240 : 0
+        }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-60",
+          "fixed top-0 left-0 z-40 h-screen",
           "bg-background/95 backdrop-blur-sm border-r border-primary/10",
-          "lg:translate-x-0"
+          "md:translate-x-0 md:w-60",
+          !isMobile && "md:block"
         )}
       >
         <div className="flex h-full flex-col">
@@ -75,7 +79,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSidebarOpen(false)}
-                className="lg:hidden"
+                className="md:hidden"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -124,7 +128,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* メインコンテンツ */}
       <div className={cn(
         "min-h-screen transition-all duration-200",
-        "lg:ml-60"
+        "md:ml-60"
       )}>
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-16 border-b border-primary/10 bg-background/95 backdrop-blur">
@@ -142,7 +146,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* コンテンツエリア */}
-        <main className="container mx-auto p-4 lg:p-8">
+        <main className="container mx-auto p-4 md:p-8">
           {children}
         </main>
       </div>
