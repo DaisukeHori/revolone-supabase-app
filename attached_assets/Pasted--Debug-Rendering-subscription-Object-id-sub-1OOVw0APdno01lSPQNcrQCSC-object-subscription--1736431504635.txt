@@ -1,0 +1,63 @@
+[Debug] Rendering subscription: 
+Object {id: "sub_1OOVw0APdno01lSPQNcrQCSC", object: "subscription", application: null, application_fee_percent: null, automatic_tax: {…}, …}
+application: null
+application_fee_percent: null
+automatic_tax: Object
+billing_cycle_anchor: 1719457736
+billing_cycle_anchor_config: null
+billing_thresholds: null
+cancel_at: null
+cancel_at_period_end: false
+canceled_at: null
+cancellation_details: Object
+collection_method: "charge_automatically"
+created: 1702864075
+currency: "jpy"
+current_period_end: 1737947336
+current_period_start: 1735268936
+customer: "cus_PCvnk7s61noGQW"
+days_until_due: null
+default_payment_method: "pm_1QaalnAPdno01lSPEVWvUsTe"
+default_source: null
+default_tax_rates: Array(0)
+description: null
+discount: null
+discounts: Array(0)
+ended_at: null
+id: "sub_1OOVw0APdno01lSPQNcrQCSC"
+invoice_settings: Object
+items: Object
+latest_invoice: "in_1QaTvdAPdno01lSP80BuVtyP"
+livemode: true
+metadata: Object
+next_pending_invoice_item_invoice: null
+object: "subscription"
+on_behalf_of: null
+pause_collection: null
+payment_settings: Object
+pending_invoice_item_interval: null
+pending_setup_intent: null
+pending_update: null
+plan: null
+quantity: null
+schedule: null
+start_date: 1702864075
+status: "active"
+test_clock: null
+transfer_data: null
+trial_end: 1719457736
+trial_settings: Object
+trial_start: 1716779501
+[[Prototype]]: Object
+Cannot read properties of null (reading 'amount')
+The above error occurred in the <ProfilePage> component:
+
+    at ProfilePage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/ProfilePage.tsx:28:54)
+    at Route (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=4c73eef5:323:16)
+    at Switch (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=4c73eef5:379:17)
+    at App (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/App.tsx:27:31)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=4c73eef5:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Cannot read properties of null (reading 'amount')

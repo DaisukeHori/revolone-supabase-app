@@ -26,24 +26,37 @@ export async function getCustomerByEmail(email: string) {
 
   const subscriptions = await stripe.subscriptions.list({
     customer: customer.id,
-    expand: ['data.plan.product'],
+    expand: ['data.items.data.price.product'],
   });
 
-  console.log(`[Stripe] Subscriptions data:`, JSON.stringify({
-    customerId: customer.id,
-    subscriptionsCount: subscriptions.data.length,
-    subscriptionsData: subscriptions.data.map(sub => ({
-      id: sub.id,
-      status: sub.status,
-      planId: sub.plan?.id,
-      productId: sub.plan?.product?.id,
-      productName: typeof sub.plan?.product === 'string' ? 'ID_ONLY' : sub.plan?.product?.name
-    }))
-  }, null, 2));
+  // サブスクリプションデータを整形
+  const formattedSubscriptions = subscriptions.data.map(subscription => {
+    const items = subscription.items.data;
+    const plans = items.map(item => ({
+      amount: item.price.unit_amount,
+      currency: item.price.currency,
+      interval: item.price.recurring?.interval || 'month',
+      product: {
+        name: typeof item.price.product === 'string' 
+          ? 'Product' 
+          : item.price.product.name,
+        description: typeof item.price.product === 'string'
+          ? null
+          : item.price.product.description,
+      }
+    }));
+
+    return {
+      id: subscription.id,
+      status: subscription.status,
+      current_period_end: subscription.current_period_end,
+      plan: plans[0], // 主要なプランを返す
+    };
+  });
 
   return {
     customer,
-    subscriptions: subscriptions.data,
+    subscriptions: formattedSubscriptions,
   };
 }
 
@@ -61,13 +74,8 @@ export function setupStripeRoutes(app: Express) {
         return res.status(404).json({ message: "Stripeの顧客情報が見つかりません" });
       }
 
-      const response = {
-        customer: customerData.customer,
-        subscriptions: customerData.subscriptions,
-      };
-
-      console.log(`[Stripe] Response data:`, JSON.stringify(response, null, 2));
-      res.json(response);
+      console.log(`[Stripe] Response data:`, JSON.stringify(customerData, null, 2));
+      res.json(customerData);
     } catch (error) {
       console.error('[Stripe] APIエラー:', error);
       res.status(500).json({ message: "顧客情報の取得中にエラーが発生しました" });

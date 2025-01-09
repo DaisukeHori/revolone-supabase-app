@@ -20,10 +20,10 @@ type StripeCustomerData = {
     status: string;
     current_period_end: number;
     plan: {
-      amount: number;
+      amount: number | null;
       currency: string;
       interval: string;
-      product?: {
+      product: {
         name: string;
         description: string | null;
       };
@@ -38,22 +38,6 @@ export default function ProfilePage() {
   const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
     enabled: !!user,
-    onSuccess: (data) => {
-      console.log('[Debug] Stripe data received:', data);
-      console.log('[Debug] Subscriptions:', data?.subscriptions);
-      if (data?.subscriptions) {
-        data.subscriptions.forEach((sub, index) => {
-          console.log(`[Debug] Subscription ${index}:`, {
-            id: sub.id,
-            plan: sub.plan,
-            product: sub.plan?.product
-          });
-        });
-      }
-    },
-    onError: (error) => {
-      console.error('[Debug] Stripe data fetch error:', error);
-    }
   });
 
   if (isUserLoading || isStripeLoading) {
@@ -72,7 +56,7 @@ export default function ProfilePage() {
   // デバッグ用のデータ構造チェック
   console.log('[Debug] Current stripeData:', stripeData);
   if (stripeData?.subscriptions) {
-    console.log('[Debug] Subscription plans:', stripeData.subscriptions.map(sub => sub.plan));
+    console.log('[Debug] Subscription plans:', stripeData.subscriptions);
   }
 
   return (
@@ -115,8 +99,8 @@ export default function ProfilePage() {
               <h3 className="text-lg font-medium">サブスクリプション情報</h3>
               {stripeData.subscriptions.length > 0 ? (
                 stripeData.subscriptions.map(subscription => {
-                  // 各サブスクリプションのデータ構造をログ出力
-                  console.log(`[Debug] Rendering subscription:`, subscription);
+                  // デバッグログ
+                  console.log('[Debug] Rendering subscription:', subscription);
 
                   return (
                     <div key={subscription.id} className="space-y-2 bg-primary/5 p-4 rounded-lg">
@@ -132,13 +116,15 @@ export default function ProfilePage() {
                           )}
                         </div>
                         <span className="text-sm px-2 py-1 rounded-full bg-primary/10">
-                          {subscription.status}
+                          {subscription.status === 'active' ? '有効' : subscription.status}
                         </span>
                       </div>
-                      <div className="text-sm">
-                        <p>料金: {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}</p>
-                        <p>次回更新日: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}</p>
-                      </div>
+                      {subscription.plan?.amount && (
+                        <div className="text-sm">
+                          <p>料金: {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}</p>
+                          <p>次回更新日: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}</p>
+                        </div>
+                      )}
                     </div>
                   );
                 })
