@@ -44,9 +44,9 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
 }
 
 export function generatePasswordResetEmail(email: string, token: string) {
-  // Replitの環境URLを使用
-  const baseUrl = process.env.REPL_SLUG 
-    ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+  // Replitの環境URLを取得
+  const baseUrl = process.env.REPL_ID 
+    ? `https://${process.env.REPL_ID}.id.repl.co`
     : "http://localhost:5000";
 
   const resetLink = `${baseUrl}/reset-password/${token}`;
