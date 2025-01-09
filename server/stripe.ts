@@ -26,38 +26,51 @@ export async function getCustomerByEmail(email: string) {
 
   const subscriptions = await stripe.subscriptions.list({
     customer: customer.id,
-    expand: ['data.items.data.price.product'],
+    limit: 100,
   });
 
+  console.log(`[Stripe] Raw subscriptions data:`, JSON.stringify(subscriptions.data, null, 2));
+
   // サブスクリプションデータを整形
-  const formattedSubscriptions = subscriptions.data.map(subscription => {
+  const formattedSubscriptions = await Promise.all(subscriptions.data.map(async subscription => {
     const items = subscription.items.data;
-    const plans = items.map(item => ({
-      amount: item.price.unit_amount,
-      currency: item.price.currency,
-      interval: item.price.recurring?.interval || 'month',
-      product: {
-        name: typeof item.price.product === 'string' 
-          ? 'Product' 
-          : item.price.product.name,
-        description: typeof item.price.product === 'string'
-          ? null
-          : item.price.product.description,
-      }
+
+    // 各アイテムの詳細情報を取得
+    const itemDetails = await Promise.all(items.map(async item => {
+      const price = await stripe.prices.retrieve(item.price.id, {
+        expand: ['product'],
+      });
+
+      return {
+        amount: price.unit_amount,
+        currency: price.currency,
+        interval: price.recurring?.interval || 'month',
+        product: {
+          name: typeof price.product === 'string' 
+            ? 'Product' 
+            : price.product.name,
+          description: typeof price.product === 'string'
+            ? null
+            : price.product.description,
+        }
+      };
     }));
 
     return {
       id: subscription.id,
       status: subscription.status,
       current_period_end: subscription.current_period_end,
-      plan: plans[0], // 主要なプランを返す
+      plan: itemDetails[0], // 主要なプランを返す
     };
-  });
+  }));
 
-  return {
+  const result = {
     customer,
     subscriptions: formattedSubscriptions,
   };
+
+  console.log(`[Stripe] Formatted response:`, JSON.stringify(result, null, 2));
+  return result;
 }
 
 export function setupStripeRoutes(app: Express) {
@@ -74,7 +87,6 @@ export function setupStripeRoutes(app: Express) {
         return res.status(404).json({ message: "Stripeの顧客情報が見つかりません" });
       }
 
-      console.log(`[Stripe] Response data:`, JSON.stringify(customerData, null, 2));
       res.json(customerData);
     } catch (error) {
       console.error('[Stripe] APIエラー:', error);
