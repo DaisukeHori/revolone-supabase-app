@@ -34,7 +34,7 @@ async function handleRequest(
 
     if (!response.ok) {
       if (response.status >= 500) {
-        return { ok: false, message: "サーバーエラーが発生しました。" };
+        return { ok: false, message: "サーバーエラーが発生しました" };
       }
       return { ok: false, message };
     }
@@ -75,40 +75,42 @@ export function useUser() {
   const loginMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
     onSuccess: (result) => {
-      if (!result.ok) {
-        return;
-      }
       if (result.message) {
         toast({
           description: result.message,
+          variant: result.ok ? "default" : "destructive",
         });
       }
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: ['user'] });
+      }
     },
   });
 
   const registerMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
     onSuccess: (result) => {
-      if (!result.ok) {
-        return;
-      }
       if (result.message) {
         toast({
           description: result.message,
+          variant: result.ok ? "default" : "destructive",
         });
       }
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: ['user'] });
+      }
     },
   });
 
   const logoutMutation = useMutation<RequestResult, Error>({
     mutationFn: () => handleRequest('/api/logout', 'POST'),
     onSuccess: (result) => {
-      if (result.ok && result.message) {
+      if (result.message) {
         toast({
           description: result.message,
         });
+      }
+      if (result.ok) {
         queryClient.invalidateQueries({ queryKey: ['user'] });
       }
     },

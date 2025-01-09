@@ -30,7 +30,10 @@ export function AuthForm() {
   const [, setLocation] = useLocation();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(isLogin 
+      ? insertUserSchema.omit({ username: true }) 
+      : insertUserSchema
+    ),
     defaultValues: {
       email: "",
       username: "",
@@ -42,7 +45,11 @@ export function AuthForm() {
     try {
       setError(null);
       if (isLogin) {
-        const result = await login(data);
+        const result = await login({
+          email: data.email,
+          password: data.password,
+          username: "" // ログイン時は不要だが型のために空文字を設定
+        });
         if (!result.ok) {
           setError(result.message);
           return;
