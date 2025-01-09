@@ -1,11 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { Bell, Moon, Mail, Shield } from "lucide-react";
+import { Bell, Moon, Mail, Shield, ArrowLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 const container = {
   hidden: { opacity: 0 },
@@ -26,6 +28,7 @@ export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
+  const [, setLocation] = useLocation();
 
   return (
     <AppLayout>
@@ -35,6 +38,18 @@ export default function SettingsPage() {
         animate="show"
         className="space-y-8"
       >
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation("/")}
+            className="hover:bg-primary/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold">設定</h1>
+        </div>
+
         <motion.div variants={item}>
           <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
             <CardHeader>

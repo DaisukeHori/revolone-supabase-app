@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock, 
   Receipt, History, Settings, CreditCard as CardIcon, RefreshCw,
-  CheckCircle, Ban
+  CheckCircle, Ban, ExternalLink
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 
 type StripeSubscription = {
   id: string;
@@ -41,6 +42,15 @@ type StripeSubscription = {
   };
 };
 
+type StripePaymentHistory = {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created: number;
+  invoice_pdf: string | null;
+};
+
 type StripeCustomerData = {
   customer: {
     id: string;
@@ -50,6 +60,7 @@ type StripeCustomerData = {
     metadata: Record<string, string>;
   };
   subscriptions: StripeSubscription[];
+  payment_history: StripePaymentHistory[];
 }[];
 
 function getStatusBadgeColor(status: string) {
@@ -99,9 +110,61 @@ function formatCardBrand(brand: string) {
 
 export default function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const subscriptionId = window.location.pathname.split("/").pop();
-  const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData>({
+
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
+  });
+
+  const toggleAutoRenewalMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        description: "自動更新設定を変更しました",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        description: "設定の変更に失敗しました",
+      });
+    }
+  });
+
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/cancel`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        description: "サブスクリプションをキャンセルしました",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        description: "キャンセルに失敗しました",
+      });
+    }
   });
 
   if (isLoading) {
@@ -127,11 +190,13 @@ export default function SubscriptionDetailPage() {
     );
   }
 
-  const subscription = stripeData
-    .flatMap(data => data.subscriptions)
-    .find(sub => sub.id === subscriptionId);
+  const customerData = stripeData.find(data =>
+    data.subscriptions.some(sub => sub.id === subscriptionId)
+  );
 
-  if (!subscription) {
+  const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+
+  if (!subscription || !customerData) {
     return (
       <AppLayout>
         <Alert variant="destructive">
@@ -144,11 +209,26 @@ export default function SubscriptionDetailPage() {
     );
   }
 
-  const customer = stripeData.find(data =>
-    data.subscriptions.some(sub => sub.id === subscriptionId)
-  )?.customer;
-
   const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
+  const customer = customerData.customer;
+
+  const handleAutoRenewalToggle = async () => {
+    try {
+      await toggleAutoRenewalMutation.mutateAsync(subscription.id);
+    } catch (error) {
+      console.error('自動更新設定の変更に失敗:', error);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
+      try {
+        await cancelSubscriptionMutation.mutateAsync(subscription.id);
+      } catch (error) {
+        console.error('サブスクリプションのキャンセルに失敗:', error);
+      }
+    }
+  };
 
   return (
     <AppLayout>
@@ -320,7 +400,7 @@ export default function SubscriptionDetailPage() {
                 </div>
                 <Switch 
                   checked={!subscription.cancel_at_period_end}
-                  // onCheckedChange={handleAutoRenewalToggle} // TODO: 自動更新の切り替え機能を実装
+                  onCheckedChange={handleAutoRenewalToggle} 
                 />
               </div>
             </div>
@@ -357,6 +437,7 @@ export default function SubscriptionDetailPage() {
                   <Button
                     variant="outline"
                     className="w-full gap-2 text-red-600 hover:text-red-600 hover:bg-red-50"
+                    onClick={handleCancelSubscription}
                   >
                     <Ban className="h-4 w-4" />
                     解約する
@@ -378,9 +459,60 @@ export default function SubscriptionDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground text-center py-8">
-              支払い履歴は実装中です
-            </div>
+            {customerData.payment_history?.length > 0 ? (
+              <div className="space-y-4">
+                {customerData.payment_history.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between py-4 border-b border-primary/10 last:border-0"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {payment.amount.toLocaleString()} {payment.currency.toUpperCase()}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(payment.created * 1000).toLocaleDateString("ja-JP", {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge
+                        className={
+                          payment.status === 'succeeded'
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                        }
+                      >
+                        {payment.status === 'succeeded' ? '支払い完了' : '処理中'}
+                      </Badge>
+                      {payment.invoice_pdf && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-primary/10"
+                          asChild
+                        >
+                          <a
+                            href={payment.invoice_pdf}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-8">
+                支払い履歴はありません
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

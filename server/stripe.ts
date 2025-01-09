@@ -27,12 +27,17 @@ export async function getCustomersByEmail(email: string) {
   const customersData = await Promise.all(customers.data.map(async (customer) => {
     console.log(`[Stripe] Processing customer: ${customer.id}`);
 
+    // サブスクリプション情報の取得
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
       limit: 100,
     });
 
-    console.log(`[Stripe] Raw subscriptions data:`, JSON.stringify(subscriptions.data, null, 2));
+    // 支払い履歴の取得
+    const paymentHistory = await stripe.invoices.list({
+      customer: customer.id,
+      limit: 100,
+    });
 
     // サブスクリプションデータを整形
     const formattedSubscriptions = await Promise.all(subscriptions.data.map(async subscription => {
@@ -63,8 +68,31 @@ export async function getCustomersByEmail(email: string) {
         id: subscription.id,
         status: subscription.status,
         current_period_end: subscription.current_period_end,
+        trial_end: subscription.trial_end,
+        trial_start: subscription.trial_start,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        default_payment_method: subscription.default_payment_method
+          ? {
+              card: {
+                brand: (subscription.default_payment_method as Stripe.PaymentMethod).card!.brand,
+                last4: (subscription.default_payment_method as Stripe.PaymentMethod).card!.last4,
+                exp_month: (subscription.default_payment_method as Stripe.PaymentMethod).card!.exp_month,
+                exp_year: (subscription.default_payment_method as Stripe.PaymentMethod).card!.exp_year,
+              }
+            }
+          : null,
         plan: itemDetails[0], // 主要なプランを返す
       };
+    }));
+
+    // 支払い履歴を整形
+    const formattedPaymentHistory = paymentHistory.data.map(invoice => ({
+      id: invoice.id,
+      amount: invoice.amount_paid,
+      currency: invoice.currency,
+      status: invoice.status,
+      created: invoice.created,
+      invoice_pdf: invoice.invoice_pdf,
     }));
 
     return {
@@ -76,6 +104,7 @@ export async function getCustomersByEmail(email: string) {
         metadata: customer.metadata,
       },
       subscriptions: formattedSubscriptions,
+      payment_history: formattedPaymentHistory,
     };
   }));
 
@@ -101,6 +130,68 @@ export function setupStripeRoutes(app: Express) {
     } catch (error) {
       console.error('[Stripe] APIエラー:', error);
       res.status(500).json({ message: "顧客情報の取得中にエラーが発生しました" });
+    }
+  });
+
+  app.post("/api/stripe/subscription/:id/auto-renewal", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const subscriptionId = req.params.id;
+
+    try {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const customersData = await getCustomersByEmail(req.user.email);
+
+      if (!customersData?.some(data => 
+        data.subscriptions.some(sub => sub.id === subscriptionId)
+      )) {
+        return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
+      }
+
+      if (subscription.cancel_at_period_end) {
+        // 自動更新を再開
+        await stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: false,
+        });
+      } else {
+        // 次回更新時にキャンセル
+        await stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true,
+        });
+      }
+
+      res.json({ message: "自動更新設定を更新しました" });
+    } catch (error) {
+      console.error('[Stripe] 自動更新設定の更新エラー:', error);
+      res.status(500).json({ message: "設定の更新中にエラーが発生しました" });
+    }
+  });
+
+  app.post("/api/stripe/subscription/:id/cancel", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const subscriptionId = req.params.id;
+
+    try {
+      const customersData = await getCustomersByEmail(req.user.email);
+
+      if (!customersData?.some(data => 
+        data.subscriptions.some(sub => sub.id === subscriptionId)
+      )) {
+        return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
+      }
+
+      // サブスクリプションを即時キャンセル
+      await stripe.subscriptions.del(subscriptionId);
+
+      res.json({ message: "サブスクリプションをキャンセルしました" });
+    } catch (error) {
+      console.error('[Stripe] サブスクリプションのキャンセルエラー:', error);
+      res.status(500).json({ message: "キャンセル処理中にエラーが発生しました" });
     }
   });
 }
