@@ -6,7 +6,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// ロギングミドルウェアの設定
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -41,11 +40,10 @@ app.use((req, res, next) => {
   try {
     const server = registerRoutes(app);
 
-    // エラーハンドリングミドルウェア
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error('Server Error:', err);
+      console.error('Error:', err);
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "サーバーエラーが発生しました";
+      const message = err.message || "予期せぬエラーが発生しました";
 
       res.status(status).json({ message });
     });

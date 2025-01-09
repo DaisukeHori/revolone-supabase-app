@@ -44,16 +44,18 @@ export function AuthForm() {
       if (isLogin) {
         const result = await login(data);
         if (!result.ok) {
-          setError(result.message || "ログインに失敗しました。");
+          setError(result.message);
+          return;
         }
       } else {
         const result = await register(data);
         if (!result.ok) {
-          setError(result.message || "登録に失敗しました。");
+          setError(result.message);
+          return;
         }
       }
     } catch (error) {
-      setError("予期せぬエラーが発生しました。");
+      setError("予期せぬエラーが発生しました");
       console.error(error);
     }
   };

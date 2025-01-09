@@ -76,10 +76,6 @@ export function useUser() {
     mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast({
-          variant: "destructive",
-          description: result.message,
-        });
         return;
       }
       if (result.message) {
@@ -89,22 +85,12 @@ export function useUser() {
       }
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        description: error.message,
-      });
-    }
   });
 
   const registerMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast({
-          variant: "destructive",
-          description: result.message,
-        });
         return;
       }
       if (result.message) {
@@ -114,12 +100,6 @@ export function useUser() {
       }
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        description: error.message,
-      });
-    }
   });
 
   const logoutMutation = useMutation<RequestResult, Error>({
