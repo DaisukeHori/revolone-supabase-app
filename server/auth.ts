@@ -192,82 +192,6 @@ export function setupAuth(app: Express) {
     res.status(401).json({ message: "ログインが必要です" });
   });
 
-  app.put("/api/user/profile", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "ログインが必要です" });
-    }
-
-    const result = updateProfileSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ 
-        message: result.error.issues.map(i => i.message).join("、")
-      });
-    }
-
-    const { email, username } = result.data;
-
-    try {
-      // メールアドレスの重複チェック
-      if (email !== req.user.email) {
-        const [existingUserWithEmail] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
-
-        if (existingUserWithEmail) {
-          return res.status(400).json({ 
-            message: "このメールアドレスは既に使用されています" 
-          });
-        }
-      }
-
-      // ユーザー名の重複チェック
-      if (username !== req.user.username) {
-        const [existingUserWithUsername] = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
-
-        if (existingUserWithUsername) {
-          return res.status(400).json({ 
-            message: "このユーザー名は既に使用されています" 
-          });
-        }
-      }
-
-      // プロフィールの更新
-      const [updatedUser] = await db
-        .update(users)
-        .set({
-          email,
-          username,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, req.user.id))
-        .returning();
-
-      // セッション内のユーザー情報も更新
-      req.user.email = updatedUser.email;
-      req.user.username = updatedUser.username;
-
-      res.json({ 
-        message: "プロフィールを更新しました",
-        user: {
-          id: updatedUser.id,
-          username: updatedUser.username,
-          email: updatedUser.email,
-        }
-      });
-    } catch (error) {
-      console.error("プロフィール更新エラー:", error);
-      res.status(500).json({ 
-        message: "プロフィールの更新中にエラーが発生しました" 
-      });
-    }
-  });
-
   app.post("/api/request-reset", async (req, res) => {
     const { email } = req.body;
 
@@ -354,6 +278,82 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error("パスワード更新エラー:", error);
       res.status(500).json({ message: "パスワードの更新中にエラーが発生しました" });
+    }
+  });
+
+  app.put("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const result = updateProfileSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: result.error.issues.map(i => i.message).join("、")
+      });
+    }
+
+    const { email, username } = result.data;
+
+    try {
+      // メールアドレスの重複チェック
+      if (email !== req.user.email) {
+        const [existingUserWithEmail] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        if (existingUserWithEmail) {
+          return res.status(400).json({ 
+            message: "このメールアドレスは既に使用されています" 
+          });
+        }
+      }
+
+      // ユーザー名の重複チェック
+      if (username !== req.user.username) {
+        const [existingUserWithUsername] = await db
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+
+        if (existingUserWithUsername) {
+          return res.status(400).json({ 
+            message: "このユーザー名は既に使用されています" 
+          });
+        }
+      }
+
+      // プロフィールの更新
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          email,
+          username,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      // セッション内のユーザー情報も更新
+      req.user.email = updatedUser.email;
+      req.user.username = updatedUser.username;
+
+      res.json({ 
+        message: "プロフィールを更新しました",
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+        }
+      });
+    } catch (error) {
+      console.error("プロフィール更新エラー:", error);
+      res.status(500).json({ 
+        message: "プロフィールの更新中にエラーが発生しました" 
+      });
     }
   });
 }

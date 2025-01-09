@@ -10,31 +10,50 @@ import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
 
-const resetSchema = z.object({
+// メールアドレス入力用のスキーマ
+const requestResetSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません"),
 });
 
-type FormData = z.infer<typeof resetSchema>;
+// 新しいパスワード入力用のスキーマ
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, "パスワードは8文字以上である必要があります"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "パスワードが一致しません",
+  path: ["confirmPassword"],
+});
+
+type RequestResetData = z.infer<typeof requestResetSchema>;
+type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
 export default function PasswordResetPage() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(resetSchema),
-    defaultValues: {
-      email: "",
-    },
+  // トークンの有無に応じてフォームを切り替え
+  const form = useForm<RequestResetData | ResetPasswordData>({
+    resolver: zodResolver(token ? resetPasswordSchema : requestResetSchema),
+    defaultValues: token
+      ? { password: "", confirmPassword: "" }
+      : { email: "" },
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: RequestResetData | ResetPasswordData) => {
     try {
       setError(null);
-      const response = await fetch("/api/request-reset", {
+      const endpoint = token ? "/api/reset-password" : "/api/request-reset";
+      const body = token
+        ? { token, password: (data as ResetPasswordData).password }
+        : { email: (data as RequestResetData).email };
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
@@ -45,6 +64,10 @@ export default function PasswordResetPage() {
       }
 
       setSuccess(true);
+      if (token) {
+        // パスワードリセット完了後、3秒後にログインページへリダイレクト
+        setTimeout(() => setLocation("/"), 3000);
+      }
     } catch (error) {
       setError("予期せぬエラーが発生しました");
       console.error(error);
@@ -57,7 +80,7 @@ export default function PasswordResetPage() {
       <Card className="w-full max-w-md bg-background/95 backdrop-blur-sm border-primary/10">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center font-medium">
-            パスワードリセット
+            {token ? "新しいパスワードの設定" : "パスワードリセット"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -65,16 +88,20 @@ export default function PasswordResetPage() {
             <div className="space-y-4">
               <Alert className="bg-green-50 border-green-200">
                 <AlertDescription className="text-green-800">
-                  パスワードリセットの手順をメールでお送りしました。
+                  {token
+                    ? "パスワードが正常に更新されました。ログインページに移動します。"
+                    : "パスワードリセットの手順をメールでお送りしました。"}
                 </AlertDescription>
               </Alert>
-              <Button
-                type="button"
-                className="w-full"
-                onClick={() => setLocation("/")}
-              >
-                ログインページに戻る
-              </Button>
+              {!token && (
+                <Button
+                  type="button"
+                  className="w-full bg-primary/90 hover:bg-primary transition-colors"
+                  onClick={() => setLocation("/")}
+                >
+                  ログインページに戻る
+                </Button>
+              )}
             </div>
           ) : (
             <Form {...form}>
@@ -85,30 +112,73 @@ export default function PasswordResetPage() {
                   </Alert>
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-foreground/90">メールアドレス</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="example@email.com"
-                          {...field}
-                          className="bg-background/80 border-primary/20 focus:border-primary/40"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {token ? (
+                  // 新しいパスワード入力フォーム
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground/90">新しいパスワード</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="********"
+                              {...field}
+                              className="bg-background/80 border-primary/20 focus:border-primary/40"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground/90">パスワードの確認</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="********"
+                              {...field}
+                              className="bg-background/80 border-primary/20 focus:border-primary/40"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                ) : (
+                  // メールアドレス入力フォーム
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground/90">メールアドレス</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="example@email.com"
+                            {...field}
+                            className="bg-background/80 border-primary/20 focus:border-primary/40"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <Button
                   type="submit"
                   className="w-full bg-primary/90 hover:bg-primary transition-colors"
                   disabled={form.formState.isSubmitting}
                 >
-                  パスワードをリセット
+                  {token ? "パスワードを更新" : "パスワードをリセット"}
                 </Button>
 
                 <Button
