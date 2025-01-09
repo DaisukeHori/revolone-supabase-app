@@ -32,7 +32,9 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
   };
 
   try {
+    console.log("メール送信を開始:", { to, subject });
     await mail.send(msg);
+    console.log("メール送信成功:", { to, subject });
     return { success: true };
   } catch (error) {
     console.error("メール送信エラー:", error);
