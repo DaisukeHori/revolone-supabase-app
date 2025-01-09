@@ -31,15 +31,16 @@ type StripeSubscription = {
       exp_year: number;
     };
   } | null;
-  plan: {
+  items: {
     amount: number | null;
     currency: string;
     interval: string;
+    quantity: number;
     product: {
       name: string;
       description: string | null;
     };
-  };
+  }[];
 };
 
 type StripePaymentHistory = {
@@ -255,11 +256,11 @@ export default function SubscriptionDetailPage() {
                 </div>
                 <div>
                   <CardTitle className="text-2xl">
-                    {subscription.plan?.product?.name || 'サブスクリプション'}
+                    {subscription.items[0]?.product?.name || 'サブスクリプション'}
                   </CardTitle>
-                  {subscription.plan?.product?.description && (
+                  {subscription.items[0]?.product?.description && (
                     <CardDescription>
-                      {subscription.plan.product.description}
+                      {subscription.items[0].product.description}
                     </CardDescription>
                   )}
                 </div>
@@ -292,21 +293,37 @@ export default function SubscriptionDetailPage() {
 
             {/* プラン詳細 */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">プラン詳細</h3>
-              <div className="grid gap-6 md:grid-cols-2">
-                {subscription.plan?.amount && (
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="h-5 w-5 text-muted-foreground mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">料金</p>
-                      <p className="text-lg font-medium">
-                        {subscription.plan.amount.toLocaleString()} {subscription.plan.currency.toUpperCase()}
-                        <span className="text-sm text-muted-foreground"> / {subscription.plan.interval}</span>
-                      </p>
+              <h3 className="text-sm font-medium text-muted-foreground">契約中のサービス</h3>
+              <div className="space-y-4">
+                {subscription.items.map((item, index) => (
+                  <div key={index} className="p-4 bg-primary/5 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-lg">{item.product.name}</h4>
+                        {item.product.description && (
+                          <p className="text-sm text-muted-foreground">
+                            {item.product.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CreditCard className="h-4 w-4" />
+                          <span>
+                            {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                          </span>
+                          {item.quantity > 1 && (
+                            <>
+                              <span>×</span>
+                              <span>{item.quantity}個</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
+                ))}
+              </div>
 
+              <div className="grid gap-6 md:grid-cols-2 mt-6">
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 text-muted-foreground mt-1" />
                   <div>
@@ -345,11 +362,14 @@ export default function SubscriptionDetailPage() {
                 <div className="flex items-start gap-3">
                   <Receipt className="h-5 w-5 text-muted-foreground mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">次回請求額</p>
+                    <p className="text-sm text-muted-foreground">次回請求額（合計）</p>
                     <p className="text-lg font-medium">
-                      {subscription.plan?.amount
-                        ? `${subscription.plan.amount.toLocaleString()} ${subscription.plan.currency.toUpperCase()}`
-                        : '未定'}
+                      {subscription.items.reduce((total, item) => {
+                        if (item.amount && item.quantity) {
+                          return total + (item.amount * item.quantity);
+                        }
+                        return total;
+                      }, 0).toLocaleString()} {subscription.items[0]?.currency.toUpperCase()}
                     </p>
                   </div>
                 </div>

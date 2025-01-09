@@ -54,6 +54,7 @@ export async function getCustomersByEmail(email: string) {
           amount: price.unit_amount,
           currency: price.currency,
           interval: price.recurring?.interval || 'month',
+          quantity: item.quantity,
           product: {
             name: typeof price.product === 'object' ? price.product.name : 'Product',
             description: typeof price.product === 'object' ? price.product.description : null,
@@ -85,7 +86,7 @@ export async function getCustomersByEmail(email: string) {
         trial_start: subscription.trial_start,
         cancel_at_period_end: subscription.cancel_at_period_end,
         default_payment_method: paymentMethod,
-        plan: itemDetails[0], // 主要なプランを返す
+        items: itemDetails, // 全てのアイテムを返す
       };
     }));
 
