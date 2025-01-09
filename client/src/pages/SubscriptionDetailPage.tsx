@@ -305,11 +305,18 @@ function ConfirmUpdateDialog({
   onConfirm: () => Promise<void>;
   isUpdating: boolean;
 }) {
-  const changedItems = items.filter(item => updatedQuantities[item.id] !== item.quantity);
+  // 変更のある商品のみをフィルタリング
+  const changedItems = items.filter((item, index) => {
+    const itemId = item.id || `item_${index}`;
+    return updatedQuantities[itemId] !== item.quantity;
+  });
 
-  const totalAmount = items.reduce((total, item) => {
+  // 合計金額の計算（全商品の合計）
+  const totalAmount = items.reduce((total, item, index) => {
+    const itemId = item.id || `item_${index}`;
+    const quantity = updatedQuantities[itemId] || item.quantity;
     if (item.amount) {
-      return total + (item.amount * (updatedQuantities[item.id] || item.quantity));
+      return total + (item.amount * quantity);
     }
     return total;
   }, 0);
@@ -325,21 +332,27 @@ function ConfirmUpdateDialog({
         </DialogHeader>
         <div className="space-y-6">
           <div className="space-y-4">
-            {changedItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">{item.product.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.quantity}個 → {updatedQuantities[item.id]}個
-                  </p>
+            {items.map((item, index) => {
+              const itemId = item.id || `item_${index}`;
+              const updatedQuantity = updatedQuantities[itemId];
+              const hasChanged = updatedQuantity !== item.quantity;
+
+              return (
+                <div key={itemId} className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">{item.product.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.quantity}個 → {updatedQuantity || item.quantity}個
+                    </p>
+                  </div>
+                  {item.amount && (
+                    <p className="font-medium">
+                      {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                    </p>
+                  )}
                 </div>
-                {item.amount && (
-                  <p className="font-medium">
-                    {(item.amount * updatedQuantities[item.id]).toLocaleString()} {item.currency.toUpperCase()}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
             <div className="pt-4 border-t border-primary/10">
               <div className="flex justify-between items-center">
                 <p className="font-medium">次回請求額（合計）</p>
@@ -360,7 +373,7 @@ function ConfirmUpdateDialog({
             </Button>
             <Button
               onClick={onConfirm}
-              disabled={isUpdating}
+              disabled={isUpdating || changedItems.length === 0}
             >
               {isUpdating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
