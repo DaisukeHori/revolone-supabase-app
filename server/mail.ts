@@ -16,7 +16,7 @@ type SendMailOptions = {
 export async function sendMail({ to, subject, text, html }: SendMailOptions) {
   const msg = {
     to,
-    from: "info@revol-one.com", // SendGridで認証済みのドメイン
+    from: "info@revol-one.com",
     subject,
     text,
     html,
@@ -35,8 +35,13 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
 }
 
 export function generatePasswordResetEmail(email: string, token: string) {
-  const resetLink = `${process.env.APP_URL || "http://localhost:5000"}/reset-password?token=${token}`;
-  
+  // Replitの環境変数からURLを取得、なければホスト名を使用
+  const baseUrl = process.env.REPL_SLUG 
+    ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+    : "http://localhost:5000";
+
+  const resetLink = `${baseUrl}/reset-password?token=${token}`;
+
   return {
     subject: "パスワードリセットのご案内",
     text: `
