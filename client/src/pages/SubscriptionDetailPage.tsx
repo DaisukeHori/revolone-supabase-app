@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
   Receipt, History, Settings, CreditCard as CardIcon, RefreshCw,
@@ -371,6 +372,7 @@ function ConfirmUpdateDialog({
 function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const subscriptionId = window.location.pathname.split("/").pop();
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData>({
@@ -440,7 +442,7 @@ function SubscriptionDetailPage() {
         description: "自動更新設定を変更しました",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         description: "設定の変更に失敗しました",
@@ -465,7 +467,7 @@ function SubscriptionDetailPage() {
         description: "サブスクリプションをキャンセルしました",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         description: "キャンセルに失敗しました",

@@ -1,0 +1,22 @@
+useQuery is not defined
+The above error occurred in the <SubscriptionDetailPage> component:
+
+    at SubscriptionDetailPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/SubscriptionDetailPage.tsx:525:27)
+    at Route (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0c869367:323:16)
+    at Switch (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0c869367:379:17)
+    at App (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/App.tsx:31:31)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0c869367:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+useQuery is not defined
+at SubscriptionDetailPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/SubscriptionDetailPage.tsx:528:59)
+at renderWithHooks (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:12151:26)
+at mountIndeterminateComponent (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:14901:21)
+at beginWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:15882:22)
+at beginWork$1 (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:19721:22)
+at performUnitOfWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:19166:20)
+at workLoopSync (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:19105:13)
+at renderRootSync (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:19084:15)
+at recoverFromConcurrentError (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=0c869367:18704:28)
+at performSyncWorkOnRoot (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjh
