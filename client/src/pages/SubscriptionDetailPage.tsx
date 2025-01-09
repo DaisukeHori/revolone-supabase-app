@@ -133,11 +133,15 @@ function QuantityInput({
 
   // initialQuantityが変更された時にquantityを更新
   useEffect(() => {
-    setQuantity(initialQuantity);
-  }, [initialQuantity]);
+    console.log('QuantityInput initialQuantity changed to:', initialQuantity);
+    if (initialQuantity !== quantity) {
+      setQuantity(initialQuantity);
+    }
+  }, [initialQuantity, quantity]);
 
   const handleChange = (value: number) => {
     const newQuantity = Math.max(min, Math.min(max, value));
+    console.log('QuantityInput handleChange:', newQuantity);
     setQuantity(newQuantity);
     onChange(newQuantity);
   };
@@ -186,26 +190,21 @@ function UpdateQuantityModal({
   onConfirm: (quantities: Record<string, number>) => void;
 }) {
   // 初期値を設定
-  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  // モーダルが開かれた時とitemsが変更された時に数量を初期化
+  useEffect(() => {
+    console.log('Updating quantities with items:', items);
     const initialQuantities: Record<string, number> = {};
     items.forEach(item => {
+      console.log(`Setting quantity for item ${item.id}:`, item.quantity);
       initialQuantities[item.id] = item.quantity;
     });
-    return initialQuantities;
-  });
-
-  // itemsが変更された時にquantitiesを更新
-  useEffect(() => {
-    setQuantities(prevQuantities => {
-      const newQuantities: Record<string, number> = {};
-      items.forEach(item => {
-        newQuantities[item.id] = item.quantity;
-      });
-      return newQuantities;
-    });
-  }, [items]);
+    setQuantities(initialQuantities);
+  }, [items, isOpen]);
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
+    console.log(`Changing quantity for item ${itemId} to:`, quantity);
     setQuantities(prev => ({
       ...prev,
       [itemId]: quantity
@@ -224,31 +223,34 @@ function UpdateQuantityModal({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
-          {items.map((item) => (
-            <div key={item.id} className="p-4 bg-primary/5 rounded-lg">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h4 className="font-medium text-lg">{item.product.name}</h4>
-                  {item.product.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {item.product.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CreditCard className="h-4 w-4" />
-                    <span>
-                      {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
-                    </span>
+          {items.map((item) => {
+            console.log(`Rendering item ${item.id} with quantity:`, quantities[item.id]);
+            return (
+              <div key={item.id} className="p-4 bg-primary/5 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-lg">{item.product.name}</h4>
+                    {item.product.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {item.product.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CreditCard className="h-4 w-4" />
+                      <span>
+                        {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                      </span>
+                    </div>
                   </div>
+                  <QuantityInput
+                    key={`${item.id}-${quantities[item.id]}`}
+                    initialQuantity={quantities[item.id] || item.quantity}
+                    onChange={(quantity) => handleQuantityChange(item.id, quantity)}
+                  />
                 </div>
-                <QuantityInput
-                  key={`${item.id}-${quantities[item.id]}`}
-                  initialQuantity={quantities[item.id]}
-                  onChange={(quantity) => handleQuantityChange(item.id, quantity)}
-                />
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="flex justify-end gap-2">
             <Button
