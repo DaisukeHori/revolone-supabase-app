@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
   Receipt, History, Settings, CreditCard as CardIcon, RefreshCw,
@@ -122,26 +121,28 @@ function QuantityInput({
   initialQuantity,
   onChange,
   min = 1,
-  max = 99
+  max = 99,
+  itemId // Add itemId for debugging
 }: {
   initialQuantity: number;
   onChange: (quantity: number) => void;
   min?: number;
   max?: number;
+  itemId?: string; // Add itemId type
 }) {
   const [quantity, setQuantity] = useState(initialQuantity);
 
-  // initialQuantityが変更された時にquantityを更新
   useEffect(() => {
-    console.log('QuantityInput initialQuantity changed to:', initialQuantity);
+    console.log(`[QuantityInput ${itemId}] initialQuantity:`, initialQuantity, 'current quantity:', quantity);
     if (initialQuantity !== quantity) {
+      console.log(`[QuantityInput ${itemId}] Updating quantity to:`, initialQuantity);
       setQuantity(initialQuantity);
     }
-  }, [initialQuantity, quantity]);
+  }, [initialQuantity, quantity, itemId]);
 
   const handleChange = (value: number) => {
     const newQuantity = Math.max(min, Math.min(max, value));
-    console.log('QuantityInput handleChange:', newQuantity);
+    console.log(`[QuantityInput ${itemId}] handleChange:`, newQuantity);
     setQuantity(newQuantity);
     onChange(newQuantity);
   };
@@ -189,29 +190,35 @@ function UpdateQuantityModal({
   items: StripeSubscription['items'];
   onConfirm: (quantities: Record<string, number>) => void;
 }) {
-  // 初期値を設定
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   // モーダルが開かれた時とitemsが変更された時に数量を初期化
   useEffect(() => {
-    console.log('Updating quantities with items:', items);
+    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', items);
     const initialQuantities: Record<string, number> = {};
     items.forEach(item => {
-      console.log(`Setting quantity for item ${item.id}:`, item.quantity);
+      if (!item.id) {
+        console.warn('[UpdateQuantityModal] Item has no ID:', item);
+        return;
+      }
+      console.log(`[UpdateQuantityModal] Setting initial quantity for item ${item.id}:`, item.quantity);
       initialQuantities[item.id] = item.quantity;
     });
+    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
     setQuantities(initialQuantities);
   }, [items, isOpen]);
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
-    console.log(`Changing quantity for item ${itemId} to:`, quantity);
-    setQuantities(prev => ({
-      ...prev,
-      [itemId]: quantity
-    }));
+    console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
+    setQuantities(prev => {
+      const next = {
+        ...prev,
+        [itemId]: quantity
+      };
+      console.log('[UpdateQuantityModal] Updated quantities:', next);
+      return next;
+    });
   };
-
-  const hasChanges = items.some(item => quantities[item.id] !== item.quantity);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -224,7 +231,11 @@ function UpdateQuantityModal({
         </DialogHeader>
         <div className="space-y-6">
           {items.map((item) => {
-            console.log(`Rendering item ${item.id} with quantity:`, quantities[item.id]);
+            if (!item.id) {
+              console.warn('[UpdateQuantityModal] Skipping item without ID:', item);
+              return null;
+            }
+            console.log(`[UpdateQuantityModal] Rendering item ${item.id} with quantity:`, quantities[item.id], 'original:', item.quantity);
             return (
               <div key={item.id} className="p-4 bg-primary/5 rounded-lg">
                 <div className="flex items-start justify-between">
@@ -243,7 +254,8 @@ function UpdateQuantityModal({
                     </div>
                   </div>
                   <QuantityInput
-                    key={`${item.id}-${quantities[item.id]}`}
+                    key={`${item.id}-${quantities[item.id] || item.quantity}`}
+                    itemId={item.id} // Pass itemId for debugging
                     initialQuantity={quantities[item.id] || item.quantity}
                     onChange={(quantity) => handleQuantityChange(item.id, quantity)}
                   />
@@ -261,7 +273,7 @@ function UpdateQuantityModal({
             </Button>
             <Button
               onClick={() => onConfirm(quantities)}
-              disabled={!hasChanges}
+              disabled={Object.keys(quantities).length === 0}
             >
               変更内容を確認
             </Button>
