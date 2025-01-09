@@ -20,6 +20,15 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
     subject,
     text,
     html,
+    trackingSettings: {
+      clickTracking: {
+        enable: false,
+        enableText: false
+      },
+      openTracking: {
+        enable: false
+      }
+    }
   };
 
   try {
