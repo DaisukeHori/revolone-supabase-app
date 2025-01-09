@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,22 @@ import {
 import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
 import { Background } from "@/components/ui/background";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
   const [, setLocation] = useLocation();
   const { user, logout } = useUser();
+
+  // ウィンドウ幅が変更されたときの処理
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   const menuItems = [
     { icon: Home, label: "ホーム", href: "/" },
@@ -37,7 +44,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* オーバーレイ（モバイル用） */}
       <AnimatePresence>
-        {isSidebarOpen && (
+        {isMobile && isSidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.5 }}
@@ -63,14 +70,16 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* ロゴ/ブランド部分 */}
           <div className="flex h-16 items-center justify-between px-4 border-b border-primary/10">
             <span className="text-xl font-semibold">管理画面</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(false)}
+                className="lg:hidden"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            )}
           </div>
 
           {/* ナビゲーションメニュー */}
@@ -84,7 +93,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   className="w-full justify-start gap-3 mb-1"
                   onClick={() => {
                     setLocation(item.href);
-                    setIsSidebarOpen(false);
+                    isMobile && setIsSidebarOpen(false);
                   }}
                 >
                   <Icon className="h-5 w-5" />
@@ -120,14 +129,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-16 border-b border-primary/10 bg-background/95 backdrop-blur">
           <div className="flex h-16 items-center gap-4 px-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </header>
 

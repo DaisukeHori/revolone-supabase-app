@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useTheme } from "@/hooks/use-theme";
 
 const container = {
   hidden: { opacity: 0 },
@@ -26,7 +27,7 @@ const item = {
 
 export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
   const [, setLocation] = useLocation();
 
@@ -106,8 +107,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={darkMode}
-                  onCheckedChange={setDarkMode}
+                  checked={isDark}
+                  onCheckedChange={toggleTheme}
                 />
               </div>
             </CardContent>

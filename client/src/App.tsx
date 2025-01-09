@@ -9,9 +9,18 @@ import SubscriptionDetailPage from "./pages/SubscriptionDetailPage";
 import BillingSettingsPage from "./pages/BillingSettingsPage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
+import { useTheme } from "./hooks/use-theme";
+import { useEffect } from "react";
 
 function App() {
   const { user, isLoading } = useUser();
+  const { theme } = useTheme();
+
+  // テーマの初期設定
+  useEffect(() => {
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(theme);
+  }, [theme]);
 
   if (isLoading) {
     return (
