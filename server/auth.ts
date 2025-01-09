@@ -282,7 +282,7 @@ export function setupAuth(app: Express) {
         return res.json({ message: "パスワードリセットの手順をメールでお送りしました" });
       }
 
-      // TODO: パスワードリセットトークンの生成とメール送信機能の実装
+      // パスワードリセットトークンの生成
       const resetToken = randomBytes(32).toString("hex");
       const resetTokenExpiry = new Date(Date.now() + 3600000); // 1時間後
 
@@ -294,12 +294,47 @@ export function setupAuth(app: Express) {
         })
         .where(eq(users.id, user.id));
 
-      // ここでメール送信処理を実装予定
+      // TODO: メール送信機能の実装
+      // 実際のメール送信の代わりに、コンソールにトークンを出力
+      console.log(`Reset token for ${email}: ${resetToken}`);
 
       res.json({ message: "パスワードリセットの手順をメールでお送りしました" });
     } catch (error) {
       console.error("パスワードリセットエラー:", error);
       res.status(500).json({ message: "パスワードリセットの処理中にエラーが発生しました" });
+    }
+  });
+
+  app.post("/api/reset-password", async (req, res) => {
+    const { token, password } = req.body;
+
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.resetToken, token))
+        .limit(1);
+
+      if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+        return res.status(400).json({ message: "無効または期限切れのトークンです" });
+      }
+
+      const hashedPassword = await crypto.hash(password);
+
+      await db
+        .update(users)
+        .set({
+          password: hashedPassword,
+          resetToken: null,
+          resetTokenExpiry: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
+      res.json({ message: "パスワードが正常に更新されました" });
+    } catch (error) {
+      console.error("パスワード更新エラー:", error);
+      res.status(500).json({ message: "パスワードの更新中にエラーが発生しました" });
     }
   });
 }

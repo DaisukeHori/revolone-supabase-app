@@ -31,10 +31,22 @@ export default function PasswordResetPage() {
   const onSubmit = async (data: FormData) => {
     try {
       setError(null);
-      // TODO: パスワードリセットのAPI実装後に有効化
+      const response = await fetch("/api/request-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.message || "予期せぬエラーが発生しました");
+        return;
+      }
+
       setSuccess(true);
     } catch (error) {
-      setError("予期せぬエラーが発生しました。");
+      setError("予期せぬエラーが発生しました");
       console.error(error);
     }
   };
