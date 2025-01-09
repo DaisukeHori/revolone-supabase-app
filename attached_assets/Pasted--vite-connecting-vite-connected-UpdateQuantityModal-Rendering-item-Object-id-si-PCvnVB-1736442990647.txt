@@ -1,0 +1,64 @@
+[vite] connecting...
+[vite] connected.
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_PCvnVB5W2jsmXg", name: "テストサブスク商品01", currentQuantity: undefined, originalQuantity: 1}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_PCvncgX3NYJJZa", name: "テストサブスク商品02", currentQuantity: undefined, originalQuantity: 4}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_QBGVa7ncVGT8zH", name: "Revol Oneサブスクリプション", currentQuantity: undefined, originalQuantity: 1}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_QBGV8njLS05A4s", name: "レボナイザー追加利用ライセンス", currentQuantity: undefined, originalQuantity: 2}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_PCvnVB5W2jsmXg", name: "テストサブスク商品01", currentQuantity: undefined, originalQuantity: 1}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_PCvncgX3NYJJZa", name: "テストサブスク商品02", currentQuantity: undefined, originalQuantity: 4}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_QBGVa7ncVGT8zH", name: "Revol Oneサブスクリプション", currentQuantity: undefined, originalQuantity: 1}
+[UpdateQuantityModal] Rendering item: 
+Object {id: "si_QBGV8njLS05A4s", name: "レボナイザー追加利用ライセンス", currentQuantity: undefined, originalQuantity: 2}
+[UpdateQuantityModal] Modal opened or items changed. Items: [
+  {
+    "subscription_item_id": "si_PCvnVB5W2jsmXg",
+    "amount": 100,
+    "currency": "jpy",
+    "interval": "month",
+    "quantity": 1,
+    "product": {
+      "name": "テストサブスク商品01",
+      "description": "決済用商品（説明欄）"
+    }
+  },
+  {
+    "subscription_item_id": "si_PCvncgX3NYJJZa",
+    "amount": 33,
+    "currency": "jpy",
+    "interval": "month",
+    "quantity": 4,
+    "product": {
+      "name": "テストサブスク商品02",
+      "description": null
+    }
+  },
+  {
+    "subscription_item_id": "si_QBGVa7ncVGT8zH",
+    "amount": 20,
+    "currency": "jpy",
+    "interval": "month",
+    "quantity": 1,
+    "product": {
+      "name": "Revol Oneサブスクリプション",
+      "description": "レボルの美容室経営支援を毎月9900円で利用できるサブスクリプション。"
+    }
+  },
+  {
+    "subscription_item_id": "si_QBGV8njLS05A4s",
+    "amount": 10,
+    "currency": "jpy",
+    "interval": "month",
+    "quantity": 2,
+    "product": {
+      "name": "レボナイザー追加利用ライセンス",
+      "description": "レボナイザーを複数台ご利用になりたい方むけの、追加ライセンスです。"
+    }
+  }
+]

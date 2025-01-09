@@ -225,10 +225,6 @@ export function setupStripeRoutes(app: Express) {
         payment_method_options: {
           card: {
             request_three_d_secure: 'automatic'
-          },
-          konbini: {
-            expires_after_days: 5,
-            product_description: 'Revol One サービス'
           }
         }
       });

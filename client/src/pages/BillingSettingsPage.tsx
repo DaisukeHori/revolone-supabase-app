@@ -101,10 +101,14 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
         business: {
           name: 'Revol One',
         },
-        paymentMethodConfiguration: {
-          konbini: {
-            label: 'コンビニ決済'
+        fields: {
+          billingDetails: {
+            name: 'auto',
+            email: 'auto'
           }
+        },
+        terms: {
+          konbini: 'setup'
         }
       }} />
 
