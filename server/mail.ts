@@ -20,21 +20,10 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
     subject,
     text,
     html,
-    trackingSettings: {
-      clickTracking: {
-        enable: false,
-        enableText: false
-      },
-      openTracking: {
-        enable: false
-      }
-    }
   };
 
   try {
-    console.log("メール送信を開始:", { to, subject });
     await mail.send(msg);
-    console.log("メール送信成功:", { to, subject });
     return { success: true };
   } catch (error) {
     console.error("メール送信エラー:", error);
@@ -46,16 +35,8 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
 }
 
 export function generatePasswordResetEmail(email: string, token: string) {
-  // Replitの環境URLを取得
-  const baseUrl = process.env.REPL_SLUG 
-    ? `https://${process.env.REPL_ID}-00-${process.env.REPL_SLUG}.sisko.replit.dev`
-    : "http://localhost:5000";
-
-  const resetLink = `${baseUrl}/reset-password/${token}`;
-
-  // デバッグ用：生成されたURLを表示
-  console.log('Generated reset link:', resetLink);
-
+  const resetLink = `${process.env.APP_URL || "http://localhost:5000"}/reset-password?token=${token}`;
+  
   return {
     subject: "パスワードリセットのご案内",
     text: `

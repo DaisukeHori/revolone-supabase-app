@@ -1,8 +1,7 @@
 import { Switch, Route } from "wouter";
 import { Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
-import PasswordResetRequestPage from "./pages/PasswordResetPage";
-import PasswordResetPage from "./pages/PasswordResetConfirmPage";
+import PasswordResetPage from "./pages/PasswordResetPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import { useUser } from "./hooks/use-user";
@@ -21,8 +20,7 @@ function App() {
   if (!user) {
     return (
       <Switch>
-        <Route path="/reset-password" component={PasswordResetRequestPage} />
-        <Route path="/reset-password/:token" component={PasswordResetPage} />
+        <Route path="/reset-password" component={PasswordResetPage} />
         <Route component={AuthPage} />
       </Switch>
     );
