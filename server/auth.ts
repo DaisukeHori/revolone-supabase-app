@@ -70,11 +70,11 @@ export function setupAuth(app: Express) {
           .limit(1);
 
         if (!user) {
-          return done(null, false, { message: "メールアドレスが見つかりません。" });
+          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません。" });
         }
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
-          return done(null, false, { message: "パスワードが正しくありません。" });
+          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません。" });
         }
         return done(null, user);
       } catch (err) {
