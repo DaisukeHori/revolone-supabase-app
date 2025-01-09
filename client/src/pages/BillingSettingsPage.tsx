@@ -58,6 +58,7 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
         return;
       }
 
+      // デフォルトの支払い方法として設定
       const response = await fetch('/api/stripe/set-default-payment-method', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -91,13 +92,7 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
         </Alert>
       )}
 
-      <PaymentElement options={{
-        paymentMethodTypes: ['card', 'konbini'],
-        layout: {
-          type: 'tabs',
-          defaultCollapsed: false
-        }
-      }} />
+      <PaymentElement />
 
       <Button
         type="submit"
@@ -188,7 +183,7 @@ export default function BillingSettingsPage() {
                 <div>
                   <CardTitle className="text-2xl">支払い方法の変更</CardTitle>
                   <CardDescription>
-                    クレジットカード・デビットカード、またはコンビニ決済を選択できます
+                    新しいクレジットカードまたはデビットカードを登録します
                   </CardDescription>
                 </div>
               </div>
