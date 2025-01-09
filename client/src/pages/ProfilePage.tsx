@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Background } from "@/components/ui/background";
 import { useUser } from "@/hooks/use-user";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard, Building2, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { motion } from "framer-motion";
 
 type StripeSubscription = {
   id: string;
@@ -33,10 +33,23 @@ type StripeCustomerData = {
   subscriptions: StripeSubscription[];
 }[];
 
-export default function ProfilePage() {
-  const { user, isLoading: isUserLoading, logout } = useUser();
-  const [, setLocation] = useLocation();
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
 
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
+
+export default function ProfilePage() {
+  const { user, isLoading: isUserLoading } = useUser();
   const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
     enabled: !!user,
@@ -44,140 +57,136 @@ export default function ProfilePage() {
 
   if (isUserLoading || isStripeLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
     );
   }
 
-  if (!user) {
-    setLocation("/");
-    return null;
-  }
-
-  // デバッグ用のデータ構造チェック
-  console.log('[Debug] Current stripeData:', stripeData);
-  if (stripeData) {
-    console.log('[Debug] Customer count:', stripeData.length);
-  }
-
   return (
-    <div className="min-h-screen p-4 space-y-4">
-      <Background />
+    <AppLayout>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-8"
+      >
+        {/* プロフィール情報 */}
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <UserIcon className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-2xl">プロフィール</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">ユーザー名</div>
+                <div className="text-lg">{user?.username}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">メールアドレス</div>
+                <div className="text-lg">{user?.email}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">登録日</div>
+                <div className="text-lg">
+                  {new Date(user!.createdAt).toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-      {/* ユーザープロフィール */}
-      <Card className="w-full max-w-2xl mx-auto bg-background/95 backdrop-blur-sm border-primary/10">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center font-medium">
-            プロフィール
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">ユーザー名</p>
-            <p className="text-foreground font-medium">{user.username}</p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">メールアドレス</p>
-            <p className="text-foreground font-medium">{user.email}</p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">登録日</p>
-            <p className="text-foreground font-medium">
-              {new Date(user.createdAt).toLocaleDateString("ja-JP", {
-                year: "numeric",
-                month: "long",
-                day: "numeric"
-              })}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stripe顧客情報とサブスクリプション */}
-      {stripeError ? (
-        <Card className="w-full max-w-2xl mx-auto">
-          <CardContent className="pt-6">
+        {/* サブスクリプション情報 */}
+        {stripeError ? (
+          <motion.div variants={item}>
             <Alert variant="destructive">
               <AlertDescription>
                 サブスクリプション情報の取得に失敗しました
               </AlertDescription>
             </Alert>
-          </CardContent>
-        </Card>
-      ) : stripeData && stripeData.length > 0 ? (
-        <div className="space-y-4">
-          {stripeData.map((customerData) => (
-            <Card key={customerData.customer.id} className="w-full max-w-2xl mx-auto bg-background/95 backdrop-blur-sm border-primary/10">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-xl font-medium">
-                  {customerData.customer.metadata?.サロン名 || customerData.customer.name || '顧客アカウント'}
-                </CardTitle>
-                {customerData.customer.metadata?.代理店名 && (
-                  <p className="text-sm text-muted-foreground">
-                    代理店: {customerData.customer.metadata.代理店名}
-                  </p>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">サブスクリプション情報</h3>
-                  {customerData.subscriptions.length > 0 ? (
-                    customerData.subscriptions.map(subscription => {
-                      return (
-                        <div key={subscription.id} className="space-y-2 bg-primary/5 p-4 rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">
-                                {subscription.plan?.product?.name || 'サブスクリプション'}
-                              </h4>
-                              {subscription.plan?.product?.description && (
-                                <p className="text-sm text-muted-foreground">
-                                  {subscription.plan.product.description}
-                                </p>
-                              )}
-                            </div>
-                            <span className="text-sm px-2 py-1 rounded-full bg-primary/10">
-                              {subscription.status === 'active' ? '有効' : subscription.status}
-                            </span>
+          </motion.div>
+        ) : stripeData && stripeData.length > 0 ? (
+          stripeData.map((customerData, index) => (
+            <motion.div key={customerData.customer.id} variants={item}>
+              <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-3 rounded-lg">
+                      <Building2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">
+                        {customerData.customer.metadata?.サロン名 || customerData.customer.name || '顧客アカウント'}
+                      </CardTitle>
+                      {customerData.customer.metadata?.代理店名 && (
+                        <p className="text-sm text-muted-foreground">
+                          代理店: {customerData.customer.metadata.代理店名}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {customerData.subscriptions.map(subscription => (
+                    <motion.div
+                      key={subscription.id}
+                      className="bg-primary/5 rounded-lg p-6 space-y-4"
+                      whileHover={{ scale: 1.01 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                            <h4 className="font-medium text-lg">
+                              {subscription.plan?.product?.name || 'サブスクリプション'}
+                            </h4>
                           </div>
-                          {subscription.plan?.amount && (
-                            <div className="text-sm">
-                              <p>料金: {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}</p>
-                              <p>次回更新日: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}</p>
-                            </div>
+                          {subscription.plan?.product?.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {subscription.plan.product.description}
+                            </p>
                           )}
                         </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-muted-foreground">アクティブなサブスクリプションはありません</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : null}
-
-      {/* アクションボタン */}
-      <Card className="w-full max-w-2xl mx-auto bg-background/95 backdrop-blur-sm border-primary/10">
-        <CardContent className="pt-6 space-y-2">
-          <Button
-            onClick={() => setLocation("/edit-profile")}
-            className="w-full bg-primary/90 hover:bg-primary transition-colors"
-          >
-            プロフィールを編集
-          </Button>
-          <Button
-            onClick={() => logout()}
-            variant="outline"
-            className="w-full border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
-          >
-            ログアウト
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+                        <span className="text-sm px-3 py-1 rounded-full bg-primary/10 text-primary">
+                          {subscription.status === 'active' ? '有効' : subscription.status}
+                        </span>
+                      </div>
+                      {subscription.plan?.amount && (
+                        <div className="grid grid-cols-2 gap-4 text-sm border-t border-primary/10 pt-4">
+                          <div>
+                            <div className="text-muted-foreground mb-1">料金</div>
+                            <div className="font-medium">
+                              {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground mb-1">次回更新日</div>
+                            <div className="font-medium">
+                              {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        ) : null}
+      </motion.div>
+    </AppLayout>
   );
 }
