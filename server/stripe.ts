@@ -7,7 +7,6 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16',
-  typescript: true,
 });
 
 export async function getCustomersByEmail(email: string) {
@@ -218,15 +217,11 @@ export function setupStripeRoutes(app: Express) {
       // 最初の顧客IDを使用
       const customerId = customersData[0].customer.id;
 
-      // Setup Intentを作成 - カードとコンビニ決済を有効化
+      // Setup Intentを作成
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card', 'konbini'],
-        payment_method_options: {
-          card: {
-            request_three_d_secure: 'automatic'
-          }
-        }
+        payment_method_types: ['card'],
+        usage: 'off_session', // 将来の支払いに使用可能
       });
 
       res.json({

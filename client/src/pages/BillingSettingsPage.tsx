@@ -92,25 +92,7 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
         </Alert>
       )}
 
-      <PaymentElement options={{
-        layout: {
-          type: 'tabs',
-          defaultCollapsed: false,
-        },
-        paymentMethodOrder: ['card', 'konbini'],
-        business: {
-          name: 'Revol One',
-        },
-        fields: {
-          billingDetails: {
-            name: 'auto',
-            email: 'auto'
-          }
-        },
-        terms: {
-          konbini: 'setup'
-        }
-      }} />
+      <PaymentElement />
 
       <Button
         type="submit"
