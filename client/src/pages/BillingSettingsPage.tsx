@@ -94,11 +94,20 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
 
       <PaymentElement options={{
         layout: {
-          type: 'accordion',
+          type: 'tabs',
           defaultCollapsed: false,
-          spacedAccordionItems: true
+          spacedAccordionItems: false
         },
-        paymentMethodOrder: ['card'],
+        paymentMethodOrder: ['card', 'konbini'],
+        defaultValues: {
+          billingDetails: {
+            name: '',
+            email: '',
+          }
+        },
+        business: {
+          name: 'Revol One',
+        }
       }} />
 
       <Button
