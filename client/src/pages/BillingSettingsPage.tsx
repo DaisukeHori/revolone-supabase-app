@@ -92,7 +92,13 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
         </Alert>
       )}
 
-      <PaymentElement />
+      <PaymentElement options={{
+        layout: {
+          type: 'tabs',
+          defaultCollapsed: false,
+        },
+        paymentMethodOrder: ['card', 'paypay', 'konbini', 'bank_transfer'],
+      }} />
 
       <Button
         type="submit"

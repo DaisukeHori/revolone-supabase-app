@@ -217,10 +217,27 @@ export function setupStripeRoutes(app: Express) {
       // 最初の顧客IDを使用
       const customerId = customersData[0].customer.id;
 
-      // Setup Intentを作成
+      // Setup Intentを作成 - 日本で利用可能な決済方法を追加
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card'],
+        payment_method_types: [
+          'card',           // クレジットカード/デビットカード
+          'konbini',        // コンビニ決済
+          'paypay',         // PayPay
+          'bank_transfer',  // 銀行振込
+        ],
+        payment_method_options: {
+          card: {
+            request_three_d_secure: 'automatic',
+          },
+          konbini: {
+            expires_after_days: 3,
+            product_description: 'サブスクリプション',
+          },
+          bank_transfer: {
+            type: 'jp_bank_transfer',
+          },
+        },
         usage: 'off_session', // 将来の支払いに使用可能
       });
 
