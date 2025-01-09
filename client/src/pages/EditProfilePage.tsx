@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const editProfileSchema = z.object({
   username: z.string().min(3, "ユーザー名は3文字以上である必要があります"),
@@ -24,6 +25,7 @@ export default function EditProfilePage() {
   const { user, isLoading } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<FormData>({
     resolver: zodResolver(editProfileSchema),
@@ -50,7 +52,7 @@ export default function EditProfilePage() {
     try {
       setError(null);
       setIsSubmitting(true);
-      
+
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -65,6 +67,8 @@ export default function EditProfilePage() {
         return;
       }
 
+      // キャッシュを更新
+      await queryClient.invalidateQueries({ queryKey: ['user'] });
       setLocation("/profile");
     } catch (error) {
       setError("予期せぬエラーが発生しました");
