@@ -40,7 +40,7 @@ type StripeSubscription = {
     };
   } | null;
   items: {
-    id: string; // Added id field
+    subscription_item_id: string; // Stripe APIの実際のsubscription_item id
     amount: number | null;
     currency: string;
     interval: string;
@@ -123,13 +123,13 @@ function QuantityInput({
   onChange,
   min = 1,
   max = 99,
-  itemId // Add itemId for debugging
+  itemId
 }: {
   initialQuantity: number;
   onChange: (quantity: number) => void;
   min?: number;
   max?: number;
-  itemId?: string; // Add itemId type
+  itemId?: string;
 }) {
   const [quantity, setQuantity] = useState(initialQuantity);
 
@@ -193,13 +193,11 @@ function UpdateQuantityModal({
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  // モーダルが開かれた時とitemsが変更された時に数量を初期化
   useEffect(() => {
     console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
     const initialQuantities: Record<string, number> = {};
-    items.forEach((item, index) => {
-      // Use subscription_item.id from Stripe API response
-      const itemId = item.id || `item_${index}`;
+    items.forEach((item) => {
+      const itemId = item.subscription_item_id;
       console.log(`[UpdateQuantityModal] Processing item:`, {
         id: itemId,
         name: item.product.name,
@@ -233,8 +231,8 @@ function UpdateQuantityModal({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
-          {items.map((item, index) => {
-            const itemId = item.id || `item_${index}`;
+          {items.map((item) => {
+            const itemId = item.subscription_item_id;
             console.log(`[UpdateQuantityModal] Rendering item:`, {
               id: itemId,
               name: item.product.name,
@@ -306,14 +304,14 @@ function ConfirmUpdateDialog({
   isUpdating: boolean;
 }) {
   // 変更のある商品のみをフィルタリング
-  const changedItems = items.filter((item, index) => {
-    const itemId = item.id || `item_${index}`;
+  const changedItems = items.filter((item) => {
+    const itemId = item.subscription_item_id;
     return updatedQuantities[itemId] !== item.quantity;
   });
 
   // 合計金額の計算（全商品の合計）
-  const totalAmount = items.reduce((total, item, index) => {
-    const itemId = item.id || `item_${index}`;
+  const totalAmount = items.reduce((total, item) => {
+    const itemId = item.subscription_item_id;
     const quantity = updatedQuantities[itemId] || item.quantity;
     if (item.amount) {
       return total + (item.amount * quantity);
@@ -332,8 +330,8 @@ function ConfirmUpdateDialog({
         </DialogHeader>
         <div className="space-y-6">
           <div className="space-y-4">
-            {items.map((item, index) => {
-              const itemId = item.id || `item_${index}`;
+            {items.map((item) => {
+              const itemId = item.subscription_item_id;
               const updatedQuantity = updatedQuantities[itemId];
               const hasChanged = updatedQuantity !== item.quantity;
 
@@ -631,7 +629,7 @@ function SubscriptionDetailPage() {
               </div>
               <div className="space-y-4">
                 {subscription.items.map((item) => (
-                  <div key={item.id} className="p-4 bg-primary/5 rounded-lg">
+                  <div key={item.subscription_item_id} className="p-4 bg-primary/5 rounded-lg">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <h4 className="font-medium text-lg">{item.product.name}</h4>

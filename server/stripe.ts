@@ -51,6 +51,7 @@ export async function getCustomersByEmail(email: string) {
         });
 
         return {
+          subscription_item_id: item.id, // 本物のsubscription_item idを追加
           amount: price.unit_amount,
           currency: price.currency,
           interval: price.recurring?.interval || 'month',
@@ -86,7 +87,7 @@ export async function getCustomersByEmail(email: string) {
         trial_start: subscription.trial_start,
         cancel_at_period_end: subscription.cancel_at_period_end,
         default_payment_method: paymentMethod,
-        items: itemDetails, // 全てのアイテムを返す
+        items: itemDetails,
       };
     }));
 
@@ -297,6 +298,7 @@ export function setupStripeRoutes(app: Express) {
 
       // 各アイテムの数量を更新
       await Promise.all(items.map(async (item) => {
+        console.log('Updating subscription item:', item);
         await stripe.subscriptionItems.update(item.id, {
           quantity: item.quantity,
         });
