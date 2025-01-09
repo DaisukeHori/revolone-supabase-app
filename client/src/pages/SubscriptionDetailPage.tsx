@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type StripeSubscription = {
   id: string;
@@ -131,6 +131,11 @@ function QuantityInput({
 }) {
   const [quantity, setQuantity] = useState(initialQuantity);
 
+  // initialQuantityが変更された時にquantityを更新
+  useEffect(() => {
+    setQuantity(initialQuantity);
+  }, [initialQuantity]);
+
   const handleChange = (value: number) => {
     const newQuantity = Math.max(min, Math.min(max, value));
     setQuantity(newQuantity);
@@ -180,9 +185,25 @@ function UpdateQuantityModal({
   items: StripeSubscription['items'];
   onConfirm: (quantities: Record<string, number>) => void;
 }) {
-  const [quantities, setQuantities] = useState<Record<string, number>>(() =>
-    Object.fromEntries(items.map(item => [item.id, item.quantity]))
-  );
+  // 初期値を設定
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
+    const initialQuantities: Record<string, number> = {};
+    items.forEach(item => {
+      initialQuantities[item.id] = item.quantity;
+    });
+    return initialQuantities;
+  });
+
+  // itemsが変更された時にquantitiesを更新
+  useEffect(() => {
+    setQuantities(prevQuantities => {
+      const newQuantities: Record<string, number> = {};
+      items.forEach(item => {
+        newQuantities[item.id] = item.quantity;
+      });
+      return newQuantities;
+    });
+  }, [items]);
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
     setQuantities(prev => ({
@@ -221,6 +242,7 @@ function UpdateQuantityModal({
                   </div>
                 </div>
                 <QuantityInput
+                  key={`${item.id}-${quantities[item.id]}`}
                   initialQuantity={quantities[item.id]}
                   onChange={(quantity) => handleQuantityChange(item.id, quantity)}
                 />
@@ -332,7 +354,7 @@ function ConfirmUpdateDialog({
   );
 }
 
-export default function SubscriptionDetailPage() {
+function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const subscriptionId = window.location.pathname.split("/").pop();
@@ -817,3 +839,5 @@ export default function SubscriptionDetailPage() {
     </AppLayout>
   );
 }
+
+export default SubscriptionDetailPage;
