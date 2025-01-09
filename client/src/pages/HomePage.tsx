@@ -92,80 +92,71 @@ export default function HomePage() {
           <motion.div variants={item}>
             <Alert variant="destructive">
               <AlertDescription>
-                サブスクリプション情報の取得に失敗しました
+                店舗情報の取得に失敗しました
               </AlertDescription>
             </Alert>
           </motion.div>
         ) : stripeData && stripeData.length > 0 ? (
-          stripeData.map((customerData) => (
-            <motion.div key={customerData.customer.id} variants={item}>
-              <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-                <CardHeader className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-3 rounded-lg">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">
-                        {customerData.customer.metadata?.サロン名 || customerData.customer.name || '顧客アカウント'}
-                      </CardTitle>
-                      {customerData.customer.metadata?.代理店名 && (
-                        <p className="text-sm text-muted-foreground">
-                          代理店: {customerData.customer.metadata.代理店名}
-                        </p>
-                      )}
-                    </div>
+          <motion.div variants={item}>
+            <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                    <Building2 className="h-6 w-6 text-primary" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {customerData.subscriptions.map(subscription => (
-                    <motion.div
-                      key={subscription.id}
-                      className="bg-primary/5 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-primary/10 transition-colors"
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                      onClick={() => setLocation(`/subscription/${subscription.id}`)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5 text-primary" />
-                            <h4 className="font-medium text-lg">
-                              {subscription.plan?.product?.name || 'サブスクリプション'}
-                            </h4>
-                          </div>
-                          {subscription.plan?.product?.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {subscription.plan.product.description}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-sm px-3 py-1 rounded-full bg-primary/10 text-primary">
-                          {subscription.status === 'active' ? '有効' : subscription.status}
-                        </span>
+                  <CardTitle className="text-2xl">店舗一覧</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {stripeData.map((customerData) => (
+                  <motion.div
+                    key={customerData.customer.id}
+                    className="bg-primary/5 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-primary/10 transition-colors"
+                    whileHover={{ scale: 1.01 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    onClick={() => {
+                      if (customerData.subscriptions[0]) {
+                        setLocation(`/subscription/${customerData.subscriptions[0].id}`);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-semibold">
+                          {customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定'}
+                        </h3>
+                        {customerData.customer.metadata?.代理店名 && (
+                          <p className="text-sm text-muted-foreground">
+                            代理店: {customerData.customer.metadata.代理店名}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          登録日: {new Date(customerData.customer.created * 1000).toLocaleDateString("ja-JP")}
+                        </p>
                       </div>
-                      {subscription.plan?.amount && (
-                        <div className="grid grid-cols-2 gap-4 text-sm border-t border-primary/10 pt-4">
-                          <div>
-                            <div className="text-muted-foreground mb-1">料金</div>
-                            <div className="font-medium">
-                              {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground mb-1">次回更新日</div>
-                            <div className="font-medium">
-                              {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
-                            </div>
+                    </div>
+                    {customerData.subscriptions.length > 0 && (
+                      <div className="grid gap-4 pt-4 border-t border-primary/10">
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">契約中のサービス</p>
+                          <div className="flex flex-wrap gap-2">
+                            {customerData.subscriptions.map((subscription) => (
+                              <div
+                                key={subscription.id}
+                                className="bg-primary/10 px-3 py-1 rounded-full text-sm text-primary"
+                              >
+                                {subscription.plan?.product?.name}
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
         ) : null}
 
         <motion.div variants={item}>
