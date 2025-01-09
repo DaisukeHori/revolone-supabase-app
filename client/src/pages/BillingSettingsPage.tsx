@@ -96,15 +96,8 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
         layout: {
           type: 'tabs',
           defaultCollapsed: false,
-          spacedAccordionItems: false
         },
-        paymentMethodOrder: ['card', 'konbini'],
-        defaultValues: {
-          billingDetails: {
-            name: '',
-            email: '',
-          }
-        },
+        paymentMethodOrder: ['card'],
         business: {
           name: 'Revol One',
         }
