@@ -218,13 +218,17 @@ export function setupStripeRoutes(app: Express) {
       // 最初の顧客IDを使用
       const customerId = customersData[0].customer.id;
 
-      // クレジットカード決済のみを有効化
+      // Setup Intentを作成 - カードとコンビニ決済を有効化
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card'],
+        payment_method_types: ['card', 'konbini'],
         payment_method_options: {
           card: {
             request_three_d_secure: 'automatic'
+          },
+          konbini: {
+            expires_after_days: 5,
+            product_description: 'Revol One サービス'
           }
         }
       });

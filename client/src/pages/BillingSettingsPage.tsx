@@ -97,9 +97,14 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
           type: 'tabs',
           defaultCollapsed: false,
         },
-        paymentMethodOrder: ['card'],
+        paymentMethodOrder: ['card', 'konbini'],
         business: {
           name: 'Revol One',
+        },
+        paymentMethodConfiguration: {
+          konbini: {
+            label: 'コンビニ決済'
+          }
         }
       }} />
 
