@@ -195,15 +195,17 @@ function UpdateQuantityModal({
 
   // モーダルが開かれた時とitemsが変更された時に数量を初期化
   useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', items);
+    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
     const initialQuantities: Record<string, number> = {};
-    items.forEach(item => {
-      if (!item.id) {
-        console.warn('[UpdateQuantityModal] Item has no ID:', item);
-        return;
-      }
-      console.log(`[UpdateQuantityModal] Setting initial quantity for item ${item.id}:`, item.quantity);
-      initialQuantities[item.id] = item.quantity;
+    items.forEach((item, index) => {
+      // Use subscription_item.id from Stripe API response
+      const itemId = item.id || `item_${index}`;
+      console.log(`[UpdateQuantityModal] Processing item:`, {
+        id: itemId,
+        name: item.product.name,
+        quantity: item.quantity
+      });
+      initialQuantities[itemId] = item.quantity;
     });
     console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
     setQuantities(initialQuantities);
@@ -231,14 +233,17 @@ function UpdateQuantityModal({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
-          {items.map((item) => {
-            if (!item.id) {
-              console.warn('[UpdateQuantityModal] Skipping item without ID:', item);
-              return null;
-            }
-            console.log(`[UpdateQuantityModal] Rendering item ${item.id} with quantity:`, quantities[item.id], 'original:', item.quantity);
+          {items.map((item, index) => {
+            const itemId = item.id || `item_${index}`;
+            console.log(`[UpdateQuantityModal] Rendering item:`, {
+              id: itemId,
+              name: item.product.name,
+              currentQuantity: quantities[itemId],
+              originalQuantity: item.quantity
+            });
+
             return (
-              <div key={item.id} className="p-4 bg-primary/5 rounded-lg">
+              <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <h4 className="font-medium text-lg">{item.product.name}</h4>
@@ -255,10 +260,10 @@ function UpdateQuantityModal({
                     </div>
                   </div>
                   <QuantityInput
-                    key={`${item.id}-${quantities[item.id] || item.quantity}`}
-                    itemId={item.id} // Pass itemId for debugging
-                    initialQuantity={quantities[item.id] || item.quantity}
-                    onChange={(quantity) => handleQuantityChange(item.id, quantity)}
+                    key={`${itemId}-${quantities[itemId] || item.quantity}`}
+                    itemId={itemId}
+                    initialQuantity={quantities[itemId] || item.quantity}
+                    onChange={(quantity) => handleQuantityChange(itemId, quantity)}
                   />
                 </div>
               </div>
