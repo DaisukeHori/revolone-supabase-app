@@ -38,6 +38,22 @@ export default function ProfilePage() {
   const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
     enabled: !!user,
+    onSuccess: (data) => {
+      console.log('[Debug] Stripe data received:', data);
+      console.log('[Debug] Subscriptions:', data?.subscriptions);
+      if (data?.subscriptions) {
+        data.subscriptions.forEach((sub, index) => {
+          console.log(`[Debug] Subscription ${index}:`, {
+            id: sub.id,
+            plan: sub.plan,
+            product: sub.plan?.product
+          });
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('[Debug] Stripe data fetch error:', error);
+    }
   });
 
   if (isUserLoading || isStripeLoading) {
@@ -51,6 +67,12 @@ export default function ProfilePage() {
   if (!user) {
     setLocation("/");
     return null;
+  }
+
+  // デバッグ用のデータ構造チェック
+  console.log('[Debug] Current stripeData:', stripeData);
+  if (stripeData?.subscriptions) {
+    console.log('[Debug] Subscription plans:', stripeData.subscriptions.map(sub => sub.plan));
   }
 
   return (
@@ -92,29 +114,34 @@ export default function ProfilePage() {
             <div className="space-y-4 pt-4 border-t border-primary/10">
               <h3 className="text-lg font-medium">サブスクリプション情報</h3>
               {stripeData.subscriptions.length > 0 ? (
-                stripeData.subscriptions.map(subscription => (
-                  <div key={subscription.id} className="space-y-2 bg-primary/5 p-4 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">
-                          {subscription.plan.product?.name || 'サブスクリプション'}
-                        </h4>
-                        {subscription.plan.product?.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {subscription.plan.product.description}
-                          </p>
-                        )}
+                stripeData.subscriptions.map(subscription => {
+                  // 各サブスクリプションのデータ構造をログ出力
+                  console.log(`[Debug] Rendering subscription:`, subscription);
+
+                  return (
+                    <div key={subscription.id} className="space-y-2 bg-primary/5 p-4 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">
+                            {subscription.plan?.product?.name || 'サブスクリプション'}
+                          </h4>
+                          {subscription.plan?.product?.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {subscription.plan.product.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-sm px-2 py-1 rounded-full bg-primary/10">
+                          {subscription.status}
+                        </span>
                       </div>
-                      <span className="text-sm px-2 py-1 rounded-full bg-primary/10">
-                        {subscription.status}
-                      </span>
+                      <div className="text-sm">
+                        <p>料金: {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}</p>
+                        <p>次回更新日: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}</p>
+                      </div>
                     </div>
-                    <div className="text-sm">
-                      <p>料金: {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}</p>
-                      <p>次回更新日: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}</p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-muted-foreground">アクティブなサブスクリプションはありません</p>
               )}
