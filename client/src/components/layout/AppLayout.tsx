@@ -12,14 +12,15 @@ import {
   Home
 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Background } from "@/components/ui/background";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { user, logout } = useUser();
 
@@ -32,12 +33,31 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <Background className="fixed inset-0" />
+
+      {/* オーバーレイ（モバイル用） */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* サイドバー */}
       <motion.aside
-        initial={{ x: -240 }}
+        initial={false}
         animate={{ x: isSidebarOpen ? 0 : -240 }}
-        transition={{ duration: 0.2 }}
-        className="fixed top-0 left-0 z-40 h-screen w-60 bg-sidebar border-r border-primary/10"
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className={cn(
+          "fixed top-0 left-0 z-40 h-screen w-60",
+          "bg-background/95 backdrop-blur-sm border-r border-primary/10",
+          "lg:translate-x-0"
+        )}
       >
         <div className="flex h-full flex-col">
           {/* ロゴ/ブランド部分 */}
@@ -54,15 +74,18 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           {/* ナビゲーションメニュー */}
-          <nav className="flex-1 space-y-1 px-3 py-4">
+          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Button
                   key={item.href}
                   variant="ghost"
-                  className="w-full justify-start gap-3"
-                  onClick={() => setLocation(item.href)}
+                  className="w-full justify-start gap-3 mb-1"
+                  onClick={() => {
+                    setLocation(item.href);
+                    setIsSidebarOpen(false);
+                  }}
                 >
                   <Icon className="h-5 w-5" />
                   {item.label}
@@ -91,8 +114,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* メインコンテンツ */}
       <div className={cn(
-        "transition-all duration-200",
-        isSidebarOpen ? "lg:ml-60" : "ml-0"
+        "min-h-screen transition-all duration-200",
+        "lg:ml-60"
       )}>
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-16 border-b border-primary/10 bg-background/95 backdrop-blur">
@@ -101,6 +124,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               variant="ghost"
               size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="lg:hidden"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -108,7 +132,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* コンテンツエリア */}
-        <main className="container mx-auto p-4 lg:p-8 min-h-[calc(100vh-4rem)]">
+        <main className="container mx-auto p-4 lg:p-8">
           {children}
         </main>
       </div>

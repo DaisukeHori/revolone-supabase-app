@@ -5,6 +5,7 @@ import PasswordResetPage from "./pages/PasswordResetPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import { useUser } from "./hooks/use-user";
+import { Background } from "@/components/ui/background";
 
 function App() {
   const { user, isLoading } = useUser();
@@ -12,6 +13,7 @@ function App() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
+        <Background />
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -21,7 +23,7 @@ function App() {
     return (
       <Switch>
         <Route path="/reset-password" component={PasswordResetPage} />
-        <Route component={AuthPage} />
+        <Route path="*" component={AuthPage} />
       </Switch>
     );
   }
@@ -30,6 +32,7 @@ function App() {
     <Switch>
       <Route path="/edit-profile" component={EditProfilePage} />
       <Route path="/" component={ProfilePage} />
+      <Route path="*" component={ProfilePage} />
     </Switch>
   );
 }
