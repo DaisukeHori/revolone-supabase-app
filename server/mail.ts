@@ -16,7 +16,7 @@ type SendMailOptions = {
 export async function sendMail({ to, subject, text, html }: SendMailOptions) {
   const msg = {
     to,
-    from: "noreply@example.com", // SendGridで認証済みのドメインに変更する必要があります
+    from: "info@revol-one.com", // SendGridで認証済みのドメイン
     subject,
     text,
     html,
