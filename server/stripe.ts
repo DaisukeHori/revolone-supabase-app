@@ -149,7 +149,7 @@ export function setupStripeRoutes(app: Express) {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const customersData = await getCustomersByEmail(req.user.email);
 
-      if (!customersData?.some(data => 
+      if (!customersData?.some(data =>
         data.subscriptions.some(sub => sub.id === subscriptionId)
       )) {
         return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
@@ -184,7 +184,7 @@ export function setupStripeRoutes(app: Express) {
     try {
       const customersData = await getCustomersByEmail(req.user.email);
 
-      if (!customersData?.some(data => 
+      if (!customersData?.some(data =>
         data.subscriptions.some(sub => sub.id === subscriptionId)
       )) {
         return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
@@ -197,6 +197,78 @@ export function setupStripeRoutes(app: Express) {
     } catch (error) {
       console.error('[Stripe] サブスクリプションのキャンセルエラー:', error);
       res.status(500).json({ message: "キャンセル処理中にエラーが発生しました" });
+    }
+  });
+
+  // 支払い方法変更用のSetup Intentを作成
+  app.post("/api/stripe/setup-intent", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    try {
+      // ユーザーのStripe顧客情報を取得
+      const customersData = await getCustomersByEmail(req.user.email);
+      if (!customersData || customersData.length === 0) {
+        return res.status(404).json({ message: "Stripeの顧客情報が見つかりません" });
+      }
+
+      // 最初の顧客IDを使用
+      const customerId = customersData[0].customer.id;
+
+      // Setup Intentを作成
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        usage: 'off_session', // 将来の支払いに使用可能
+      });
+
+      res.json({
+        clientSecret: setupIntent.client_secret,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      });
+    } catch (error) {
+      console.error('[Stripe] Setup Intent作成エラー:', error);
+      res.status(500).json({ message: "支払い方法の設定準備中にエラーが発生しました" });
+    }
+  });
+
+  // 支払い方法をデフォルトに設定
+  app.post("/api/stripe/set-default-payment-method", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const { paymentMethodId } = req.body;
+
+    try {
+      const customersData = await getCustomersByEmail(req.user.email);
+      if (!customersData || customersData.length === 0) {
+        return res.status(404).json({ message: "Stripeの顧客情報が見つかりません" });
+      }
+
+      const customerId = customersData[0].customer.id;
+
+      // 顧客のデフォルト支払い方法を更新
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+
+      // 該当顧客の全てのサブスクリプションの支払い方法も更新
+      for (const customerData of customersData) {
+        for (const subscription of customerData.subscriptions) {
+          await stripe.subscriptions.update(subscription.id, {
+            default_payment_method: paymentMethodId,
+          });
+        }
+      }
+
+      res.json({ message: "支払い方法を更新しました" });
+    } catch (error) {
+      console.error('[Stripe] 支払い方法更新エラー:', error);
+      res.status(500).json({ message: "支払い方法の更新中にエラーが発生しました" });
     }
   });
 }
