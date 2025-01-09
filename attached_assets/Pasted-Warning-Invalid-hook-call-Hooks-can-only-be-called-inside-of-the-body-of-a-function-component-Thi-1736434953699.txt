@@ -1,0 +1,27 @@
+Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+Cannot read properties of null (reading 'useState')
+Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+Cannot read properties of null (reading 'useState')
+The above error occurred in the <App> component:
+
+    at App (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/App.tsx:30:31)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=8528eba0:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+The above error occurred in the <Toaster> component:
+
+    at Toaster (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/components/ui/toaster.tsx:29:22)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=8528eba0:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Cannot read properties of null (reading 'useState')
