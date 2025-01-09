@@ -220,8 +220,8 @@ export function setupStripeRoutes(app: Express) {
       // Setup Intentを作成
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card'],
-        usage: 'off_session', // 将来の支払いに使用可能
+        payment_method_types: ['card', 'konbini'],
+        usage: 'off_session',
       });
 
       res.json({
@@ -257,11 +257,15 @@ export function setupStripeRoutes(app: Express) {
         },
       });
 
-      // 該当顧客の全てのサブスクリプションの支払い方法も更新
+      // サブスクリプションの支払い設定も更新
       for (const customerData of customersData) {
         for (const subscription of customerData.subscriptions) {
           await stripe.subscriptions.update(subscription.id, {
             default_payment_method: paymentMethodId,
+            payment_settings: {
+              payment_method_types: ['card', 'konbini'],
+              save_default_payment_method: 'on_subscription',
+            },
           });
         }
       }
@@ -273,7 +277,6 @@ export function setupStripeRoutes(app: Express) {
     }
   });
 
-  // プランアイテムの数量を更新
   app.post("/api/stripe/subscription/:id/update-quantities", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
