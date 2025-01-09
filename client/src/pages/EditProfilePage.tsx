@@ -37,7 +37,7 @@ export default function EditProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -67,9 +67,11 @@ export default function EditProfilePage() {
         return;
       }
 
-      // キャッシュを更新
+      // キャッシュを更新してからページ遷移
       await queryClient.invalidateQueries({ queryKey: ['user'] });
-      setLocation("/profile");
+      // プロフィールページに戻る前に少し待つ
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setLocation("/");
     } catch (error) {
       setError("予期せぬエラーが発生しました");
       console.error(error);
@@ -146,7 +148,7 @@ export default function EditProfilePage() {
                   type="button"
                   variant="ghost"
                   className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-                  onClick={() => setLocation("/profile")}
+                  onClick={() => setLocation("/")}
                 >
                   キャンセル
                 </Button>
