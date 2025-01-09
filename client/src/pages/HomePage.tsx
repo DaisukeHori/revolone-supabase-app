@@ -11,15 +11,17 @@ type StripeSubscription = {
   id: string;
   status: string;
   current_period_end: number;
-  plan: {
+  items: {
+    subscription_item_id: string;
     amount: number | null;
     currency: string;
     interval: string;
+    quantity: number;
     product: {
       name: string;
       description: string | null;
     };
-  };
+  }[];
 };
 
 type StripeCustomerData = {
@@ -140,14 +142,16 @@ export default function HomePage() {
                         <div className="space-y-2">
                           <p className="text-sm text-muted-foreground">契約中のサービス</p>
                           <div className="flex flex-wrap gap-2">
-                            {customerData.subscriptions.map((subscription) => (
-                              <div
-                                key={subscription.id}
-                                className="bg-primary/10 px-3 py-1 rounded-full text-sm text-primary"
-                              >
-                                {subscription.plan?.product?.name}
-                              </div>
-                            ))}
+                            {customerData.subscriptions.flatMap(subscription => 
+                              subscription.items.map(item => (
+                                <div
+                                  key={item.subscription_item_id}
+                                  className="bg-primary/10 px-3 py-1 rounded-full text-sm text-primary"
+                                >
+                                  {item.product.name} {item.quantity > 1 ? `× ${item.quantity}` : ''}
+                                </div>
+                              ))
+                            )}
                           </div>
                         </div>
                       </div>
