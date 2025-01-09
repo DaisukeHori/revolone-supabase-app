@@ -218,10 +218,10 @@ export function setupStripeRoutes(app: Express) {
       // 最初の顧客IDを使用
       const customerId = customersData[0].customer.id;
 
-      // Setup Intentを作成 - 日本向け決済方法を有効化
+      // クレジットカード決済のみを有効化
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card', 'paypay'],
+        payment_method_types: ['card'],
         payment_method_options: {
           card: {
             request_three_d_secure: 'automatic'

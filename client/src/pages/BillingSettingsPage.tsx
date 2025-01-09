@@ -97,14 +97,9 @@ function PaymentForm({ onComplete }: { onComplete: () => void }) {
           type: 'tabs',
           defaultCollapsed: false,
         },
-        paymentMethodOrder: ['card', 'paypay'],
+        paymentMethodOrder: ['card'],
         business: {
           name: 'Revol One',
-        },
-        wallets: {
-          paypay: {
-            label: 'PayPay決済'
-          }
         }
       }} />
 
