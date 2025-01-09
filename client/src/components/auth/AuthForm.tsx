@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type FormData = {
   email: string;
@@ -23,6 +24,7 @@ type FormData = {
 
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { login, register } = useUser();
 
   const form = useForm<FormData>({
@@ -36,27 +38,45 @@ export function AuthForm() {
 
   const onSubmit = async (data: FormData) => {
     try {
+      setError(null);
       if (isLogin) {
-        await login(data);
+        const result = await login(data);
+        if (!result.ok && result.message) {
+          setError(result.message);
+        }
       } else {
-        await register(data);
+        const result = await register(data);
+        if (!result.ok && result.message) {
+          setError(result.message);
+        }
       }
     } catch (error) {
+      setError("予期せぬエラーが発生しました。");
       console.error(error);
     }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {error && (
+          <Alert variant="destructive" className="bg-red-50 border-red-200 mb-4">
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>メールアドレス</FormLabel>
+              <FormLabel className="text-foreground/90">メールアドレス</FormLabel>
               <FormControl>
-                <Input placeholder="example@email.com" {...field} />
+                <Input 
+                  placeholder="example@email.com" 
+                  {...field} 
+                  className="bg-background/80 border-primary/20 focus:border-primary/40"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -69,9 +89,13 @@ export function AuthForm() {
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>ユーザー名</FormLabel>
+                <FormLabel className="text-foreground/90">ユーザー名</FormLabel>
                 <FormControl>
-                  <Input placeholder="ユーザー名" {...field} />
+                  <Input 
+                    placeholder="ユーザー名" 
+                    {...field} 
+                    className="bg-background/80 border-primary/20 focus:border-primary/40"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -84,18 +108,34 @@ export function AuthForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>パスワード</FormLabel>
+              <FormLabel className="text-foreground/90">パスワード</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="********" {...field} />
+                <Input 
+                  type="password" 
+                  placeholder="********" 
+                  {...field} 
+                  className="bg-background/80 border-primary/20 focus:border-primary/40"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
+        {isLogin && (
+          <Button
+            type="button"
+            variant="link"
+            className="px-0 text-sm text-muted-foreground hover:text-primary transition-colors"
+            onClick={() => {/* TODO: パスワードリセット機能の実装 */}}
+          >
+            パスワードをお忘れの方はこちら
+          </Button>
+        )}
+
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-primary/90 hover:bg-primary transition-colors"
           disabled={form.formState.isSubmitting}
         >
           {form.formState.isSubmitting ? (
@@ -110,8 +150,12 @@ export function AuthForm() {
         <Button
           type="button"
           variant="ghost"
-          className="w-full"
-          onClick={() => setIsLogin(!isLogin)}
+          className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+          onClick={() => {
+            setError(null);
+            setIsLogin(!isLogin);
+            form.reset();
+          }}
         >
           {isLogin
             ? "アカウントをお持ちでない方はこちら"
