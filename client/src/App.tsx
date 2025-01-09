@@ -3,6 +3,9 @@ import { Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
 import PasswordResetPage from "./pages/PasswordResetPage";
 import ProfilePage from "./pages/ProfilePage";
+import HomePage from "./pages/HomePage";
+import SettingsPage from "./pages/SettingsPage";
+import SubscriptionDetailPage from "./pages/SubscriptionDetailPage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 
@@ -30,8 +33,10 @@ function App() {
   return (
     <Switch>
       <Route path="/profile" component={ProfilePage} />
-      <Route path="/" component={ProfilePage} />
-      <Route path="*" component={ProfilePage} />
+      <Route path="/settings" component={SettingsPage} />
+      <Route path="/subscription/:id" component={SubscriptionDetailPage} />
+      <Route path="/" component={HomePage} />
+      <Route path="*" component={HomePage} />
     </Switch>
   );
 }

@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
+import { useLocation } from "wouter";
 
 type StripeSubscription = {
   id: string;
@@ -51,6 +52,7 @@ const item = {
 };
 
 export default function ProfilePage() {
+  const [, setLocation] = useLocation();
   const { user, isLoading: isUserLoading } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
@@ -86,7 +88,7 @@ export default function ProfilePage() {
             </Alert>
           </motion.div>
         ) : stripeData && stripeData.length > 0 ? (
-          stripeData.map((customerData, index) => (
+          stripeData.map((customerData) => (
             <motion.div key={customerData.customer.id} variants={item}>
               <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
                 <CardHeader className="space-y-1">
@@ -110,9 +112,10 @@ export default function ProfilePage() {
                   {customerData.subscriptions.map(subscription => (
                     <motion.div
                       key={subscription.id}
-                      className="bg-primary/5 rounded-lg p-6 space-y-4"
+                      className="bg-primary/5 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-primary/10 transition-colors"
                       whileHover={{ scale: 1.01 }}
                       transition={{ type: "spring", stiffness: 300 }}
+                      onClick={() => setLocation(`/subscription/${subscription.id}`)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
