@@ -1,11 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, CreditCard, Building2, User as UserIcon } from "lucide-react";
+import { Loader2, CreditCard, Building2, User as UserIcon, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { EditProfileForm } from "@/components/profile/EditProfileForm";
 
 type StripeSubscription = {
   id: string;
@@ -50,6 +52,7 @@ const item = {
 
 export default function ProfilePage() {
   const { user, isLoading: isUserLoading } = useUser();
+  const [isEditing, setIsEditing] = useState(false);
   const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
     enabled: !!user,
@@ -73,40 +76,6 @@ export default function ProfilePage() {
         animate="show"
         className="space-y-8"
       >
-        {/* プロフィール情報 */}
-        <motion.div variants={item}>
-          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-            <CardHeader className="space-y-1">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <UserIcon className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-2xl">プロフィール</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">ユーザー名</div>
-                <div className="text-lg">{user?.username}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">メールアドレス</div>
-                <div className="text-lg">{user?.email}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">登録日</div>
-                <div className="text-lg">
-                  {new Date(user!.createdAt).toLocaleDateString("ja-JP", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric"
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
         {/* サブスクリプション情報 */}
         {stripeError ? (
           <motion.div variants={item}>
@@ -186,6 +155,56 @@ export default function ProfilePage() {
             </motion.div>
           ))
         ) : null}
+
+        {/* プロフィール情報 */}
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                    <UserIcon className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl">プロフィール</CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="hover:bg-primary/10"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isEditing ? (
+                <EditProfileForm onComplete={() => setIsEditing(false)} />
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">ユーザー名</div>
+                    <div className="text-lg">{user?.username}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">メールアドレス</div>
+                    <div className="text-lg">{user?.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">登録日</div>
+                    <div className="text-lg">
+                      {new Date(user!.createdAt).toLocaleDateString("ja-JP", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric"
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
     </AppLayout>
   );

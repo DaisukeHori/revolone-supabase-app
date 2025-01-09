@@ -26,7 +26,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const menuItems = [
     { icon: Home, label: "ホーム", href: "/" },
-    { icon: User, label: "プロフィール編集", href: "/edit-profile" },
+    { icon: User, label: "プロフィール", href: "/profile" },
     { icon: CreditCard, label: "支払い設定", href: "/billing" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];
@@ -56,7 +56,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         className={cn(
           "fixed top-0 left-0 z-40 h-screen w-60",
           "bg-background/95 backdrop-blur-sm border-r border-primary/10",
-          "lg:translate-x-0"
+          "translate-x-[-240px] lg:translate-x-0"
         )}
       >
         <div className="flex h-full flex-col">

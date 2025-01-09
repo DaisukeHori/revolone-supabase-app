@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
 import PasswordResetPage from "./pages/PasswordResetPage";
 import ProfilePage from "./pages/ProfilePage";
-import EditProfilePage from "./pages/EditProfilePage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 
@@ -30,7 +29,7 @@ function App() {
 
   return (
     <Switch>
-      <Route path="/edit-profile" component={EditProfilePage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/" component={ProfilePage} />
       <Route path="*" component={ProfilePage} />
     </Switch>
