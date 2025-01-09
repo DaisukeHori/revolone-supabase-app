@@ -271,4 +271,46 @@ export function setupStripeRoutes(app: Express) {
       res.status(500).json({ message: "支払い方法の更新中にエラーが発生しました" });
     }
   });
+
+  // プランアイテムの数量を更新
+  app.post("/api/stripe/subscription/:id/update-quantities", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const subscriptionId = req.params.id;
+    const { items } = req.body as { items: { id: string; quantity: number }[] };
+
+    try {
+      const customersData = await getCustomersByEmail(req.user.email);
+
+      if (!customersData?.some(data =>
+        data.subscriptions.some(sub => sub.id === subscriptionId)
+      )) {
+        return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
+      }
+
+      // サブスクリプションの詳細を取得
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['items.data.price.product'],
+      });
+
+      // 各アイテムの数量を更新
+      await Promise.all(items.map(async (item) => {
+        await stripe.subscriptionItems.update(item.id, {
+          quantity: item.quantity,
+        });
+      }));
+
+      // 更新後のサブスクリプションを返す
+      const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['items.data.price.product'],
+      });
+
+      res.json({ message: "数量を更新しました", subscription: updatedSubscription });
+    } catch (error) {
+      console.error('[Stripe] 数量更新エラー:', error);
+      res.status(500).json({ message: "数量の更新中にエラーが発生しました" });
+    }
+  });
 }

@@ -2,19 +2,27 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { 
-  AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock, 
+import {
+  AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
   Receipt, History, Settings, CreditCard as CardIcon, RefreshCw,
-  CheckCircle, Ban, ExternalLink
+  CheckCircle, Ban, ExternalLink, Loader2
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useState } from 'react';
 
 type StripeSubscription = {
   id: string;
@@ -32,6 +40,7 @@ type StripeSubscription = {
     };
   } | null;
   items: {
+    id: string; // Added id field
     amount: number | null;
     currency: string;
     interval: string;
@@ -109,6 +118,57 @@ function formatCardBrand(brand: string) {
   }
 }
 
+function QuantityInput({
+  initialQuantity,
+  onChange,
+  min = 1,
+  max = 99
+}: {
+  initialQuantity: number;
+  onChange: (quantity: number) => void;
+  min?: number;
+  max?: number;
+}) {
+  const [quantity, setQuantity] = useState(initialQuantity);
+
+  const handleChange = (value: number) => {
+    const newQuantity = Math.max(min, Math.min(max, value));
+    setQuantity(newQuantity);
+    onChange(newQuantity);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => handleChange(quantity - 1)}
+        disabled={quantity <= min}
+        className="h-8 w-8"
+      >
+        -
+      </Button>
+      <Input
+        type="number"
+        value={quantity}
+        onChange={(e) => handleChange(parseInt(e.target.value) || min)}
+        className="h-8 w-16 text-center"
+        min={min}
+        max={max}
+      />
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => handleChange(quantity + 1)}
+        disabled={quantity >= max}
+        className="h-8 w-8"
+      >
+        +
+      </Button>
+    </div>
+  );
+}
+
 export default function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -167,6 +227,59 @@ export default function SubscriptionDetailPage() {
       });
     }
   });
+
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
+
+  const handleQuantityChange = (itemId: string, quantity: number) => {
+    setUpdatedQuantities(prev => ({
+      ...prev,
+      [itemId]: quantity
+    }));
+  };
+
+  const handleUpdateQuantities = async () => {
+    if (Object.keys(updatedQuantities).length === 0) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
+            id,
+            quantity
+          }))
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      toast({
+        description: "プランの数量を更新しました",
+      });
+
+      await refetch();
+      setUpdatedQuantities({});
+      setShowConfirmDialog(false);
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -246,7 +359,6 @@ export default function SubscriptionDetailPage() {
           <h1 className="text-2xl font-semibold">サブスクリプション詳細</h1>
         </div>
 
-        {/* メインの情報カード */}
         <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -291,7 +403,6 @@ export default function SubscriptionDetailPage() {
 
             <Separator />
 
-            {/* プラン詳細 */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">契約中のサービス</h3>
               <div className="space-y-4">
@@ -310,14 +421,12 @@ export default function SubscriptionDetailPage() {
                           <span>
                             {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
                           </span>
-                          {item.quantity > 1 && (
-                            <>
-                              <span>×</span>
-                              <span>{item.quantity}個</span>
-                            </>
-                          )}
                         </div>
                       </div>
+                      <QuantityInput
+                        initialQuantity={item.quantity}
+                        onChange={(quantity) => handleQuantityChange(item.id, quantity)}
+                      />
                     </div>
                   </div>
                 ))}
@@ -378,7 +487,6 @@ export default function SubscriptionDetailPage() {
 
             <Separator />
 
-            {/* 支払い方法 */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
               <div className="flex items-start gap-3">
@@ -403,7 +511,6 @@ export default function SubscriptionDetailPage() {
 
             <Separator />
 
-            {/* 自動更新設定 */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">自動更新設定</h3>
               <div className="flex items-center justify-between">
@@ -418,16 +525,15 @@ export default function SubscriptionDetailPage() {
                     </p>
                   </div>
                 </div>
-                <Switch 
+                <Switch
                   checked={!subscription.cancel_at_period_end}
-                  onCheckedChange={handleAutoRenewalToggle} 
+                  onCheckedChange={handleAutoRenewalToggle}
                 />
               </div>
             </div>
 
             <Separator />
 
-            {/* アクション */}
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-medium text-muted-foreground">アクション</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -468,7 +574,6 @@ export default function SubscriptionDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 支払い履歴 */}
         <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -536,6 +641,57 @@ export default function SubscriptionDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>プランの数量を更新</DialogTitle>
+            <DialogDescription>
+              選択した数量で更新してよろしいですか？更新後、次回の請求から反映されます。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              {subscription.items.map((item, index) => {
+                const updatedQuantity = updatedQuantities[item.id];
+                if (updatedQuantity === undefined || updatedQuantity === item.quantity) {
+                  return null;
+                }
+                return (
+                  <div key={index} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">{item.product.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.quantity}個 → {updatedQuantity}個
+                      </p>
+                    </div>
+                    <p className="font-medium">
+                      {(item.amount * updatedQuantity).toLocaleString()} {item.currency.toUpperCase()}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmDialog(false)}
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleUpdateQuantities}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                更新する
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
