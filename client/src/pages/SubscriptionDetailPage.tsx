@@ -434,7 +434,7 @@ export default function SubscriptionDetailPage() {
                 <Button
                   variant="outline"
                   className="w-full gap-2"
-                  onClick={() => setLocation("/settings")}
+                  onClick={() => setLocation("/billing")}
                 >
                   <Settings className="h-4 w-4" />
                   支払い設定を変更

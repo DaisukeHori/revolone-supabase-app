@@ -6,6 +6,7 @@ import ProfilePage from "./pages/ProfilePage";
 import HomePage from "./pages/HomePage";
 import SettingsPage from "./pages/SettingsPage";
 import SubscriptionDetailPage from "./pages/SubscriptionDetailPage";
+import BillingSettingsPage from "./pages/BillingSettingsPage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 
@@ -35,6 +36,7 @@ function App() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/subscription/:id" component={SubscriptionDetailPage} />
+      <Route path="/billing" component={BillingSettingsPage} />
       <Route path="/" component={HomePage} />
       <Route path="*" component={HomePage} />
     </Switch>
