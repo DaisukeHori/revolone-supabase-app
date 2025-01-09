@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useLocation } from "wouter";
 
 type FormData = {
   email: string;
@@ -26,6 +27,7 @@ export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { login, register } = useUser();
+  const [, setLocation] = useLocation();
 
   const form = useForm<FormData>({
     resolver: zodResolver(insertUserSchema),
@@ -41,13 +43,13 @@ export function AuthForm() {
       setError(null);
       if (isLogin) {
         const result = await login(data);
-        if (!result.ok && result.message) {
-          setError(result.message);
+        if (!result.ok) {
+          setError(result.message || "ログインに失敗しました。");
         }
       } else {
         const result = await register(data);
-        if (!result.ok && result.message) {
-          setError(result.message);
+        if (!result.ok) {
+          setError(result.message || "登録に失敗しました。");
         }
       }
     } catch (error) {
@@ -60,7 +62,7 @@ export function AuthForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {error && (
-          <Alert variant="destructive" className="bg-red-50 border-red-200 mb-4">
+          <Alert variant="destructive" className="bg-red-50 border-red-200">
             <AlertDescription className="text-red-800">{error}</AlertDescription>
           </Alert>
         )}
@@ -127,7 +129,7 @@ export function AuthForm() {
             type="button"
             variant="link"
             className="px-0 text-sm text-muted-foreground hover:text-primary transition-colors"
-            onClick={() => {/* TODO: パスワードリセット機能の実装 */}}
+            onClick={() => setLocation("/reset-password")}
           >
             パスワードをお忘れの方はこちら
           </Button>

@@ -23,17 +23,23 @@ async function handleRequest(
       credentials: "include",
     });
 
+    const data = await response.text();
+    let message: string;
+    try {
+      const jsonData = JSON.parse(data);
+      message = jsonData.message;
+    } catch {
+      message = data;
+    }
+
     if (!response.ok) {
       if (response.status >= 500) {
         return { ok: false, message: "サーバーエラーが発生しました。" };
       }
-
-      const message = await response.text();
       return { ok: false, message };
     }
 
-    const data = await response.json();
-    return { ok: true, message: data.message };
+    return { ok: true, message };
   } catch (e: any) {
     return { ok: false, message: e.toString() };
   }
@@ -69,12 +75,19 @@ export function useUser() {
   const loginMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
     onSuccess: (result) => {
-      if (result.ok && result.message) {
+      if (!result.ok) {
+        toast({
+          variant: "destructive",
+          description: result.message,
+        });
+        return;
+      }
+      if (result.message) {
         toast({
           description: result.message,
         });
-        queryClient.invalidateQueries({ queryKey: ['user'] });
       }
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error) => {
       toast({
@@ -87,12 +100,19 @@ export function useUser() {
   const registerMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
     onSuccess: (result) => {
-      if (result.ok && result.message) {
+      if (!result.ok) {
+        toast({
+          variant: "destructive",
+          description: result.message,
+        });
+        return;
+      }
+      if (result.message) {
         toast({
           description: result.message,
         });
-        queryClient.invalidateQueries({ queryKey: ['user'] });
       }
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error) => {
       toast({

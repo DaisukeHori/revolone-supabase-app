@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import { Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
+import PasswordResetPage from "./pages/PasswordResetPage";
 import { useUser } from "./hooks/use-user";
 
 function App() {
@@ -15,7 +16,12 @@ function App() {
   }
 
   if (!user) {
-    return <AuthPage />;
+    return (
+      <Switch>
+        <Route path="/reset-password" component={PasswordResetPage} />
+        <Route component={AuthPage} />
+      </Switch>
+    );
   }
 
   return (

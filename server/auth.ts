@@ -106,7 +106,7 @@ export function setupAuth(app: Express) {
       if (!result.success) {
         return res
           .status(400)
-          .send(result.error.issues.map(i => i.message).join("、"));
+          .json({ message: result.error.issues.map(i => i.message).join("、") });
       }
 
       const { email, username, password } = result.data;
@@ -118,7 +118,7 @@ export function setupAuth(app: Express) {
         .limit(1);
 
       if (existingUser) {
-        return res.status(400).send("このメールアドレスは既に登録されています。");
+        return res.status(400).json({ message: "このメールアドレスは既に登録されています。" });
       }
 
       const hashedPassword = await crypto.hash(password);
@@ -153,7 +153,7 @@ export function setupAuth(app: Express) {
       }
 
       if (!user) {
-        return res.status(400).send(info.message ?? "ログインに失敗しました。");
+        return res.status(400).json({ message: info.message ?? "ログインに失敗しました。" });
       }
 
       req.logIn(user, (err) => {
@@ -172,7 +172,7 @@ export function setupAuth(app: Express) {
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
-        return res.status(500).send("ログアウトに失敗しました。");
+        return res.status(500).json({ message: "ログアウトに失敗しました。" });
       }
       res.json({ message: "ログアウトしました。" });
     });
@@ -182,6 +182,24 @@ export function setupAuth(app: Express) {
     if (req.isAuthenticated()) {
       return res.json(req.user);
     }
-    res.status(401).send("ログインが必要です。");
+    res.status(401).json({ message: "ログインが必要です。" });
+  });
+
+  app.post("/api/request-reset", async (req, res) => {
+    const { email } = req.body;
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (!user) {
+      // セキュリティのため、ユーザーが存在しない場合でも同じメッセージを返す
+      return res.json({ message: "パスワードリセットの手順をメールでお送りしました。" });
+    }
+
+    // TODO: 実際のパスワードリセット機能の実装
+    // ここでは、成功メッセージだけを返す
+    res.json({ message: "パスワードリセットの手順をメールでお送りしました。" });
   });
 }
