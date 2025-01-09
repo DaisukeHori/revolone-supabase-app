@@ -9,6 +9,7 @@ import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { sendMail, generatePasswordResetEmail } from "./mail";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -282,7 +283,6 @@ export function setupAuth(app: Express) {
         return res.json({ message: "パスワードリセットの手順をメールでお送りしました" });
       }
 
-      // パスワードリセットトークンの生成
       const resetToken = randomBytes(32).toString("hex");
       const resetTokenExpiry = new Date(Date.now() + 3600000); // 1時間後
 
@@ -291,12 +291,31 @@ export function setupAuth(app: Express) {
         .set({
           resetToken,
           resetTokenExpiry,
+          updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
 
-      // TODO: メール送信機能の実装
-      // 実際のメール送信の代わりに、コンソールにトークンを出力
-      console.log(`Reset token for ${email}: ${resetToken}`);
+      // メール送信
+      const { subject, text, html } = generatePasswordResetEmail(email, resetToken);
+      const result = await sendMail({
+        to: email,
+        subject,
+        text,
+        html
+      });
+
+      if (!result.success) {
+        console.error("パスワードリセットメールの送信に失敗:", result.error);
+        // ユーザーには一般的なエラーメッセージを返す
+        return res.status(500).json({ 
+          message: "パスワードリセットの処理中にエラーが発生しました" 
+        });
+      }
+
+      // 開発環境でのデバッグ用
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`Reset token for ${email}: ${resetToken}`);
+      }
 
       res.json({ message: "パスワードリセットの手順をメールでお送りしました" });
     } catch (error) {
