@@ -4,12 +4,43 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+type StripeCustomerData = {
+  customer: {
+    id: string;
+    name: string | null;
+    email: string;
+    created: number;
+    currency: string | null;
+  };
+  subscriptions: Array<{
+    id: string;
+    status: string;
+    current_period_end: number;
+    plan: {
+      amount: number;
+      currency: string;
+      interval: string;
+      product: {
+        name: string;
+        description: string | null;
+      };
+    };
+  }>;
+};
 
 export default function ProfilePage() {
-  const { user, isLoading, logout } = useUser();
+  const { user, isLoading: isUserLoading, logout } = useUser();
   const [, setLocation] = useLocation();
 
-  if (isLoading) {
+  const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
+    queryKey: ['/api/stripe/customer'],
+    enabled: !!user, // ユーザーがログインしている場合のみクエリを実行
+  });
+
+  if (isUserLoading || isStripeLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -50,6 +81,42 @@ export default function ProfilePage() {
               })}
             </p>
           </div>
+
+          {stripeError ? (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>
+                サブスクリプション情報の取得に失敗しました
+              </AlertDescription>
+            </Alert>
+          ) : stripeData ? (
+            <div className="space-y-4 pt-4 border-t border-primary/10">
+              <h3 className="text-lg font-medium">サブスクリプション情報</h3>
+              {stripeData.subscriptions.length > 0 ? (
+                stripeData.subscriptions.map(subscription => (
+                  <div key={subscription.id} className="space-y-2 bg-primary/5 p-4 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{subscription.plan.product.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {subscription.plan.product.description}
+                        </p>
+                      </div>
+                      <span className="text-sm px-2 py-1 rounded-full bg-primary/10">
+                        {subscription.status}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <p>料金: {subscription.plan.amount / 100} {subscription.plan.currency.toUpperCase()} / {subscription.plan.interval}</p>
+                      <p>次回更新日: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">アクティブなサブスクリプションはありません</p>
+              )}
+            </div>
+          ) : null}
+
           <div className="pt-4 space-y-2">
             <Button
               onClick={() => setLocation("/edit-profile")}
