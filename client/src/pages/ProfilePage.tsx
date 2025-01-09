@@ -23,7 +23,7 @@ type StripeCustomerData = {
       amount: number;
       currency: string;
       interval: string;
-      product: {
+      product?: {
         name: string;
         description: string | null;
       };
@@ -37,7 +37,7 @@ export default function ProfilePage() {
 
   const { data: stripeData, isLoading: isStripeLoading, error: stripeError } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
-    enabled: !!user, // ユーザーがログインしている場合のみクエリを実行
+    enabled: !!user,
   });
 
   if (isUserLoading || isStripeLoading) {
@@ -96,10 +96,14 @@ export default function ProfilePage() {
                   <div key={subscription.id} className="space-y-2 bg-primary/5 p-4 rounded-lg">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-medium">{subscription.plan.product.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {subscription.plan.product.description}
-                        </p>
+                        <h4 className="font-medium">
+                          {subscription.plan.product?.name || 'サブスクリプション'}
+                        </h4>
+                        {subscription.plan.product?.description && (
+                          <p className="text-sm text-muted-foreground">
+                            {subscription.plan.product.description}
+                          </p>
+                        )}
                       </div>
                       <span className="text-sm px-2 py-1 rounded-full bg-primary/10">
                         {subscription.status}

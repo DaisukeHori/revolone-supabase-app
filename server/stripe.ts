@@ -39,7 +39,7 @@ export function setupStripeRoutes(app: Express) {
 
     try {
       const customerData = await getCustomerByEmail(req.user.email);
-      
+
       if (!customerData) {
         return res.status(404).json({ message: "Stripeの顧客情報が見つかりません" });
       }
