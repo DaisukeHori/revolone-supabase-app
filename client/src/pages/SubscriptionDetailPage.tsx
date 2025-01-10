@@ -602,12 +602,26 @@ function SubscriptionDetailPage() {
                     <p className="text-sm text-muted-foreground">契約者名</p>
                     <p className="text-lg">{customer.metadata?.サロン名 || customer.name || '未設定'}</p>
                   </div>
-                  {customer.metadata?.代理店名 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">代理店</p>
-                      <p className="text-lg">{customer.metadata.代理店名}</p>
-                    </div>
-                  )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">契約番号</p>
+                    <p className="text-lg font-mono">{subscription.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">契約開始日</p>
+                    <p className="text-lg">
+                      {new Date(customer.created * 1000).toLocaleDateString("ja-JP", {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">契約ステータス</p>
+                    <Badge className={`${getStatusBadgeColor(subscription.status)} mt-1`}>
+                      {formatStatus(subscription.status)}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             )}
