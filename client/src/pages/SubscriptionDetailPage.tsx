@@ -310,22 +310,43 @@ function ConfirmUpdateDialog({
             <div className="space-y-4">
               {items.map((item) => {
                 const itemId = item.subscription_item_id;
-                const updatedQuantity = updatedQuantities[itemId];
+                const updatedQuantity = updatedQuantities[itemId] || item.quantity;
                 const hasChanged = updatedQuantity !== item.quantity;
 
                 return (
-                  <div key={itemId} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{item.product.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.quantity}個 → {updatedQuantity || item.quantity}個
-                      </p>
+                  <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-lg">{item.product.name}</h4>
+                        {item.product.description && (
+                          <p className="text-sm text-muted-foreground">
+                            {item.product.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CreditCard className="h-4 w-4" />
+                          <span>
+                            {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">
+                          {hasChanged ? (
+                            <span className="text-primary">
+                              {item.quantity}台 → {updatedQuantity}台
+                            </span>
+                          ) : (
+                            <span>{item.quantity}台</span>
+                          )}
+                        </div>
+                        {item.amount && (
+                          <div className="text-sm text-muted-foreground">
+                            小計: {(updatedQuantity * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    {item.amount && (
-                      <p className="font-medium">
-                        {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
-                      </p>
-                    )}
                   </div>
                 );
               })}
@@ -965,6 +986,20 @@ export default function SubscriptionDetailPage() {
     0
   ) || 0;
 
+  const handleQuantityChange = (quantity: number) => {
+    const newQuantities: Record<string, number> = {};
+    subscription?.items.forEach(item => {
+      if (item.product.name.includes('レボナイザー')) {
+        newQuantities[item.subscription_item_id] = quantity;
+      } else {
+        newQuantities[item.subscription_item_id] = item.quantity;
+      }
+    });
+    setUpdatedQuantities(newQuantities);
+    setShowQuantityModal(false);
+    setShowConfirmDialog(true);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -985,7 +1020,7 @@ export default function SubscriptionDetailPage() {
           <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-3 rounded-lg">
+                <div className="bgprimary/10 p-3 rounded-lg">
                   <Package className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -1150,18 +1185,7 @@ export default function SubscriptionDetailPage() {
             isOpen={showQuantityModal}
             onClose={() => setShowQuantityModal(false)}
             currentQuantity={currentTotalQuantity}
-            onConfirm={(quantity) => {
-              const newQuantities = { ...updatedQuantities };
-              subscription.items.forEach(item => {
-                newQuantities[item.subscription_item_id] = item.quantity;
-                if (item.product.name.includes('レボナイザー')) {
-                  newQuantities[item.subscription_item_id] = quantity;
-                }
-              });
-              setUpdatedQuantities(newQuantities);
-              setShowQuantityModal(false);
-              setShowConfirmDialog(true);
-            }}
+            onConfirm={handleQuantityChange}
           />
         )}
 
