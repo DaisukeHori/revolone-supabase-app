@@ -421,9 +421,44 @@ function SubscriptionDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
 
-  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData>({
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
+    staleTime: 0, // 常に最新のデータを取得
   });
+
+  console.log('Stripe Data:', stripeData); // デバッグログ
+
+  const customerData = stripeData?.find(data =>
+    data.subscriptions.some(sub => sub.id === subscriptionId)
+  );
+
+  console.log('Customer Data:', customerData); // デバッグログ
+
+  const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+  const customer = customerData?.customer;
+
+  console.log('Customer:', customer); // デバッグログ
+
+  const form = useForm<StoreFormValues>({
+    resolver: zodResolver(storeFormSchema),
+    defaultValues: {
+      name: customer?.metadata?.サロン名 || '',
+      address: customer?.metadata?.住所 || '',
+      phoneNumber: customer?.metadata?.電話番号 || '',
+    },
+  });
+
+  // useEffectを追加してフォームの値を更新
+  useEffect(() => {
+    if (customer?.metadata) {
+      form.reset({
+        name: customer.metadata.サロン名 || '',
+        address: customer.metadata.住所 || '',
+        phoneNumber: customer.metadata.電話番号 || '',
+      });
+    }
+  }, [customer, form]);
+
 
   const handleUpdateQuantities = async () => {
     if (Object.keys(updatedQuantities).length === 0) {
@@ -540,11 +575,7 @@ function SubscriptionDetailPage() {
     );
   }
 
-  const customerData = stripeData.find(data =>
-    data.subscriptions.some(sub => sub.id === subscriptionId)
-  );
-
-  const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+  
 
   if (!subscription || !customerData) {
     return (
@@ -560,7 +591,7 @@ function SubscriptionDetailPage() {
   }
 
   const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
-  const customer = customerData.customer;
+  
 
   const handleAutoRenewalToggle = async () => {
     try {
@@ -615,14 +646,7 @@ function SubscriptionDetailPage() {
     }
   };
 
-  const form = useForm<StoreFormValues>({
-    resolver: zodResolver(storeFormSchema),
-    defaultValues: {
-      name: customer?.metadata?.サロン名 || '',
-      address: customer?.metadata?.住所 || '',
-      phoneNumber: customer?.metadata?.電話番号 || '',
-    }
-  });
+  
 
   return (
     <AppLayout>
