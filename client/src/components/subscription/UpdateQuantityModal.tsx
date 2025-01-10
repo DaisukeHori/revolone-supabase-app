@@ -55,7 +55,6 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
     setStep(1); // モーダルが開かれるたびにステップ1から開始
   }, [items, isOpen]);
 
-  // 数量変更ハンドラー
   const handleQuantityChange = (itemId: string, value: number) => {
     setOtherQuantities(prev => ({
       ...prev,
@@ -94,6 +93,9 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
 
   // レボナイザー以外の商品があるかどうかを確認
   const hasNonRevonizerItems = items.some(item => !isRevonizerProduct(item.subscription_item_id));
+
+  // レボナイザー以外の商品を抽出
+  const nonRevonizerItems = items.filter(item => !isRevonizerProduct(item.subscription_item_id));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -137,28 +139,23 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
 
           {step === 2 && (
             // Step 2: その他の商品の数量設定（レボナイザー以外）
-            items.map(item => {
-              if (!isRevonizerProduct(item.subscription_item_id)) {
-                return (
-                  <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
-                    <div className="col-span-2">
-                      <h3 className="font-medium">{item.product.name}</h3>
-                    </div>
-                    <div className="col-span-2">
-                      <QuantityInput
-                        itemId={item.subscription_item_id}
-                        initialQuantity={otherQuantities[item.subscription_item_id] || 0}
-                        onChange={(quantity) =>
-                          handleQuantityChange(item.subscription_item_id, quantity)
-                        }
-                        min={0}
-                      />
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })
+            nonRevonizerItems.map(item => (
+              <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
+                <div className="col-span-2">
+                  <h3 className="font-medium">{item.product.name}</h3>
+                </div>
+                <div className="col-span-2">
+                  <QuantityInput
+                    itemId={item.subscription_item_id}
+                    initialQuantity={otherQuantities[item.subscription_item_id] || 0}
+                    onChange={(quantity) =>
+                      handleQuantityChange(item.subscription_item_id, quantity)
+                    }
+                    min={0}
+                  />
+                </div>
+              </div>
+            ))
           )}
 
           {step === 3 && (
@@ -183,28 +180,21 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
               {hasNonRevonizerItems && (
                 <div className="space-y-2">
                   <h3 className="font-medium">その他の商品</h3>
-                  {items.map(item => {
-                    if (!isRevonizerProduct(item.subscription_item_id)) {
-                      const newQuantity = otherQuantities[item.subscription_item_id];
-                      const quantityDiff = newQuantity - item.quantity;
-
-                      return (
-                        <div key={item.subscription_item_id} className="pl-4 space-y-1 text-sm">
-                          <p>{item.product.name}</p>
-                          <div className="pl-4 text-muted-foreground">
-                            <p>変更前: {item.quantity}個</p>
-                            <p>変更後: {newQuantity}個</p>
-                            {quantityDiff !== 0 && (
-                              <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
-                                {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
+                  {nonRevonizerItems.map(item => (
+                    <div key={item.subscription_item_id} className="pl-4 space-y-1 text-sm">
+                      <p>{item.product.name}</p>
+                      <div className="pl-4 text-muted-foreground">
+                        <p>変更前: {item.quantity}個</p>
+                        <p>変更後: {otherQuantities[item.subscription_item_id]}個</p>
+                        {otherQuantities[item.subscription_item_id] !== item.quantity && (
+                          <p className={otherQuantities[item.subscription_item_id] > item.quantity ? "text-green-600" : "text-red-600"}>
+                            {otherQuantities[item.subscription_item_id] > item.quantity ? "+" : ""}
+                            {otherQuantities[item.subscription_item_id] - item.quantity}個
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
