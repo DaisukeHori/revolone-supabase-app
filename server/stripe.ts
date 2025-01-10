@@ -162,7 +162,7 @@ export function setupStripeRoutes(app: Express) {
     }
 
     const customerId = req.params.id;
-    const { metadata } = req.body;
+    const { metadata, address, phone } = req.body;
 
     try {
       // ユーザーの認証確認
@@ -180,12 +180,18 @@ export function setupStripeRoutes(app: Express) {
         ...metadata,
       };
 
-      // メタデータを更新
+      // 顧客情報を更新（メタデータ、住所、電話番号）
       const customer = await stripe.customers.update(customerId, {
         metadata: updatedMetadata,
+        address,
+        phone,
       });
 
-      console.log('[Stripe] Updated customer metadata:', customer.metadata);
+      console.log('[Stripe] Updated customer:', {
+        metadata: customer.metadata,
+        address: customer.address,
+        phone: customer.phone,
+      });
 
       res.json({
         message: "顧客情報を更新しました",
@@ -194,10 +200,12 @@ export function setupStripeRoutes(app: Express) {
           name: customer.name,
           email: customer.email,
           metadata: customer.metadata,
+          address: customer.address,
+          phone: customer.phone,
         },
       });
     } catch (error) {
-      console.error('[Stripe] メタデータ更新エラー:', error);
+      console.error('[Stripe] 顧客情報更新エラー:', error);
       res.status(500).json({ message: "顧客情報の更新中にエラーが発生しました" });
     }
   });

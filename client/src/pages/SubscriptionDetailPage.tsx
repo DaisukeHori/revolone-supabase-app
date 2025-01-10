@@ -35,6 +35,19 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+// フォームのスキーマ定義を更新
+const storeFormSchema = z.object({
+  name: z.string().min(1, "店舗名を入力してください"),
+  postalCode: z.string().min(1, "郵便番号を入力してください"),
+  state: z.string().min(1, "都道府県を入力してください"),
+  city: z.string().min(1, "市区町村を入力してください"),
+  line1: z.string().min(1, "住所1を入力してください"),
+  line2: z.string(),
+  phoneNumber: z.string().min(1, "電話番号を入力してください"),
+});
+
+type StoreFormValues = z.infer<typeof storeFormSchema>;
+
 // 型定義部分を更新
 type StripeCustomerData = {
   customer: {
@@ -62,8 +75,6 @@ type StripeCustomerData = {
   payment_history: StripePaymentHistory[];
 };
 
-type StoreFormValues = z.infer<typeof storeFormSchema>;
-
 type StripeSubscription = {
   id: string;
   status: string;
@@ -80,7 +91,7 @@ type StripeSubscription = {
     };
   } | null;
   items: {
-    subscription_item_id: string; // Stripe APIの実際のsubscription_item id
+    subscription_item_id: string;
     amount: number | null;
     currency: string;
     interval: string;
@@ -100,51 +111,6 @@ type StripePaymentHistory = {
   created: number;
   invoice_pdf: string | null;
 };
-
-function getStatusBadgeColor(status: string) {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'trialing':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'past_due':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'canceled':
-      return 'bg-red-100 text-red-800 border-red-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-}
-
-function formatStatus(status: string) {
-  switch (status) {
-    case 'active':
-      return '有効';
-    case 'trialing':
-      return 'トライアル中';
-    case 'past_due':
-      return '支払い期限超過';
-    case 'canceled':
-      return 'キャンセル済み';
-    default:
-      return status;
-  }
-}
-
-function formatCardBrand(brand: string) {
-  switch (brand.toLowerCase()) {
-    case 'visa':
-      return 'VISA';
-    case 'mastercard':
-      return 'Mastercard';
-    case 'amex':
-      return 'American Express';
-    case 'jcb':
-      return 'JCB';
-    default:
-      return brand;
-  }
-}
 
 function QuantityInput({
   initialQuantity,
@@ -413,13 +379,48 @@ function ConfirmUpdateDialog({
   );
 }
 
-// フォームのスキーマ定義を更新
-const storeFormSchema = z.object({
-  name: z.string().min(1, "店舗名を入力してください"),
-  address: z.string().min(1, "住所を入力してください"),
-  phoneNumber: z.string().min(1, "電話番号を入力してください"),
-});
+function formatAddress(address: StripeCustomerData['customer']['address'] | null): string {
+  if (!address) return '未設定';
 
+  const parts = [
+    address.state,
+    address.city,
+    address.line1,
+    address.line2
+  ].filter(Boolean);
+
+  return parts.join(' ') || '未設定';
+}
+
+function formatStatus(status: string) {
+  switch (status) {
+    case 'active':
+      return '有効';
+    case 'trialing':
+      return 'トライアル中';
+    case 'past_due':
+      return '支払い期限超過';
+    case 'canceled':
+      return 'キャンセル済み';
+    default:
+      return status;
+  }
+}
+
+function getStatusBadgeColor(status: string) {
+  switch (status) {
+    case 'active':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'trialing':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'past_due':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'canceled':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+}
 
 function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
@@ -454,22 +455,69 @@ function SubscriptionDetailPage() {
     resolver: zodResolver(storeFormSchema),
     defaultValues: {
       name: customer?.metadata?.サロン名 || '',
-      address: customer?.address?.line1 || customer?.metadata?.住所 || '',
-      phoneNumber: customer?.phone || customer?.metadata?.電話番号 || '',
+      postalCode: customer?.address?.postal_code || '',
+      state: customer?.address?.state || '',
+      city: customer?.address?.city || '',
+      line1: customer?.address?.line1 || '',
+      line2: customer?.address?.line2 || '',
+      phoneNumber: customer?.phone || '',
     },
   });
 
-  // useEffectを更新
   useEffect(() => {
     if (customer) {
       form.reset({
         name: customer.metadata?.サロン名 || '',
-        address: customer.address?.line1 || customer.metadata?.住所 || '',
-        phoneNumber: customer.phone || customer.metadata?.電話番号 || '',
+        postalCode: customer?.address?.postal_code || '',
+        state: customer?.address?.state || '',
+        city: customer?.address?.city || '',
+        line1: customer?.address?.line1 || '',
+        line2: customer?.address?.line2 || '',
+        phoneNumber: customer.phone || '',
       });
     }
   }, [customer, form]);
 
+  const handleUpdateStore = async (values: StoreFormValues) => {
+    if (!customer) return;
+
+    try {
+      const response = await fetch(`/api/stripe/customer/${customer.id}/metadata`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: {
+            postal_code: values.postalCode,
+            state: values.state,
+            city: values.city,
+            line1: values.line1,
+            line2: values.line2,
+          },
+          phone: values.phoneNumber,
+          metadata: {
+            サロン名: values.name,
+          }
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "店舗情報を更新しました",
+      });
+      setIsEditingStore(false);
+    } catch (error) {
+      console.error('店舗情報更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "店舗情報の更新中にエラーが発生しました",
+      });
+    }
+  };
 
   const handleUpdateQuantities = async () => {
     if (Object.keys(updatedQuantities).length === 0) {
@@ -585,7 +633,6 @@ function SubscriptionDetailPage() {
     );
   }
 
-
   if (!subscription || !customerData) {
     return (
       <AppLayout>
@@ -619,40 +666,6 @@ function SubscriptionDetailPage() {
     }
   };
 
-  const handleUpdateStore = async (values: StoreFormValues) => {
-    if (!customer) return;
-
-    try {
-      const response = await fetch(`/api/stripe/customer/${customer.id}/metadata`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          metadata: {
-            サロン名: values.name,
-            住所: values.address,
-            電話番号: values.phoneNumber,
-          }
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      await refetch();
-      toast({
-        description: "店舗情報を更新しました",
-      });
-      setIsEditingStore(false);
-    } catch (error) {
-      console.error('店舗情報更新エラー:', error);
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "店舗情報の更新中にエラーが発生しました",
-      });
-    }
-  };
 
   return (
     <AppLayout>
@@ -710,12 +723,66 @@ function SubscriptionDetailPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="address"
+                    name="postalCode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>住所</FormLabel>
+                        <FormLabel>郵便番号</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="住所を入力" />
+                          <Input {...field} placeholder="郵便番号を入力" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>都道府県</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="都道府県を入力" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>市区町村</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="市区町村を入力" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="line1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>住所1（番地など）</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="住所1を入力" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="line2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>住所2（建物名など）</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="住所2を入力（任意）" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -755,15 +822,16 @@ function SubscriptionDetailPage() {
                   <div className="text-lg">{customer?.metadata?.サロン名 || '未設定'}</div>
                 </div>
                 <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">郵便番号</div>
+                  <div className="text-lg">{customer?.address?.postal_code || '未設定'}</div>
+                </div>
+                <div>
                   <div className="text-sm font-medium text-muted-foreground mb-2">住所</div>
-                  <div className="text-lg">
-                    {customer?.address?.line1 || customer?.metadata?.住所 || '未設定'}
-                    {customer?.address?.line2 ? ` ${customer.address.line2}` : ''}
-                  </div>
+                  <div className="text-lg">{formatAddress(customer?.address)}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
-                  <div className="text-lg">{customer?.phone || customer?.metadata?.電話番号 || '未設定'}</div>
+                  <div className="text-lg">{customer?.phone || '未設定'}</div>
                 </div>
               </div>
             )}
