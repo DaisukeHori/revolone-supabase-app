@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
+  Store, CreditCard, Calendar, Package, ArrowLeft, Clock,
   Receipt, History, Settings, RefreshCw,
-  CheckCircle, Ban, ExternalLink, Loader2, Pencil, Store
+  CheckCircle, Ban, ExternalLink, Loader2, Pencil, AlertCircle
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,28 +14,14 @@ import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { useState, useEffect } from 'react';
-import { useForm } from "react-hook-form";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
+import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+import { calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
+import { StoreEditModal } from "@/components/store/StoreEditModal";
+import { useState } from 'react';
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 
-// フォームのスキーマ定義を更新（必須バリデーションを削除）
+// フォームのスキーマ定義
 const storeFormSchema = z.object({
   name: z.string(),
   postalCode: z.string(),
@@ -85,315 +71,34 @@ type StripeCustomerData = {
       [key: string]: string | undefined;
     };
   };
-  subscriptions: StripeSubscription[];
-  payment_history: StripePaymentHistory[];
-};
-
-type StripeSubscription = {
-  id: string;
-  status: string;
-  current_period_end: number;
-  trial_end: number | null;
-  trial_start: number | null;
-  cancel_at_period_end: boolean;
-  default_payment_method: {
-    card: {
-      brand: string;
-      last4: string;
-      exp_month: number;
-      exp_year: number;
-    };
-  } | null;
-  items: {
-    subscription_item_id: string;
-    amount: number | null;
-    currency: string;
-    interval: string;
-    quantity: number;
-    product: {
-      name: string;
-      description: string | null;
-    };
-  }[];
-};
-
-type StripePaymentHistory = {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  created: number;
-  invoice_pdf: string | null;
-};
-
-function QuantityInput({
-  initialQuantity,
-  onChange,
-  min = 1,
-  max = 99,
-  itemId
-}: {
-  initialQuantity: number;
-  onChange: (quantity: number) => void;
-  min?: number;
-  max?: number;
-  itemId?: string;
-}) {
-  const [quantity, setQuantity] = useState(initialQuantity);
-
-  useEffect(() => {
-    console.log(`[QuantityInput ${itemId}] initialQuantity:`, initialQuantity, 'current quantity:', quantity);
-    if (initialQuantity !== quantity) {
-      console.log(`[QuantityInput ${itemId}] Updating quantity to:`, initialQuantity);
-      setQuantity(initialQuantity);
-    }
-  }, [initialQuantity, quantity, itemId]);
-
-  const handleChange = (value: number) => {
-    const newQuantity = Math.max(min, Math.min(max, value));
-    console.log(`[QuantityInput ${itemId}] handleChange:`, newQuantity);
-    setQuantity(newQuantity);
-    onChange(newQuantity);
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => handleChange(quantity - 1)}
-        disabled={quantity <= min}
-        className="h-8 w-8"
-      >
-        -
-      </Button>
-      <Input
-        type="number"
-        value={quantity}
-        onChange={(e) => handleChange(parseInt(e.target.value) || min)}
-        className="h-8 w-16 text-center"
-        min={min}
-        max={max}
-      />
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => handleChange(quantity + 1)}
-        disabled={quantity >= max}
-        className="h-8 w-8"
-      >
-        +
-      </Button>
-    </div>
-  );
-}
-
-function UpdateQuantityModal({
-  isOpen,
-  onClose,
-  items,
-  onConfirm
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  items: StripeSubscription['items'];
-  onConfirm: (quantities: Record<string, number>) => void;
-}) {
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
-    const initialQuantities: Record<string, number> = {};
-    items.forEach((item) => {
-      const itemId = item.subscription_item_id;
-      console.log(`[UpdateQuantityModal] Processing item:`, {
-        id: itemId,
-        name: item.product.name,
-        quantity: item.quantity
-      });
-      initialQuantities[itemId] = item.quantity;
-    });
-    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
-    setQuantities(initialQuantities);
-  }, [items, isOpen]);
-
-  const handleQuantityChange = (itemId: string, quantity: number) => {
-    console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
-    setQuantities(prev => {
-      const next = {
-        ...prev,
-        [itemId]: quantity
+  subscriptions: Array<{
+    id: string;
+    status: string;
+    current_period_end: number;
+    trial_end: number | null;
+    trial_start: number | null;
+    cancel_at_period_end: boolean;
+    default_payment_method: {
+      card: {
+        brand: string;
+        last4: string;
+        exp_month: number;
+        exp_year: number;
       };
-      console.log('[UpdateQuantityModal] Updated quantities:', next);
-      return next;
-    });
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>プランの数量を変更</DialogTitle>
-          <DialogDescription>
-            各プランの数量を設定してください。
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-6 pb-2">
-          {items.map((item) => {
-            const itemId = item.subscription_item_id;
-            console.log(`[UpdateQuantityModal] Rendering item:`, {
-              id: itemId,
-              name: item.product.name,
-              currentQuantity: quantities[itemId],
-              originalQuantity: item.quantity
-            });
-
-            return (
-              <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-lg">{item.product.name}</h4>
-                    {item.product.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {item.product.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CreditCard className="h-4 w-4" />
-                      <span>
-                        {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
-                      </span>
-                    </div>
-                  </div>
-                  <QuantityInput
-                    key={`${itemId}-${quantities[itemId] || item.quantity}`}
-                    itemId={itemId}
-                    initialQuantity={quantities[itemId] || item.quantity}
-                    onChange={(quantity) => handleQuantityChange(itemId, quantity)}
-                  />
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button
-              variant="outline"
-              onClick={onClose}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => onConfirm(quantities)}
-              disabled={Object.keys(quantities).length === 0}
-            >
-              変更内容を確認
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ConfirmUpdateDialog({
-  isOpen,
-  onClose,
-  items,
-  updatedQuantities,
-  onConfirm,
-  isUpdating
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  items: StripeSubscription['items'];
-  updatedQuantities: Record<string, number>;
-  onConfirm: () => Promise<void>;
-  isUpdating: boolean;
-}) {
-  // 変更のある商品のみをフィルタリング
-  const changedItems = items.filter((item) => {
-    const itemId = item.subscription_item_id;
-    return updatedQuantities[itemId] !== item.quantity;
-  });
-
-  // 合計金額の計算（全商品の合計）
-  const totalAmount = items.reduce((total, item) => {
-    const itemId = item.subscription_item_id;
-    const quantity = updatedQuantities[itemId] || item.quantity;
-    if (item.amount) {
-      return total + (item.amount * quantity);
-    }
-    return total;
-  }, 0);
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>変更内容の確認</DialogTitle>
-          <DialogDescription>
-            以下の内容で更新します。更新後、次回の請求から反映されます。
-          </DialogDescription>
-        </DialogHeader>
-        <div className="overflow-y-auto pr-6 -mr-6">
-          <div className="space-y-6 pb-2">
-            <div className="space-y-4">
-              {items.map((item) => {
-                const itemId = item.subscription_item_id;
-                const updatedQuantity = updatedQuantities[itemId];
-                const hasChanged = updatedQuantity !== item.quantity;
-
-                return (
-                  <div key={itemId} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{item.product.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.quantity}個 → {updatedQuantity || item.quantity}個
-                      </p>
-                    </div>
-                    {item.amount && (
-                      <p className="font-medium">
-                        {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="pt-4 border-t border-primary/10">
-                <div className="flex justify-between items-center">
-                  <p className="font-medium">次回請求額（合計）</p>
-                  <p className="font-medium text-lg">
-                    {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                disabled={isUpdating}
-              >
-                キャンセル
-              </Button>
-              <Button
-                onClick={onConfirm}
-                disabled={isUpdating || changedItems.length === 0}
-              >
-                {isUpdating ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                更新する
-              </Button>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+    } | null;
+    items: Array<{
+      subscription_item_id: string;
+      amount: number | null;
+      currency: string;
+      interval: string;
+      quantity: number;
+      product: {
+        name: string;
+        description: string | null;
+      };
+    }>;
+  }>;
+};
 
 function formatAddress(address: {
   line1: string | null;
@@ -460,268 +165,9 @@ function getStatusBadgeColor(status: string) {
   }
 }
 
-function StoreEditModal({
-  isOpen,
-  onClose,
-  customer,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  customer: StripeCustomerData['customer'];
-  onSubmit: (values: StoreFormValues) => Promise<void>;
-}) {
-  const form = useForm<StoreFormValues>({
-    resolver: zodResolver(storeFormSchema),
-    defaultValues: {
-      name: customer?.metadata?.サロン名 || '',
-      postalCode: customer?.address?.postal_code || '',
-      state: customer?.address?.state || '',
-      city: customer?.address?.city || '',
-      line1: customer?.address?.line1 || '',
-      line2: customer?.address?.line2 || '',
-      phoneNumber: customer?.phone || '',
-      shippingPostalCode: customer?.shipping?.address?.postal_code || '',
-      shippingState: customer?.shipping?.address?.state || '',
-      shippingCity: customer?.shipping?.address?.city || '',
-      shippingLine1: customer?.shipping?.address?.line1 || '',
-      shippingLine2: customer?.shipping?.address?.line2 || '',
-    },
-  });
-
-  useEffect(() => {
-    if (customer) {
-      form.reset({
-        name: customer.metadata?.サロン名 || '',
-        postalCode: customer?.address?.postal_code || '',
-        state: customer?.address?.state || '',
-        city: customer?.address?.city || '',
-        line1: customer?.address?.line1 || '',
-        line2: customer?.address?.line2 || '',
-        phoneNumber: customer.phone || '',
-        shippingPostalCode: customer?.shipping?.address?.postal_code || '',
-        shippingState: customer?.shipping?.address?.state || '',
-        shippingCity: customer?.shipping?.address?.city || '',
-        shippingLine1: customer?.shipping?.address?.line1 || '',
-        shippingLine2: customer?.shipping?.address?.line2 || '',
-      });
-    }
-  }, [customer, form]);
-
-  const handleSubmit = async (values: StoreFormValues) => {
-    try {
-      await onSubmit(values);
-      onClose();
-    } catch (error) {
-      console.error('店舗情報更新エラー:', error);
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>店舗情報の編集</DialogTitle>
-          <DialogDescription>
-            店舗情報、請求先住所、配送先住所を編集できます。
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="overflow-y-auto pr-6 -mr-6">
-            <div className="space-y-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>店舗名</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="店舗名を入力" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* 請求先住所フォーム */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">請求先住所</h3>
-                <FormField
-                  control={form.control}
-                  name="postalCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>郵便番号</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="郵便番号を入力" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>都道府県</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="都道府県を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>市区町村</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="市区町村を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="line1"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>住所1（番地など）</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="住所1を入力" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="line2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>住所2（建物名など）</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="住所2を入力" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* 配送先住所フォーム */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">配送先住所</h3>
-                <FormField
-                  control={form.control}
-                  name="shippingPostalCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>郵便番号</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="郵便番号を入力" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="shippingState"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>都道府県</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="都道府県を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="shippingCity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>市区町村</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="市区町村を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="shippingLine1"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>住所1（番地など）</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="住所1を入力" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="shippingLine2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>住所2（建物名など）</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="住所2を入力" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>電話番号</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="電話番号を入力" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end gap-2 mt-6 pb-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                >
-                  キャンセル
-                </Button>
-                <Button type="submit">
-                  保存
-                </Button>
-              </div>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function SubscriptionDetailPage() {
+export default function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -731,58 +177,15 @@ function SubscriptionDetailPage() {
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
-    staleTime: 0, // 常に最新のデータを取得
+    staleTime: 0,
   });
-
-  console.log('Stripe Data:', stripeData); // デバッグログ
 
   const customerData = stripeData?.find(data =>
     data.subscriptions.some(sub => sub.id === subscriptionId)
   );
 
-  console.log('Customer Data:', customerData); // デバッグログ
-
   const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
   const customer = customerData?.customer;
-
-  console.log('Customer:', customer); // デバッグログ
-
-  const form = useForm<StoreFormValues>({
-    resolver: zodResolver(storeFormSchema),
-    defaultValues: {
-      name: customer?.metadata?.サロン名 || '',
-      postalCode: customer?.address?.postal_code || '',
-      state: customer?.address?.state || '',
-      city: customer?.address?.city || '',
-      line1: customer?.address?.line1 || '',
-      line2: customer?.address?.line2 || '',
-      phoneNumber: customer?.phone || '',
-      shippingPostalCode: customer?.shipping?.address?.postal_code || '',
-      shippingState: customer?.shipping?.address?.state || '',
-      shippingCity: customer?.shipping?.address?.city || '',
-      shippingLine1: customer?.shipping?.address?.line1 || '',
-      shippingLine2: customer?.shipping?.address?.line2 || '',
-    },
-  });
-
-  useEffect(() => {
-    if (customer) {
-      form.reset({
-        name: customer.metadata?.サロン名 || '',
-        postalCode: customer?.address?.postal_code || '',
-        state: customer?.address?.state || '',
-        city: customer?.address?.city || '',
-        line1: customer?.address?.line1 || '',
-        line2: customer?.address?.line2 || '',
-        phoneNumber: customer.phone || '',
-        shippingPostalCode: customer?.shipping?.address?.postal_code || '',
-        shippingState: customer?.shipping?.address?.state || '',
-        shippingCity: customer?.shipping?.address?.city || '',
-        shippingLine1: customer?.shipping?.address?.line1 || '',
-        shippingLine2: customer?.shipping?.address?.line2 || '',
-      });
-    }
-  }, [customer, form]);
 
   const handleUpdateStore = async (values: StoreFormValues) => {
     if (!customer) return;
@@ -821,13 +224,8 @@ function SubscriptionDetailPage() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('店舗情報更新エラー:', errorText);
-        throw new Error(errorText);
+        throw new Error(await response.text());
       }
-
-      const data = await response.json();
-      console.log('Updated customer data:', data);
 
       await refetch();
       toast({
@@ -843,22 +241,25 @@ function SubscriptionDetailPage() {
     }
   };
 
-  const handleUpdateQuantities = async () => {
-    if (Object.keys(updatedQuantities).length === 0) {
-      return;
-    }
+  const handleUpdateQuantities = async (quantities: Record<string, number>) => {
+    if (!subscription) return;
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
+      // レボナイザー商品の数量を自動計算
+      const revonizerQuantities = calculateRevonizerQuantities(
+        Math.max(...Object.values(quantities))
+      );
+
+      const updates = subscription.items.map(item => ({
+        subscription_item_id: item.subscription_item_id,
+        quantity: revonizerQuantities[item.subscription_item_id] || quantities[item.subscription_item_id] || 0,
+      }));
+
+      const response = await fetch(`/api/stripe/subscription/${subscription.id}/quantities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
-            id,
-            quantity
-          }))
-        }),
+        body: JSON.stringify({ items: updates }),
         credentials: 'include',
       });
 
@@ -868,71 +269,19 @@ function SubscriptionDetailPage() {
 
       await refetch();
       toast({
-        description: "プランの数量を更新しました",
+        description: "サブスクリプションの数量を更新しました",
       });
-
-      setUpdatedQuantities({});
       setShowConfirmDialog(false);
     } catch (error) {
       console.error('数量更新エラー:', error);
       toast({
         variant: "destructive",
-        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
       });
     } finally {
       setIsUpdating(false);
     }
   };
-
-  const toggleAutoRenewalMutation = useMutation({
-    mutationFn: async (subscriptionId: string) => {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      refetch();
-      toast({
-        description: "自動更新設定を変更しました",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        description: "設定の変更に失敗しました",
-      });
-    }
-  });
-
-  const cancelSubscriptionMutation = useMutation({
-    mutationFn: async (subscriptionId: string) => {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/cancel`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      refetch();
-      toast({
-        description: "サブスクリプションをキャンセルしました",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        description: "キャンセルに失敗しました",
-      });
-    }
-  });
 
   if (isLoading) {
     return (
@@ -948,7 +297,6 @@ function SubscriptionDetailPage() {
     return (
       <AppLayout>
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             サブスクリプション情報の取得に失敗しました
           </AlertDescription>
@@ -957,11 +305,10 @@ function SubscriptionDetailPage() {
     );
   }
 
-  if (!subscription || !customerData) {
+  if (!subscription || !customer) {
     return (
       <AppLayout>
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             指定されたサブスクリプションが見つかりません
           </AlertDescription>
@@ -974,7 +321,7 @@ function SubscriptionDetailPage() {
 
   const handleAutoRenewalToggle = async () => {
     try {
-      await toggleAutoRenewalMutation.mutateAsync(subscription.id);
+      // await toggleAutoRenewalMutation.mutateAsync(subscription.id);
     } catch (error) {
       console.error('自動更新設定の変更に失敗:', error);
     }
@@ -983,13 +330,12 @@ function SubscriptionDetailPage() {
   const handleCancelSubscription = async () => {
     if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
       try {
-        await cancelSubscriptionMutation.mutateAsync(subscription.id);
+        // await cancelSubscriptionMutation.mutateAsync(subscription.id);
       } catch (error) {
         console.error('サブスクリプションのキャンセルに失敗:', error);
       }
     }
   };
-
 
   const item = {
     hidden: { opacity: 0, y: 50 },
@@ -1003,7 +349,7 @@ function SubscriptionDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/store/" + customer?.id)}
+            onClick={() => setLocation(`/store/${customer.id}`)}
             className="hover:bg-primary/10"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -1074,6 +420,34 @@ function SubscriptionDetailPage() {
                     </div>
                   </div>
                 ))}
+
+                <div className="flex justify-between items-center pt-4">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setShowQuantityModal(true)}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    数量を変更
+                  </Button>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={!subscription.cancel_at_period_end}
+                        onCheckedChange={() => handleAutoRenewalToggle()}
+                      />
+                      <span className="text-sm">自動更新</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive/90"
+                      onClick={handleCancelSubscription}
+                    >
+                      サブスクリプションを解約
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {/* 支払い情報 */}
@@ -1104,79 +478,11 @@ function SubscriptionDetailPage() {
                   </Button>
                 </div>
               </div>
-
-              {/* 更新日情報 */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">次回更新日</h3>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
-                  </span>
-                </div>
-                {isTrialing && subscription.trial_end && (
-                  <p className="text-sm text-muted-foreground">
-                    トライアル期間: {new Date(subscription.trial_end * 1000).toLocaleDateString("ja-JP")}まで
-                  </p>
-                )}
-              </div>
-
-              {/* アクション */}
-              <div className="flex flex-wrap gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setShowQuantityModal(true)}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  数量を変更
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setLocation("/payment-history")}
-                >
-                  <History className="h-4 w-4" />
-                  支払い履歴
-                </Button>
-
-                {subscription.status !== 'canceled' && (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={handleAutoRenewalToggle}
-                    >
-                      {subscription.cancel_at_period_end ? (
-                        <>
-                          <CheckCircle className="h-4 w-4" />
-                          自動更新を有効化
-                        </>
-                      ) : (
-                        <>
-                          <Ban className="h-4 w-4" />
-                          自動更新を無効化
-                        </>
-                      )}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="gap-2 text-red-600 hover:text-red-700"
-                      onClick={handleCancelSubscription}
-                    >
-                      <Ban className="h-4 w-4" />
-                      今すぐキャンセル
-                    </Button>
-                  </>
-                )}
-              </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {showQuantityModal && (
+        {showQuantityModal && subscription && (
           <UpdateQuantityModal
             isOpen={showQuantityModal}
             onClose={() => setShowQuantityModal(false)}
@@ -1189,7 +495,7 @@ function SubscriptionDetailPage() {
           />
         )}
 
-        {showConfirmDialog && (
+        {showConfirmDialog && subscription && (
           <ConfirmUpdateDialog
             isOpen={showConfirmDialog}
             onClose={() => setShowConfirmDialog(false)}
@@ -1199,9 +505,16 @@ function SubscriptionDetailPage() {
             isUpdating={isUpdating}
           />
         )}
+
+        {isEditingStore && customer && (
+          <StoreEditModal
+            isOpen={isEditingStore}
+            onClose={() => setIsEditingStore(false)}
+            customer={customer}
+            onSubmit={handleUpdateStore}
+          />
+        )}
       </div>
     </AppLayout>
   );
 }
-
-export default SubscriptionDetailPage;
