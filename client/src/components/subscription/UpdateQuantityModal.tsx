@@ -35,6 +35,10 @@ type Props = {
 };
 
 export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props) {
+  // Step 1: レボナイザーの台数設定
+  // Step 2: その他の商品の数量設定
+  const [step, setStep] = useState(1);
+
   // レボナイザー関連の商品の合計台数
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(
     calculateTotalQuantityFromItems(filterRevonizerItems(items))
@@ -52,7 +56,8 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
       }
     });
     setOtherQuantities(initialOtherQuantities);
-  }, [items]);
+    setStep(1); // モーダルが開かれるたびにステップ1から開始
+  }, [items, isOpen]);
 
   // 数量変更ハンドラー
   const handleQuantityChange = (itemId: string, value: number) => {
@@ -66,87 +71,97 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
     setTotalRevonizerQuantity(value);
   };
 
-  const handleConfirm = () => {
-    // レボナイザー以外の商品の数量をそのまま使用
-    const quantities = { ...otherQuantities };
+  const handleNext = () => {
+    if (step === 1) {
+      setStep(2);
+    } else {
+      // レボナイザー以外の商品の数量をそのまま使用
+      const quantities = { ...otherQuantities };
 
-    // レボナイザー商品の数量を計算して追加
-    const revonizerItems = filterRevonizerItems(items);
-    revonizerItems.forEach(item => {
-      quantities[item.subscription_item_id] = totalRevonizerQuantity;
-    });
+      // レボナイザー商品の数量を計算して追加
+      const revonizerItems = filterRevonizerItems(items);
+      revonizerItems.forEach(item => {
+        quantities[item.subscription_item_id] = totalRevonizerQuantity;
+      });
 
-    onConfirm(quantities);
+      onConfirm(quantities);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>サブスクリプションの数量を変更</DialogTitle>
+          <DialogTitle>
+            {step === 1 ? "レボナイザーの台数設定" : "その他の商品の数量設定"}
+          </DialogTitle>
           <DialogDescription>
-            各商品の数量を入力してください。
+            {step === 1
+              ? "レボナイザーの必要台数を入力してください"
+              : "その他の商品の数量を入力してください"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {/* レボナイザー商品の数量入力 */}
-          {filterRevonizerItems(items).length > 0 && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <div className="col-span-2">
-                <h3 className="font-medium">レボナイザー（合計台数）</h3>
-                {items[0]?.amount && (
-                  <p className="text-sm text-muted-foreground">
-                    {items[0].amount.toLocaleString()} {items[0].currency?.toUpperCase()} / {items[0].interval}
-                  </p>
-                )}
-              </div>
-              <div className="col-span-2">
-                <QuantityInput
-                  initialQuantity={totalRevonizerQuantity}
-                  onChange={handleRevonizerQuantityChange}
-                  min={1}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* その他の商品の数量入力 */}
-          {items.map(item => {
-            if (!isRevonizerProduct(item.subscription_item_id)) {
-              return (
-                <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
-                  <div className="col-span-2">
-                    <h3 className="font-medium">{item.product.name}</h3>
-                    {item.amount && (
-                      <p className="text-sm text-muted-foreground">
-                        {item.amount.toLocaleString()} {item.currency?.toUpperCase()} / {item.interval}
-                      </p>
-                    )}
-                  </div>
-                  <div className="col-span-2">
-                    <QuantityInput
-                      itemId={item.subscription_item_id}
-                      initialQuantity={otherQuantities[item.subscription_item_id] || 0}
-                      onChange={(quantity) =>
-                        handleQuantityChange(item.subscription_item_id, quantity)
-                      }
-                      min={0}
-                    />
-                  </div>
+          {step === 1 ? (
+            // Step 1: レボナイザーの台数設定
+            filterRevonizerItems(items).length > 0 && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-span-2">
+                  <h3 className="font-medium">レボナイザー（合計台数）</h3>
+                  {items[0]?.amount && (
+                    <p className="text-sm text-muted-foreground">
+                      {items[0].amount.toLocaleString()} {items[0].currency?.toUpperCase()} / {items[0].interval}
+                    </p>
+                  )}
                 </div>
-              );
-            }
-            return null;
-          })}
+                <div className="col-span-2">
+                  <QuantityInput
+                    initialQuantity={totalRevonizerQuantity}
+                    onChange={handleRevonizerQuantityChange}
+                    min={1}
+                  />
+                </div>
+              </div>
+            )
+          ) : (
+            // Step 2: その他の商品の数量設定
+            items.map(item => {
+              if (!isRevonizerProduct(item.subscription_item_id)) {
+                return (
+                  <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
+                    <div className="col-span-2">
+                      <h3 className="font-medium">{item.product.name}</h3>
+                      {item.amount && (
+                        <p className="text-sm text-muted-foreground">
+                          {item.amount.toLocaleString()} {item.currency?.toUpperCase()} / {item.interval}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <QuantityInput
+                        itemId={item.subscription_item_id}
+                        initialQuantity={otherQuantities[item.subscription_item_id] || 0}
+                        onChange={(quantity) =>
+                          handleQuantityChange(item.subscription_item_id, quantity)
+                        }
+                        min={0}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })
+          )}
         </div>
 
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>
-          <Button onClick={handleConfirm}>
-            変更内容を確認
+          <Button onClick={handleNext}>
+            {step === 1 ? "次へ" : "変更内容を確認"}
           </Button>
         </div>
       </DialogContent>

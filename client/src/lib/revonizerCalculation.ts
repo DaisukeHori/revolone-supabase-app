@@ -26,7 +26,7 @@ export const REVONIZER_PRODUCTS = {
 // レボナイザー商品かどうかを判定する関数
 export function isRevonizerProduct(productId: string): boolean {
   return Object.values(REVONIZER_PRODUCTS).some(
-    product => product.productId === productId
+    product => product.productId === productId || product.priceId === productId
   );
 }
 

@@ -18,6 +18,7 @@ type SubscriptionItem = {
   subscription_item_id: string;
   amount: number | null;
   currency: string;
+  interval: string;
   quantity: number;
   product: {
     name: string;
@@ -30,7 +31,7 @@ type Props = {
   onClose: () => void;
   items: SubscriptionItem[];
   updatedQuantities: Record<string, number>;
-  onConfirm: () => void;
+  onConfirm: (quantities: Record<string, number>) => Promise<void>;
   isUpdating: boolean;
 };
 
@@ -92,7 +93,7 @@ export function ConfirmUpdateDialog({
             if (!isRevonizerProduct(item.subscription_item_id)) {
               const newQuantity = updatedQuantities[item.subscription_item_id];
               const quantityDiff = newQuantity - item.quantity;
-              
+
               return (
                 <div key={item.subscription_item_id} className="space-y-1">
                   <h3 className="font-medium">{item.product.name}</h3>
@@ -116,7 +117,7 @@ export function ConfirmUpdateDialog({
           <Button variant="outline" onClick={onClose} disabled={isUpdating}>
             キャンセル
           </Button>
-          <Button onClick={onConfirm} disabled={isUpdating}>
+          <Button onClick={() => onConfirm(updatedQuantities)} disabled={isUpdating}>
             {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             変更を確定
           </Button>
