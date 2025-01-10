@@ -1,0 +1,61 @@
+container is not defined
+at BillingSettingsPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/BillingSettingsPage.tsx:234:17)
+at renderWithHooks (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:12151:26)
+at mountIndeterminateComponent (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:14901:21)
+at beginWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:15882:22)
+at HTMLUnknownElement.callCallback2 (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:3674:22)
+at Object.invokeGuardedCallbackDev (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:3699:24)
+at invokeGuardedCallback (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:3733:39)
+at beginWork$1 (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19733:15)
+at performUnitOfWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19166:20)
+at workLoopSync (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19105:13)
+Current path: /billing/subscription/sub_1OOVw0APdno01lSPQNcrQCSC
+Is subscription payment: true
+Subscription ID: sub_1OOVw0APdno01lSPQNcrQCSC
+Stripe data: 
+(2) [{…}, {…}]
+Customer data: 
+Object {customer: {…}, subscriptions: Array(1), payment_history: Array(14)}
+Subscription: 
+Object {id: "sub_1OOVw0APdno01lSPQNcrQCSC", status: "active", current_period_end: 1737947336, trial_end: 1719457736, trial_start: 1716779501, …}
+Current path: /billing/subscription/sub_1OOVw0APdno01lSPQNcrQCSC
+Is subscription payment: true
+Subscription ID: sub_1OOVw0APdno01lSPQNcrQCSC
+Stripe data: 
+(2) [{…}, {…}]
+Customer data: 
+Object {customer: {…}, subscriptions: Array(1), payment_history: Array(14)}
+Subscription: 
+Object {id: "sub_1OOVw0APdno01lSPQNcrQCSC", status: "active", current_period_end: 1737947336, trial_end: 1719457736, trial_start: 1716779501, …}
+container is not defined
+at BillingSettingsPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/BillingSettingsPage.tsx:234:17)
+at renderWithHooks (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:12151:26)
+at mountIndeterminateComponent (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:14901:21)
+at beginWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:15882:22)
+at HTMLUnknownElement.callCallback2 (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:3674:22)
+at Object.invokeGuardedCallbackDev (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:3699:24)
+at invokeGuardedCallback (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:3733:39)
+at beginWork$1 (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19733:15)
+at performUnitOfWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19166:20)
+at workLoopSync (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19105:13)
+The above error occurred in the <BillingSettingsPage> component:
+
+    at BillingSettingsPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/BillingSettingsPage.tsx:143:27)
+    at Route (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=2a986eb0:323:16)
+    at Switch (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=2a986eb0:379:17)
+    at App (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/App.tsx:36:31)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=2a986eb0:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+container is not defined
+at BillingSettingsPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/BillingSettingsPage.tsx:234:17)
+at renderWithHooks (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:12151:26)
+at mountIndeterminateComponent (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:14901:21)
+at beginWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:15882:22)
+at beginWork$1 (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19721:22)
+at performUnitOfWork (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19166:20)
+at workLoopSync (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19105:13)
+at renderRootSync (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:19084:15)
+at recoverFromConcurrentError (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:18704:28)
+at performSyncWorkOnRoot (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C43VWYGG.js?v=2a986eb0:18847:28)
