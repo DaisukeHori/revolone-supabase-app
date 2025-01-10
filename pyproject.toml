@@ -1,0 +1,10 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "qrcode>=8.0",
+    "speakeasy>=2.0.0",
+    "twilio>=9.4.2",
+]

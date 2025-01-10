@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -10,6 +10,12 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  // MFA fields
+  mfaEnabled: boolean("mfa_enabled").default(false).notNull(),
+  mfaType: text("mfa_type"), // 'email', 'sms', 'totp'
+  mfaSecret: text("mfa_secret"),
+  phoneNumber: text("phone_number"),
+  backupCodes: jsonb("backup_codes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -40,7 +46,18 @@ export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email("メールアドレスの形式が正しくありません"),
   username: z.string().min(3, "ユーザー名は3文字以上である必要があります"),
   password: z.string().min(8, "パスワードは8文字以上である必要があります"),
-}).omit({ id: true, resetToken: true, resetTokenExpiry: true, createdAt: true, updatedAt: true });
+}).omit({ 
+  id: true, 
+  resetToken: true, 
+  resetTokenExpiry: true, 
+  createdAt: true, 
+  updatedAt: true,
+  mfaEnabled: true,
+  mfaType: true,
+  mfaSecret: true,
+  phoneNumber: true,
+  backupCodes: true
+});
 
 export const insertStoreSchema = createInsertSchema(stores, {
   name: z.string().min(1, "店舗名を入力してください"),
