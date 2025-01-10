@@ -44,22 +44,22 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<stri
 
   // 初期化：すべての商品の数量を0に設定
   const quantities: Record<string, number> = {
-    [REVONIZER_PRODUCTS.FIRST_UNIT.productId]: 0,
-    [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId]: 0,
-    [REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId]: 0,
+    [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 0,
+    [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]: 0,
+    [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
   };
 
   // 1台目は必ずFIRST_UNITを使用
-  quantities[REVONIZER_PRODUCTS.FIRST_UNIT.productId] = 1;
+  quantities[REVONIZER_PRODUCTS.FIRST_UNIT.priceId] = 1;
 
   if (totalQuantity > 1) {
     // 2-4台目はSECOND_TO_FOURTHを使用
     const secondToFourthCount = Math.min(totalQuantity - 1, 3);
-    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId] = secondToFourthCount;
+    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
 
     // 5台目以降はFIFTH_AND_MOREを使用
     if (totalQuantity > 4) {
-      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId] = totalQuantity - 4;
+      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = totalQuantity - 4;
     }
   }
 
@@ -75,19 +75,16 @@ export function calculateTotalQuantityFromItems(items: Array<{
 
   // 各レボナイザー商品の数量を合算
   const firstUnit = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.FIRST_UNIT.productId ||
     item.subscription_item_id === REVONIZER_PRODUCTS.FIRST_UNIT.priceId
   );
   if (firstUnit) total += firstUnit.quantity;
 
   const secondToFourth = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId ||
     item.subscription_item_id === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId
   );
   if (secondToFourth) total += secondToFourth.quantity;
 
   const fifthAndMore = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId ||
     item.subscription_item_id === REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
   );
   if (fifthAndMore) total += fifthAndMore.quantity;
