@@ -12,10 +12,10 @@ type StripePaymentHistory = {
   id: string;
   amount: number;
   currency: string;
-  status: string;
+  status: string; // Added
   created: number;
   invoice_pdf: string | null;
-  hosted_invoice_url: string | null;
+  hosted_invoice_url: string | null; // Added
 };
 
 type StripeCustomerData = {
