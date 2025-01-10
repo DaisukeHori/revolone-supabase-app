@@ -16,6 +16,11 @@ import { useQueryClient } from "@tanstack/react-query";
 const editProfileSchema = z.object({
   username: z.string().min(3, "ユーザー名は3文字以上である必要があります"),
   email: z.string().email("メールアドレスの形式が正しくありません"),
+  phoneNumber: z
+    .string()
+    .regex(/^\+[1-9]\d{1,14}$/, "国際電話形式で入力してください（例：+818012345678）")
+    .optional()
+    .or(z.literal('')),
 });
 
 type FormData = z.infer<typeof editProfileSchema>;
@@ -32,6 +37,7 @@ export default function EditProfilePage() {
     defaultValues: {
       username: user?.username || "",
       email: user?.email || "",
+      phoneNumber: user?.phoneNumber || "",
     },
   });
 
@@ -127,6 +133,27 @@ export default function EditProfilePage() {
                         className="bg-background/80 border-primary/20 focus:border-primary/40"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground/90">電話番号</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="+818012345678"
+                        className="bg-background/80 border-primary/20 focus:border-primary/40"
+                      />
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      国際電話形式で入力してください（例：+818012345678）
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
