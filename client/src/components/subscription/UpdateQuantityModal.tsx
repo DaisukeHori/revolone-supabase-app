@@ -73,12 +73,23 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
 
   const handleNext = () => {
     if (step === 1) {
-      setStep(2);
+      // レボナイザー以外の商品が存在しない場合は、直接確認画面へ
+      const hasNonRevonizerItems = items.some(item => !isRevonizerProduct(item.subscription_item_id));
+      if (hasNonRevonizerItems) {
+        setStep(2);
+      } else {
+        const quantities = {};
+        const revonizerItems = filterRevonizerItems(items);
+        revonizerItems.forEach(item => {
+          quantities[item.subscription_item_id] = totalRevonizerQuantity;
+        });
+        onConfirm(quantities);
+      }
     } else {
       // レボナイザー以外の商品の数量をそのまま使用
       const quantities = { ...otherQuantities };
 
-      // レボナイザー商品の数量を計算して追加
+      // レボナイザー商品の数量を設定
       const revonizerItems = filterRevonizerItems(items);
       revonizerItems.forEach(item => {
         quantities[item.subscription_item_id] = totalRevonizerQuantity;
@@ -87,6 +98,9 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
       onConfirm(quantities);
     }
   };
+
+  // レボナイザー以外の商品があるかどうかを確認
+  const hasNonRevonizerItems = items.some(item => !isRevonizerProduct(item.subscription_item_id));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -161,7 +175,10 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
             キャンセル
           </Button>
           <Button onClick={handleNext}>
-            {step === 1 ? "次へ" : "変更内容を確認"}
+            {step === 1 
+              ? (hasNonRevonizerItems ? "次へ" : "変更内容を確認")
+              : "変更内容を確認"
+            }
           </Button>
         </div>
       </DialogContent>
