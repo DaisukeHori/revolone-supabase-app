@@ -36,9 +36,9 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   const [step, setStep] = useState(1);
 
   // レボナイザーの合計台数（現在の契約台数を初期値として計算）
-  const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(
-    calculateTotalQuantityFromItems(filterRevonizerItems(items))
-  );
+  const revonizerItems = filterRevonizerItems(items);
+  const currentTotalQuantity = calculateTotalQuantityFromItems(revonizerItems);
+  const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState(currentTotalQuantity);
 
   // その他の商品の数量
   const [otherQuantities, setOtherQuantities] = useState<Record<string, number>>({});
@@ -124,7 +124,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
               <div className="col-span-2">
                 <h3 className="font-medium">レボナイザー（合計台数）</h3>
                 <p className="text-sm text-muted-foreground">
-                  現在の契約台数: {calculateTotalQuantityFromItems(filterRevonizerItems(items))}台
+                  現在の契約台数: {currentTotalQuantity}台
                 </p>
               </div>
               <div className="col-span-2">

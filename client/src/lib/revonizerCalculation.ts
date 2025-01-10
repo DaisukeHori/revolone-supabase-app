@@ -25,15 +25,12 @@ export const REVONIZER_PRODUCTS = {
 
 // レボナイザー商品かどうかを判定する関数
 export function isRevonizerProduct(id: string): boolean {
-  const revonizerIds = [
-    REVONIZER_PRODUCTS.FIRST_UNIT.productId,
+  const priceIds = [
     REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
-    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId,
     REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
-    REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId,
     REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
   ];
-  return revonizerIds.includes(id);
+  return priceIds.includes(id);
 }
 
 // 合計台数から各商品の必要数量を計算する関数
@@ -74,20 +71,11 @@ export function calculateTotalQuantityFromItems(items: Array<{
   let total = 0;
 
   // 各レボナイザー商品の数量を合算
-  const firstUnit = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.FIRST_UNIT.priceId
-  );
-  if (firstUnit) total += firstUnit.quantity;
-
-  const secondToFourth = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId
-  );
-  if (secondToFourth) total += secondToFourth.quantity;
-
-  const fifthAndMore = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
-  );
-  if (fifthAndMore) total += fifthAndMore.quantity;
+  items.forEach(item => {
+    if (isRevonizerProduct(item.subscription_item_id)) {
+      total += item.quantity;
+    }
+  });
 
   return total;
 }
