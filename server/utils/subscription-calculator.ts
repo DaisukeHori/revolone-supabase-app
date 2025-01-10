@@ -1,29 +1,4 @@
-type PriceLevel = {
-  productId: string;
-  priceId: string;
-  minQuantity: number;
-  maxQuantity?: number;
-};
-
-export const REVONAIZER_PRICES: PriceLevel[] = [
-  {
-    productId: 'prod_OkRTix5Mimwc9p',
-    priceId: 'price_1NwwacAPdno01lSPWH92pzrl',
-    minQuantity: 1,
-    maxQuantity: 1,
-  },
-  {
-    productId: 'prod_P0DB3wRLVlz8GV',
-    priceId: 'price_1OCCkvAPdno01lSP44FyPiZ3',
-    minQuantity: 2,
-    maxQuantity: 4,
-  },
-  {
-    productId: 'prod_P1IWo9CT6gNkX2',
-    priceId: 'price_1OED1uAPdno01lSP3UESyV7C',
-    minQuantity: 5,
-  },
-];
+import { REVONAIZER_PRICES } from './subscription-config';
 
 export interface SubscriptionQuantity {
   priceId: string;
@@ -37,7 +12,7 @@ export function calculateQuantities(totalQuantity: number): SubscriptionQuantity
   const quantities: SubscriptionQuantity[] = [];
   let remainingQuantity = totalQuantity;
 
-  // 最初の1台は必ずprod_OkRTix5Mimwc9p
+  // 最初の1台は必ずprice_1NwwacAPdno01lSPWH92pzrl
   if (remainingQuantity >= 1) {
     quantities.push({
       priceId: REVONAIZER_PRICES[0].priceId,
@@ -46,7 +21,7 @@ export function calculateQuantities(totalQuantity: number): SubscriptionQuantity
     remainingQuantity -= 1;
   }
 
-  // 2-4台目はprod_P0DB3wRLVlz8GV
+  // 2-4台目はprice_1OCCkvAPdno01lSP44FyPiZ3
   if (remainingQuantity > 0) {
     const secondTierQuantity = Math.min(remainingQuantity, 3); // 最大3台まで
     quantities.push({
@@ -56,7 +31,7 @@ export function calculateQuantities(totalQuantity: number): SubscriptionQuantity
     remainingQuantity -= secondTierQuantity;
   }
 
-  // 5台目以降はprod_P1IWo9CT6gNkX2
+  // 5台目以降はprice_1OED1uAPdno01lSP3UESyV7C
   if (remainingQuantity > 0) {
     quantities.push({
       priceId: REVONAIZER_PRICES[2].priceId,

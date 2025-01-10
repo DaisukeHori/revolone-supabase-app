@@ -286,7 +286,25 @@ function ConfirmUpdateDialog({
     return updatedQuantities[itemId] !== item.quantity;
   });
 
-  // 合計金額の計算（全商品の合計）
+  // レボナイザー関連の商品とその他の商品を分類
+  const revonizerItems = items.filter(item =>
+    item.product.name.includes('レボナイザー')
+  );
+  const otherItems = items.filter(item =>
+    !item.product.name.includes('レボナイザー')
+  );
+
+  // レボナイザーの現在の合計台数と更新後の合計台数を計算
+  const currentRevonizerTotal = revonizerItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+  const updatedRevonizerTotal = revonizerItems.reduce(
+    (total, item) => total + (updatedQuantities[item.subscription_item_id] || item.quantity),
+    0
+  );
+
+  // 合計金額の計算
   const totalAmount = items.reduce((total, item) => {
     const itemId = item.subscription_item_id;
     const quantity = updatedQuantities[itemId] || item.quantity;
@@ -299,85 +317,130 @@ function ConfirmUpdateDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader>
           <DialogTitle>変更内容の確認</DialogTitle>
           <DialogDescription>
             以下の内容で更新します。更新後、次回の請求から反映されます。
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto pr-6 -mr-6">
-          <div className="space-y-6 pb-2">
-            <div className="space-y-4">
-              {items.map((item) => {
-                const itemId = item.subscription_item_id;
-                const updatedQuantity = updatedQuantities[itemId] || item.quantity;
-                const hasChanged = updatedQuantity !== item.quantity;
+        <div className="space-y-6 py-4">
+          {/* レボナイザーの合計台数変更の表示 */}
+          <div className="p-4 bg-primary/5 rounded-lg">
+            <h3 className="text-lg font-medium mb-2">レボナイザー利用台数</h3>
+            <div className="text-lg font-medium text-primary">
+              {currentRevonizerTotal}台 → {updatedRevonizerTotal}台
+            </div>
+          </div>
 
-                return (
-                  <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-lg">{item.product.name}</h4>
-                        {item.product.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {item.product.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CreditCard className="h-4 w-4" />
-                          <span>
-                            {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">
-                          {hasChanged ? (
-                            <span className="text-primary">
-                              {item.quantity}台 → {updatedQuantity}台
-                            </span>
-                          ) : (
-                            <span>{item.quantity}台</span>
-                          )}
-                        </div>
-                        {item.amount && (
-                          <div className="text-sm text-muted-foreground">
-                            小計: {(updatedQuantity * item.amount).toLocaleString()} {item.currency.toUpperCase()}
-                          </div>
-                        )}
+          {/* レボナイザーの商品内訳 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">レボナイザー商品内訳</h3>
+            {revonizerItems.map((item) => {
+              const itemId = item.subscription_item_id;
+              const updatedQuantity = updatedQuantities[itemId] || item.quantity;
+              const hasChanged = updatedQuantity !== item.quantity;
+
+              return (
+                <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-lg">{item.product.name}</h4>
+                      {item.product.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {item.product.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CreditCard className="h-4 w-4" />
+                        <span>
+                          {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                        </span>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {hasChanged ? (
+                          <span className="text-primary">
+                            {item.quantity}台 → {updatedQuantity}台
+                          </span>
+                        ) : (
+                          <span>{item.quantity}台</span>
+                        )}
+                      </div>
+                      {item.amount && (
+                        <div className="text-sm text-muted-foreground">
+                          小計: {(updatedQuantity * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
-              <div className="pt-4 border-t border-primary/10">
-                <div className="flex justify-between items-center">
-                  <p className="font-medium">次回請求額（合計）</p>
-                  <p className="font-medium text-lg">
-                    {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
-                  </p>
                 </div>
-              </div>
-            </div>
+              );
+            })}
+          </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                disabled={isUpdating}
-              >
-                キャンセル
-              </Button>
-              <Button
-                onClick={onConfirm}
-                disabled={isUpdating || changedItems.length === 0}
-              >
-                {isUpdating ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                更新する
-              </Button>
+          {/* その他の商品 */}
+          {otherItems.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">その他のサブスクリプション</h3>
+              {otherItems.map((item) => (
+                <div key={item.subscription_item_id} className="p-4 bg-primary/5 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-lg">{item.product.name}</h4>
+                      {item.product.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {item.product.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CreditCard className="h-4 w-4" />
+                        <span>
+                          {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">{item.quantity}台</div>
+                      {item.amount && (
+                        <div className="text-sm text-muted-foreground">
+                          小計: {(item.quantity * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
+          )}
+
+          {/* 合計金額表示 */}
+          <div className="pt-4 border-t border-primary/10">
+            <div className="flex justify-between items-center">
+              <p className="font-medium">次回請求額（合計）</p>
+              <p className="font-medium text-lg">
+                {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isUpdating}
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={onConfirm}
+              disabled={isUpdating || changedItems.length === 0}
+            >
+              {isUpdating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              更新する
+            </Button>
           </div>
         </div>
       </DialogContent>
