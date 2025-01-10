@@ -8,11 +8,10 @@ import { setupMFARoutes } from "./mfa";
 export function registerRoutes(app: Express): Server {
   // 認証関連のルートを設定
   setupAuth(app);
-  // Stripe関連のルートを設定
+
+  // その他のルートを設定
   setupStripeRoutes(app);
-  // 店舗管理関連のルートを設定
   setupStoreRoutes(app);
-  // MFA関連のルートを設定
   setupMFARoutes(app);
 
   const httpServer = createServer(app);

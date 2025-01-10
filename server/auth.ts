@@ -2,7 +2,6 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
-import type { SessionData } from 'express-session';
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -14,11 +13,24 @@ import { sendMail, generatePasswordResetEmail, generateVerificationEmail } from 
 import speakeasy from "speakeasy";
 import twilio from "twilio";
 
-// Passportの型定義を拡張
+declare module 'express-session' {
+  interface SessionData {
+    mfaPendingUserId?: number;
+  }
+}
+
 declare module 'passport-local' {
   interface IVerifyOptions {
     message?: string;
     needsEmailVerification?: boolean;
+  }
+}
+
+declare global {
+  namespace Express {
+    interface User extends SelectUser {
+      requiresMFA?: boolean;
+    }
   }
 }
 
@@ -40,22 +52,6 @@ const crypto = {
     return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
   },
 };
-
-// セッションにMFA関連のデータを追加
-declare module 'express-session' {
-  interface SessionData {
-    mfaPendingUserId?: number;
-  }
-}
-
-// Express.Userに認証関連のフラグを追加
-declare global {
-  namespace Express {
-    interface User extends SelectUser {
-      requiresMFA?: boolean;
-    }
-  }
-}
 
 export const updateProfileSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません"),
