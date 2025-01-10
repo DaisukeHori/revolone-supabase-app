@@ -39,6 +39,11 @@ declare global {
 export const updateProfileSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません"),
   username: z.string().min(3, "ユーザー名は3文字以上である必要があります"),
+  phoneNumber: z
+    .string()
+    .regex(/^\+[1-9]\d{1,14}$/, "国際電話形式で入力してください（例：+818012345678）")
+    .optional()
+    .or(z.literal('')),
 });
 
 export const changePasswordSchema = z.object({
@@ -298,7 +303,7 @@ export function setupAuth(app: Express) {
       });
     }
 
-    const { email, username } = result.data;
+    const { email, username, phoneNumber } = result.data;
 
     try {
       // メールアドレスの重複チェック
@@ -337,6 +342,7 @@ export function setupAuth(app: Express) {
         .set({
           email,
           username,
+          phoneNumber,
           updatedAt: new Date(),
         })
         .where(eq(users.id, req.user.id))
@@ -345,6 +351,7 @@ export function setupAuth(app: Express) {
       // セッション内のユーザー情報も更新
       req.user.email = updatedUser.email;
       req.user.username = updatedUser.username;
+      req.user.phoneNumber = updatedUser.phoneNumber;
 
       res.json({ 
         message: "プロフィールを更新しました",
@@ -352,6 +359,7 @@ export function setupAuth(app: Express) {
           id: updatedUser.id,
           username: updatedUser.username,
           email: updatedUser.email,
+          phoneNumber: updatedUser.phoneNumber,
         }
       });
     } catch (error) {
