@@ -68,6 +68,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
     }
   };
 
+  // 2段階認証が必要な場合、認証コード入力フォームを表示
   if (mfaRequired.required) {
     return (
       <div className="space-y-4">
@@ -77,7 +78,10 @@ export function LoginForm({ onComplete }: LoginFormProps) {
             ? '登録された電話番号にSMSで送信された認証コードを入力してください'
             : '認証アプリに表示される認証コードを入力してください'}
         </p>
-        <MFAVerificationForm onComplete={onComplete} mfaType={mfaRequired.type || 'sms'} />
+        <MFAVerificationForm 
+          onComplete={onComplete} 
+          mfaType={mfaRequired.type || 'sms'} 
+        />
       </div>
     );
   }

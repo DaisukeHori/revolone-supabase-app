@@ -16,6 +16,7 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
+import { LoginForm } from "./LoginForm";
 
 type FormData = {
   email: string;
@@ -26,7 +27,7 @@ type FormData = {
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { login, register } = useUser();
+  const { register } = useUser();
   const [, setLocation] = useLocation();
 
   const form = useForm<FormData>({
@@ -41,31 +42,49 @@ export function AuthForm() {
     },
   });
 
+  const onLoginComplete = () => {
+    setLocation("/");
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       setError(null);
-      if (isLogin) {
-        const result = await login({
-          email: data.email,
-          password: data.password,
-          username: "" // ログイン時は不要だが型のために空文字を設定
-        });
-        if (!result.ok) {
-          setError(result.message);
-          return;
-        }
-      } else {
+      if (!isLogin) {
         const result = await register(data);
         if (!result.ok) {
           setError(result.message);
           return;
         }
+        // 登録成功後は自動的にログインページに遷移
+        setIsLogin(true);
+        form.reset();
+        return;
       }
     } catch (error) {
       setError("予期せぬエラーが発生しました");
       console.error(error);
     }
   };
+
+  if (isLogin) {
+    return (
+      <div className="space-y-4">
+        <LoginForm onComplete={onLoginComplete} />
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+          onClick={() => {
+            setError(null);
+            setIsLogin(false);
+            form.reset();
+          }}
+        >
+          アカウントをお持ちでない方はこちら
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
@@ -94,25 +113,23 @@ export function AuthForm() {
           )}
         />
 
-        {!isLogin && (
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-foreground/90">ユーザー名</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="ユーザー名" 
-                    {...field} 
-                    className="bg-background/80 border-primary/20 focus:border-primary/40"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-foreground/90">ユーザー名</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="ユーザー名" 
+                  {...field} 
+                  className="bg-background/80 border-primary/20 focus:border-primary/40"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -133,17 +150,6 @@ export function AuthForm() {
           )}
         />
 
-        {isLogin && (
-          <Button
-            type="button"
-            variant="link"
-            className="px-0 text-sm text-muted-foreground hover:text-primary transition-colors"
-            onClick={() => setLocation("/reset-password")}
-          >
-            パスワードをお忘れの方はこちら
-          </Button>
-        )}
-
         <Button
           type="submit"
           className="w-full bg-primary/90 hover:bg-primary transition-colors"
@@ -151,8 +157,6 @@ export function AuthForm() {
         >
           {form.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : isLogin ? (
-            "ログイン"
           ) : (
             "登録"
           )}
@@ -164,13 +168,11 @@ export function AuthForm() {
           className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
           onClick={() => {
             setError(null);
-            setIsLogin(!isLogin);
+            setIsLogin(true);
             form.reset();
           }}
         >
-          {isLogin
-            ? "アカウントをお持ちでない方はこちら"
-            : "既にアカウントをお持ちの方はこちら"}
+          既にアカウントをお持ちの方はこちら
         </Button>
       </form>
     </Form>
