@@ -54,6 +54,16 @@ type StripeSubscription = {
   }[];
 };
 
+type StripeCustomerData = {
+  customer: {
+    id: string;
+    name: string | null;
+    email: string;
+    metadata: Record<string, string>;
+  };
+  subscriptions: StripeSubscription[];
+};
+
 function PaymentForm({ onComplete, isSubscriptionPayment = false }: { onComplete: () => void, isSubscriptionPayment?: boolean }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -87,13 +97,15 @@ function PaymentForm({ onComplete, isSubscriptionPayment = false }: { onComplete
         return;
       }
 
-      // デフォルトの支払い方法として設定
+      const subscriptionId = isSubscriptionPayment ? window.location.pathname.split("/subscription/")[1] : undefined;
+      console.log('Setting up payment method for subscription:', subscriptionId);
+
       const response = await fetch('/api/stripe/set-default-payment-method', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentMethodId: setupIntent.payment_method,
-          subscriptionId: isSubscriptionPayment ? window.location.pathname.split("/").pop() : undefined
+          subscriptionId
         }),
         credentials: 'include',
       });
@@ -148,16 +160,29 @@ export default function BillingSettingsPage() {
   const [publishableKey, setPublishableKey] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const subscriptionId = window.location.pathname.split("/").pop();
   const isSubscriptionPayment = window.location.pathname.includes("/subscription/");
+  const subscriptionId = isSubscriptionPayment ? window.location.pathname.split("/subscription/")[1] : undefined;
 
-  // サブスクリプション情報を取得
-  const { data: subscriptionData } = useQuery<{ subscriptions: StripeSubscription[] }>({
+  const { data: stripeData, isLoading: isLoadingStripeData } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
-    enabled: isSubscriptionPayment,
+    staleTime: 0,
+    retry: false,
   });
 
-  const subscription = subscriptionData?.subscriptions.find(sub => sub.id === subscriptionId);
+  // データ取得のデバッグ
+  console.log('Current path:', window.location.pathname);
+  console.log('Is subscription payment:', isSubscriptionPayment);
+  console.log('Subscription ID:', subscriptionId);
+  console.log('Stripe data:', stripeData);
+
+  const customerData = stripeData?.[0];
+  console.log('Customer data:', customerData);
+
+  const subscription = isSubscriptionPayment && customerData?.subscriptions
+    ? customerData.subscriptions.find(sub => sub.id === subscriptionId)
+    : undefined;
+
+  console.log('Subscription:', subscription);
 
   useEffect(() => {
     async function initializeStripe() {
@@ -185,11 +210,33 @@ export default function BillingSettingsPage() {
     initializeStripe();
   }, []);
 
+  if (isLoadingStripeData) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (error) {
     return (
       <AppLayout>
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
+
+  if (isSubscriptionPayment && !subscription) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertDescription>
+            指定されたサブスクリプションが見つかりません
+          </AlertDescription>
         </Alert>
       </AppLayout>
     );
