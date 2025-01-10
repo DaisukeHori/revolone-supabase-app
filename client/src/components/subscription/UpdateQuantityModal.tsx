@@ -9,7 +9,7 @@ import { REVONIZER } from '@/lib/constants';
 
 type SubscriptionItem = {
   subscription_item_id: string;
-  amount: number;
+  amount: number | null;
   currency: string;
   interval: string;
   quantity: number;
@@ -131,19 +131,22 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
     switch (currentStep) {
       case 'revonizer':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="revonizer-quantity">
-                レボナイザーの希望台数を入力してください
-              </Label>
-              <Input
-                id="revonizer-quantity"
-                type="number"
-                min="0"
-                value={totalRevonizerQuantity}
-                onChange={(e) => setTotalRevonizerQuantity(Number(e.target.value))}
-                className="w-full"
-              />
+              <p className="text-sm text-muted-foreground">現在の台数: {totalRevonizerQuantity}台</p>
+              <div className="space-y-2">
+                <Label htmlFor="revonizer-quantity">
+                  レボナイザーの希望台数を入力してください
+                </Label>
+                <Input
+                  id="revonizer-quantity"
+                  type="number"
+                  min="0"
+                  value={totalRevonizerQuantity}
+                  onChange={(e) => setTotalRevonizerQuantity(Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
             </div>
 
             <DialogFooter>
@@ -236,7 +239,7 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
               <h3 className="font-medium">レボナイザー</h3>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  合計台数: {totalRevonizerQuantity}台
+                  希望台数: {totalRevonizerQuantity}台
                 </p>
                 <div className="space-y-1">
                   {calculatedQuantities.single > 0 && (
