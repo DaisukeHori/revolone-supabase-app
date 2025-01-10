@@ -206,63 +206,67 @@ function UpdateQuantityModal({
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [totalRevoQuantity, setTotalRevoQuantity] = useState<number>(0);
 
+  // 初期化時に現在のレボナイザー数量を計算
   useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
     const initialQuantities: Record<string, number> = {};
+    const revoProducts = items.filter(item => isRevonaizer(item.product.id));
+    const otherProducts = items.filter(item => !isRevonaizer(item.product.id));
 
     // レボナイザー製品の合計数を計算
     const revoTotal = getTotalQuantityFromProducts(items);
     setTotalRevoQuantity(revoTotal);
 
-    items.forEach((item) => {
-      const itemId = item.subscription_item_id;
-      console.log(`[UpdateQuantityModal] Processing item:`, {
-        id: itemId,
-        name: item.product.name,
-        quantity: item.quantity
-      });
-      initialQuantities[itemId] = item.quantity;
+    // レボナイザー製品の現在の数量を設定
+    const currentRevoQuantities = calculateProductQuantities(revoTotal);
+    revoProducts.forEach(item => {
+      const tier = Object.entries(REVONAIZER_PRODUCTS).find(
+        ([_, config]) => config.product_id === item.product.id
+      )?.[0];
+      if (tier) {
+        const tierKey = tier as keyof typeof REVONAIZER_PRODUCTS;
+        initialQuantities[item.subscription_item_id] = currentRevoQuantities[tierKey] || 0;
+      }
     });
-    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
+
+    // その他の製品の数量を設定
+    otherProducts.forEach(item => {
+      initialQuantities[item.subscription_item_id] = item.quantity;
+    });
+
     setQuantities(initialQuantities);
   }, [items, isOpen]);
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
-    console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
+    const item = items.find(i => i.subscription_item_id === itemId);
+    if (!item) return;
 
-    // レボナイザー製品の場合は特別な処理
-    const isRevoItem = items.some(item =>
-      isRevonaizer(item.product.id) && item.subscription_item_id === itemId
-    );
+    const isRevoProduct = isRevonaizer(item.product.id);
 
-    if (isRevoItem) {
-      try {
-        const newQuantities = calculateProductQuantities(quantity);
-        setTotalRevoQuantity(quantity);
-        // ここで新しい数量を設定
-        items.forEach(item => {
-          if (isRevonaizer(item.product.id)) {
-            const tier = Object.entries(REVONAIZER_PRODUCTS).find(
-              ([_, config]) => config.product_id === item.product.id
-            )?.[0];
-            if (tier) {
-              quantities[item.subscription_item_id] = newQuantities[tier as keyof typeof REVONAIZER_PRODUCTS] || 0;
-            }
+    if (isRevoProduct) {
+      // レボナイザー製品の場合は全体の数量を更新
+      const newQuantities = calculateProductQuantities(quantity);
+      setTotalRevoQuantity(quantity);
+
+      // 各tierの数量を更新
+      const updatedQuantities = { ...quantities };
+      items.forEach(item => {
+        if (isRevonaizer(item.product.id)) {
+          const tier = Object.entries(REVONAIZER_PRODUCTS).find(
+            ([_, config]) => config.product_id === item.product.id
+          )?.[0];
+          if (tier) {
+            updatedQuantities[item.subscription_item_id] = newQuantities[tier as keyof typeof REVONAIZER_PRODUCTS] || 0;
           }
-        });
-      } catch (error) {
-        console.error('数量計算エラー:', error);
-        return;
-      }
+        }
+      });
+      setQuantities(updatedQuantities);
     } else {
-      // 通常の製品の場合は直接数量を設定
+      // 通常の製品の場合は直接数量を更新
       setQuantities(prev => ({
         ...prev,
         [itemId]: quantity
       }));
     }
-
-    console.log('[UpdateQuantityModal] Updated quantities:', quantities);
   };
 
   return (
@@ -275,22 +279,34 @@ function UpdateQuantityModal({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 pb-2">
-          {items.map((item) => {
+          {/* レボナイザー製品の表示（1つにまとめる） */}
+          {items.some(item => isRevonaizer(item.product.id)) && (
+            <div className="p-4 bg-primary/5 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h4 className="font-medium text-lg">レボナイザー</h4>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    <span>現在の台数: {totalRevoQuantity}台</span>
+                  </div>
+                </div>
+                <QuantityInput
+                  initialQuantity={totalRevoQuantity}
+                  onChange={(quantity) => {
+                    const firstRevoItem = items.find(item => isRevonaizer(item.product.id));
+                    if (firstRevoItem) {
+                      handleQuantityChange(firstRevoItem.subscription_item_id, quantity);
+                    }
+                  }}
+                  min={1}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* その他の製品の表示 */}
+          {items.filter(item => !isRevonaizer(item.product.id)).map((item) => {
             const itemId = item.subscription_item_id;
-            const isRevoProduct = isRevonaizer(item.product.id);
-
-            // レボナイザー製品の場合、最初の1つだけ表示
-            if (isRevoProduct && itemId !== items.find(i => isRevonaizer(i.product.id))?.subscription_item_id) {
-              return null;
-            }
-
-            console.log(`[UpdateQuantityModal] Rendering item:`, {
-              id: itemId,
-              name: item.product.name,
-              currentQuantity: isRevoProduct ? totalRevoQuantity : quantities[itemId],
-              originalQuantity: item.quantity
-            });
-
             return (
               <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
                 <div className="flex items-center justify-between">
@@ -309,9 +325,8 @@ function UpdateQuantityModal({
                     </div>
                   </div>
                   <QuantityInput
-                    key={`${itemId}-${isRevoProduct ? totalRevoQuantity : quantities[itemId]}`}
                     itemId={itemId}
-                    initialQuantity={isRevoProduct ? totalRevoQuantity : quantities[itemId] || item.quantity}
+                    initialQuantity={quantities[itemId] || item.quantity}
                     onChange={(quantity) => handleQuantityChange(itemId, quantity)}
                   />
                 </div>
@@ -966,23 +981,25 @@ function SubscriptionDetailPage() {
 
       await refetch();
       toast({
-        description: "プランの数量を更新しました",
+        description: "プランの数量を更新しました"
       });
 
       setUpdatedQuantities({});
+      setShowQuantityModal(false);
       setShowConfirmDialog(false);
+      setIsUpdating(false);
     } catch (error) {
       console.error('数量更新エラー:', error);
       toast({
         variant: "destructive",
-        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
       });
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const toggleAutoRenewalMutation = useMutation({
+const toggleAutoRenewalMutation = useMutation({
     mutationFn: async (subscriptionId: string) => {
       const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
         method: 'POST',
@@ -990,7 +1007,7 @@ function SubscriptionDetailPage() {
       });
       if (!response.ok) {
         throw new Error(await response.text());
-            }
+      }
       return response.json();
     },
     onSuccess: () => {

@@ -471,13 +471,13 @@ export function setupStripeRoutes(app: Express) {
 
       // レボナイザー製品の数量を更新
       if (revoItems.length > 0) {
+        // 合計数量を計算
         const totalQuantity = revoItems.reduce((sum, item) => sum + item.quantity, 0);
         const newQuantities = calculateProductQuantities(totalQuantity);
 
         // 既存のアイテムを更新または削除
         for (const item of subscription.items.data) {
-          if (typeof item.price.product === 'object' &&
-              isRevonaizerProduct(item.price.product.id)) {
+          if (typeof item.price.product === 'object' && isRevonaizerProduct(item.price.product.id)) {
             const newQuantity = newQuantities[item.price.product.id] || 0;
             if (newQuantity > 0) {
               await stripe.subscriptionItems.update(item.id, {
@@ -492,8 +492,7 @@ export function setupStripeRoutes(app: Express) {
         // 新しいアイテムを追加
         for (const [productId, quantity] of Object.entries(newQuantities)) {
           const existingItem = subscription.items.data.find(
-            item => typeof item.price.product === 'object' &&
-                   item.price.product.id === productId
+            item => typeof item.price.product === 'object' && item.price.product.id === productId
           );
 
           if (!existingItem && quantity > 0) {

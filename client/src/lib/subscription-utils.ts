@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 type ProductConfig = {
   price_id: string;
   product_id: string;
@@ -26,9 +28,7 @@ export const REVONAIZER_PRODUCTS = {
   },
 } as const;
 
-export type SubscriptionQuantities = {
-  [K in keyof typeof REVONAIZER_PRODUCTS]?: number;
-};
+export type SubscriptionQuantities = Partial<Record<keyof typeof REVONAIZER_PRODUCTS, number>>;
 
 export function calculateProductQuantities(totalQuantity: number): SubscriptionQuantities {
   if (totalQuantity < 1) {
@@ -60,15 +60,15 @@ export function calculateProductQuantities(totalQuantity: number): SubscriptionQ
 
 export function getTotalQuantityFromProducts(items: Array<{
   subscription_item_id: string;
-  product: { name: string };
+  product: { id: string };
   quantity: number;
 }>): number {
   let total = 0;
-  
+
   items.forEach(item => {
     // レボナイザー製品のIDと一致するものを集計
     if (Object.values(REVONAIZER_PRODUCTS).some(
-      product => item.subscription_item_id.includes(product.product_id)
+      product => product.product_id === item.product.id
     )) {
       total += item.quantity;
     }
