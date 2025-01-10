@@ -1,11 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-type Props = {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
 export function UpdateQuantityModal({ isOpen, onClose }: Props) {
   return (

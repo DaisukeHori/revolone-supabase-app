@@ -742,6 +742,8 @@ function SubscriptionDetailPage() {
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({}); // Added state for updated quantities
+
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
@@ -853,7 +855,6 @@ function SubscriptionDetailPage() {
   };
 
   const handleUpdateQuantities = async (quantities: Record<string, number>) => {
-    // setIsUpdating(true); // Removed as per intention
     try {
       const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
         method: 'POST',
@@ -883,8 +884,6 @@ function SubscriptionDetailPage() {
         variant: "destructive",
         description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
       });
-    } finally {
-      // setIsUpdating(false); // Removed as per intention
     }
   };
 
@@ -1181,14 +1180,13 @@ function SubscriptionDetailPage() {
         </motion.div>
 
         {/* モーダルの部分を修正 */}
-        {showQuantityModal && (
-          <UpdateQuantityModal
-            isOpen={showQuantityModal}
-            onClose={() => setShowQuantityModal(false)}
-            items={subscription?.items || []}
-            onConfirm={handleUpdateQuantities}
-          />
-        )}
+        <UpdateQuantityModal
+          isOpen={showQuantityModal}
+          onClose={() => setShowQuantityModal(false)}
+          items={subscription?.items || []}
+          onConfirm={handleUpdateQuantities}
+          subscriptionId={subscriptionId}
+        />
       </div>
     </AppLayout>
   );
