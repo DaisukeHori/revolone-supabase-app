@@ -49,54 +49,43 @@ app.use((req, res, next) => {
       const message = err.message || "予期せぬエラーが発生しました";
 
       res.status(status).json({ message });
+      throw err; // Explicitly throw the error for better handling
     });
 
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
     if (app.get("env") === "development") {
-      log('開発モードでViteを設定中...');
       await setupVite(app, server);
-      log('Viteの設定が完了しました');
     } else {
-      log('本番モードで静的ファイルを設定中...');
       serveStatic(app);
-      log('静的ファイルの設定が完了しました');
     }
 
-    const PORT = process.env.PORT || 5000;
-    log(`利用可能なポートを探索中... 開始ポート: ${PORT}`);
+    // ALWAYS serve the app on port 5000
+    // this serves both the API and the client
+    const PORT = 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`serving on port ${PORT}`);
+    });
 
-    const startServer = (port: number) => {
-      server.listen(port, "0.0.0.0", () => {
-        log(`サーバーが起動しました。ポート: ${port}`);
-      }).on('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'EADDRINUSE') {
-          log(`ポート ${port} は使用中です。次のポートを試行します...`);
-          startServer(port + 1);
-        } else {
-          console.error('サーバー起動エラー:', err);
-          process.exit(1);
-        }
+    // Graceful shutdown
+    const gracefulShutdown = (signal: string) => {
+      log(`${signal} received. サーバーをシャットダウンします...`);
+      server.close(() => {
+        log('サーバーを正常に終了しました。');
+        process.exit(0);
       });
 
-      // Graceful shutdown
-      process.on('SIGTERM', () => {
-        log('SIGTERM received. サーバーをシャットダウンします...');
-        server.close(() => {
-          log('サーバーを正常に終了しました。');
-          process.exit(0);
-        });
-      });
-
-      // 追加のシグナルハンドリング
-      process.on('SIGINT', () => {
-        log('SIGINT received. サーバーをシャットダウンします...');
-        server.close(() => {
-          log('サーバーを正常に終了しました。');
-          process.exit(0);
-        });
-      });
+      // 強制シャットダウンタイマー
+      setTimeout(() => {
+        log('強制シャットダウンを実行します...');
+        process.exit(1);
+      }, 10000);
     };
 
-    startServer(Number(PORT));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
   } catch (error) {
     console.error('アプリケーション起動エラー:', error);
     process.exit(1);

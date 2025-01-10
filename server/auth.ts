@@ -218,6 +218,83 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // ログイン時にメール認証済みかチェックを追加
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: { message?: string; needsEmailVerification?: boolean }) => {
+      if (err) {
+        return next(err);
+      }
+
+      if (!user) {
+        return res.status(400).json({ message: info.message ?? "ログインに失敗しました" });
+      }
+
+      // メール認証が済んでいない場合はログイン不可
+      if (!user.emailVerified) {
+        return res.status(403).json({
+          message: "メールアドレスの確認が必要です",
+          needsEmailVerification: true
+        });
+      }
+
+      // 2段階認証が必要な場合
+      if (user.requiresMFA) {
+        // SMS認証の場合、認証コードを送信
+        if (user.mfaType === 'sms' && user.phoneNumber) {
+          const verificationCode = Math.random().toString().slice(2, 8);
+          try {
+            const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+              ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+              : null;
+
+            if (twilioClient) {
+              await twilioClient.messages.create({
+                body: `【RevolOne】認証コード：${verificationCode}\n\nこちらの認証コードを入力してログインを完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
+                to: user.phoneNumber,
+                from: process.env.TWILIO_PHONE_NUMBER
+              });
+
+              // 認証コードを一時的に保存
+              await db
+                .update(users)
+                .set({
+                  mfaSecret: verificationCode,
+                  updatedAt: new Date(),
+                })
+                .where(eq(users.id, user.id));
+            }
+          } catch (error) {
+            console.error('SMS送信エラー:', error);
+            return res.status(500).json({ message: "認証コードの送信に失敗しました" });
+          }
+        }
+
+        // セッションに2段階認証待ちのユーザーIDを保存
+        req.session.mfaPendingUserId = user.id;
+        return res.status(403).json({
+          message: "2段階認証が必要です",
+          mfaType: user.mfaType
+        });
+      }
+
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+
+        return res.json({
+          message: "ログインしました",
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            phoneNumber: user.phoneNumber
+          },
+        });
+      });
+    })(req, res, next);
+  });
+
   // メール認証を行うエンドポイント
   app.get("/api/verify-email", async (req, res) => {
     const { token } = req.query;
@@ -327,84 +404,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // ログイン時にメール認証済みかチェックを追加
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: { message?: string; needsEmailVerification?: boolean }) => {
-      if (err) {
-        return next(err);
-      }
-
-      if (!user) {
-        return res.status(400).json({ message: info.message ?? "ログインに失敗しました" });
-      }
-
-      // メール認証が済んでいない場合はログイン不可
-      if (!user.emailVerified) {
-        return res.status(403).json({
-          message: "メールアドレスの確認が必要です",
-          needsEmailVerification: true
-        });
-      }
-
-      // 2段階認証が必要な場合
-      if (user.requiresMFA) {
-        // SMS認証の場合、認証コードを送信
-        if (user.mfaType === 'sms' && user.phoneNumber) {
-          const verificationCode = Math.random().toString().slice(2, 8);
-          try {
-            const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
-              ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-              : null;
-
-            if (twilioClient) {
-              await twilioClient.messages.create({
-                body: `【RevolOne】認証コード：${verificationCode}\n\nこちらの認証コードを入力してログインを完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
-                to: user.phoneNumber,
-                from: process.env.TWILIO_PHONE_NUMBER
-              });
-
-              // 認証コードを一時的に保存
-              await db
-                .update(users)
-                .set({
-                  mfaSecret: verificationCode,
-                  updatedAt: new Date(),
-                })
-                .where(eq(users.id, user.id));
-            }
-          } catch (error) {
-            console.error('SMS送信エラー:', error);
-            return res.status(500).json({ message: "認証コードの送信に失敗しました" });
-          }
-        }
-
-        // セッションに2段階認証待ちのユーザーIDを保存
-        req.session.mfaPendingUserId = user.id;
-        return res.status(403).json({
-          message: "2段階認証が必要です",
-          mfaType: user.mfaType
-        });
-      }
-
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-
-        return res.json({
-          message: "ログインしました",
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            phoneNumber: user.phoneNumber
-          },
-        });
-      });
-    })(req, res, next);
-  });
-
-  // その他のエンドポイントは変更なし
+  // ログアウトエンドポイント
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
@@ -414,6 +414,7 @@ export function setupAuth(app: Express) {
     });
   });
 
+  // 現在のユーザー情報を取得するエンドポイント
   app.get("/api/user", (req, res) => {
     if (req.isAuthenticated()) {
       return res.json(req.user);
@@ -421,6 +422,7 @@ export function setupAuth(app: Express) {
     res.status(401).json({ message: "ログインが必要です" });
   });
 
+  // パスワードリセットリクエストエンドポイント
   app.post("/api/request-reset", async (req, res) => {
     const { email } = req.body;
 
@@ -477,6 +479,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // パスワードリセットエンドポイント
   app.post("/api/reset-password", async (req, res) => {
     const { token, password } = req.body;
 
@@ -510,6 +513,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // プロフィール更新エンドポイント
   app.put("/api/user/profile", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -589,6 +593,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // パスワード変更エンドポイント
   app.post("/api/change-password", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -629,7 +634,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // 2段階認証の検証エンドポイント
+    // 2段階認証の検証エンドポイント
   app.post("/api/verify-mfa", async (req, res) => {
     const { code } = req.body;
     const userId = req.session.mfaPendingUserId;
