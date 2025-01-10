@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
   Receipt, History, Settings, CreditCard as CardIcon, RefreshCw,
-  CheckCircle, Ban, ExternalLink, Loader2
+  CheckCircle, Ban, ExternalLink, Loader2, Pencil, Store
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,26 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// フォームのスキーマ定義
+const storeFormSchema = z.object({
+  name: z.string().min(1, "店舗名を入力してください"),
+  address: z.string().min(1, "住所を入力してください"),
+  phoneNumber: z.string().min(1, "電話番号を入力してください"),
+});
+
+type StoreFormValues = z.infer<typeof storeFormSchema>;
 
 type StripeSubscription = {
   id: string;
@@ -67,7 +87,12 @@ type StripeCustomerData = {
     name: string | null;
     email: string;
     created: number;
-    metadata: Record<string, string>;
+    metadata: {
+      サロン名?: string;
+      住所?: string;
+      電話番号?: string;
+      [key: string]: string | undefined;
+    };
   };
   subscriptions: StripeSubscription[];
   payment_history: StripePaymentHistory[];
@@ -390,15 +415,15 @@ function SubscriptionDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const subscriptionId = window.location.pathname.split("/").pop();
-
-  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData>({
-    queryKey: ['/api/stripe/customer'],
-  });
-
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditingStore, setIsEditingStore] = useState(false);
+
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData>({
+    queryKey: ['/api/stripe/customer'],
+  });
 
   const handleUpdateQuantities = async () => {
     if (Object.keys(updatedQuantities).length === 0) {
@@ -555,6 +580,50 @@ function SubscriptionDetailPage() {
     }
   };
 
+  const handleUpdateStore = async (values: StoreFormValues) => {
+    if (!customer) return;
+
+    try {
+      const response = await fetch(`/api/stripe/customer/${customer.id}/metadata`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: {
+            サロン名: values.name,
+            住所: values.address,
+            電話番号: values.phoneNumber,
+          }
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "店舗情報を更新しました",
+      });
+      setIsEditingStore(false);
+    } catch (error) {
+      console.error('店舗情報更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "店舗情報の更新中にエラーが発生しました",
+      });
+    }
+  };
+
+  const form = useForm<StoreFormValues>({
+    resolver: zodResolver(storeFormSchema),
+    defaultValues: {
+      name: customer?.metadata?.サロン名 || '',
+      address: customer?.metadata?.住所 || '',
+      phoneNumber: customer?.metadata?.電話番号 || '',
+    }
+  });
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -569,6 +638,104 @@ function SubscriptionDetailPage() {
           </Button>
           <h1 className="text-2xl font-semibold">サブスクリプション詳細</h1>
         </div>
+
+        {/* 店舗情報カード */}
+        <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <Store className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">店舗情報</CardTitle>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditingStore(!isEditingStore)}
+                className="hover:bg-primary/10"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isEditingStore ? (
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleUpdateStore)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>店舗名</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="店舗名を入力" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>住所</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="住所を入力" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>電話番号</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="電話番号を入力" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditingStore(false)}
+                    >
+                      キャンセル
+                    </Button>
+                    <Button type="submit">
+                      保存
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">店舗名</div>
+                  <div className="text-lg">{customer?.metadata?.サロン名 || '未設定'}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">住所</div>
+                  <div className="text-lg">{customer?.metadata?.住所 || '未設定'}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
+                  <div className="text-lg">{customer?.metadata?.電話番号 || '未設定'}</div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
           <CardHeader>
@@ -594,37 +761,35 @@ function SubscriptionDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {customer && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">契約情報</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">契約者名</p>
-                    <p className="text-lg">{customer.metadata?.サロン名 || customer.name || '未設定'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">契約番号</p>
-                    <p className="text-lg font-mono">{subscription.id}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">契約開始日</p>
-                    <p className="text-lg">
-                      {new Date(customer.created * 1000).toLocaleDateString("ja-JP", {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">契約ステータス</p>
-                    <Badge className={`${getStatusBadgeColor(subscription.status)} mt-1`}>
-                      {formatStatus(subscription.status)}
-                    </Badge>
-                  </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">契約情報</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">契約者名</p>
+                  <p className="text-lg">{customer.metadata?.サロン名 || customer.name || '未設定'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">契約番号</p>
+                  <p className="text-lg font-mono">{subscription.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">契約開始日</p>
+                  <p className="text-lg">
+                    {new Date(customer.created * 1000).toLocaleDateString("ja-JP", {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">契約ステータス</p>
+                  <Badge className={`${getStatusBadgeColor(subscription.status)} mt-1`}>
+                    {formatStatus(subscription.status)}
+                  </Badge>
                 </div>
               </div>
-            )}
+            </div>
 
             <Separator />
 
