@@ -7,7 +7,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CreditCard } from "lucide-react";
 import { QuantityInput } from "@/components/ui/QuantityInput";
 import {
   isRevonizerProduct,
@@ -73,7 +72,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
 
   const handleNext = () => {
     if (step === 1) {
-      // レボナイザー以外の商品が存在しない場合は、直接確認画面へ
+      // レボナイザー以外の商品が存在しない場合は直接確認画面へ
       const hasNonRevonizerItems = items.some(item => !isRevonizerProduct(item.subscription_item_id));
       if (hasNonRevonizerItems) {
         setStep(2);
@@ -123,11 +122,6 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
               <div className="grid grid-cols-4 items-center gap-4">
                 <div className="col-span-2">
                   <h3 className="font-medium">レボナイザー（合計台数）</h3>
-                  {items[0]?.amount && (
-                    <p className="text-sm text-muted-foreground">
-                      {items[0].amount.toLocaleString()} {items[0].currency?.toUpperCase()} / {items[0].interval}
-                    </p>
-                  )}
                 </div>
                 <div className="col-span-2">
                   <QuantityInput
@@ -146,11 +140,6 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
                   <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
                     <div className="col-span-2">
                       <h3 className="font-medium">{item.product.name}</h3>
-                      {item.amount && (
-                        <p className="text-sm text-muted-foreground">
-                          {item.amount.toLocaleString()} {item.currency?.toUpperCase()} / {item.interval}
-                        </p>
-                      )}
                     </div>
                     <div className="col-span-2">
                       <QuantityInput

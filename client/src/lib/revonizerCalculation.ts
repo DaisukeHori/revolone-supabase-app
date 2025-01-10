@@ -24,10 +24,16 @@ export const REVONIZER_PRODUCTS = {
 } as const;
 
 // レボナイザー商品かどうかを判定する関数
-export function isRevonizerProduct(productId: string): boolean {
-  return Object.values(REVONIZER_PRODUCTS).some(
-    product => product.productId === productId || product.priceId === productId
-  );
+export function isRevonizerProduct(id: string): boolean {
+  const revonizerIds = [
+    REVONIZER_PRODUCTS.FIRST_UNIT.productId,
+    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
+    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId,
+    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId,
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
+  ];
+  return revonizerIds.includes(id);
 }
 
 // 合計台数から各商品の必要数量を計算する関数
