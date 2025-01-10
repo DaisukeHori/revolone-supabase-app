@@ -208,7 +208,7 @@ function UpdateQuantityModal({
       description: string | null;
     };
   }[];
-  onConfirm: () => void;
+  onConfirm: (quantities: Record<string, number>) => Promise<void>;
   subscriptionId: string | undefined;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -242,7 +242,7 @@ function UpdateQuantityModal({
   };
 
   const handleConfirm = () => {
-    onConfirm();
+    onConfirm(quantities);
     onClose();
   }
 
@@ -741,7 +741,6 @@ function SubscriptionDetailPage() {
   const queryClient = useQueryClient();
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
@@ -860,8 +859,40 @@ function SubscriptionDetailPage() {
     }
   };
 
-  const handleUpdateQuantities = async () => {
-    setShowQuantityModal(true);
+  const handleUpdateQuantities = async (quantities: Record<string, number>) => {
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: Object.entries(quantities).map(([id, quantity]) => ({
+            id,
+            quantity
+          }))
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "プランの数量を更新しました",
+      });
+
+      setUpdatedQuantities({});
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const toggleAutoRenewalMutation = useMutation({
@@ -1161,57 +1192,8 @@ function SubscriptionDetailPage() {
           onClose={() => setShowQuantityModal(false)}
           subscriptionId={subscriptionId}
           items={subscription?.items || []}
-          onConfirm={async () => {
-            setShowQuantityModal(false);
-            setShowConfirmDialog(true);
-          }}
+          onConfirm={handleUpdateQuantities}
         />
-
-        {showConfirmDialog && subscription && (
-          <ConfirmUpdateDialog
-            isOpen={showConfirmDialog}
-            onClose={() => setShowConfirmDialog(false)}
-            items={subscription.items}
-            updatedQuantities={updatedQuantities}
-            onConfirm={async () => {
-              setIsUpdating(true);
-              try {
-                const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
-                      id,
-                      quantity
-                    }))
-                  }),
-                  credentials: 'include',
-                });
-
-                if (!response.ok) {
-                  throw new Error(await response.text());
-                }
-
-                await refetch();
-                toast({
-                  description: "プランの数量を更新しました",
-                });
-
-                setUpdatedQuantities({});
-                setShowConfirmDialog(false);
-              } catch (error) {
-                console.error('数量更新エラー:', error);
-                toast({
-                  variant: "destructive",
-                  description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
-                });
-              } finally {
-                setIsUpdating(false);
-              }
-            }}
-            isUpdating={isUpdating}
-          />
-        )}
       </div>
     </AppLayout>
   );

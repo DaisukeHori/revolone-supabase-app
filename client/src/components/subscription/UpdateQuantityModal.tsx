@@ -1,9 +1,9 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { REVONIZER } from '@/lib/constants';
 import { useState, useEffect } from 'react';
 
@@ -24,13 +24,12 @@ type Props = {
   onClose: () => void;
   subscriptionId: string;
   items: SubscriptionItem[];
-  onConfirm: () => void;
+  onConfirm: (quantities: Record<string, number>) => void;
 };
 
 type Step = 'revonizer' | 'other_items' | 'confirm';
 
 export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, onConfirm }: Props) {
-  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('revonizer');
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(0);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -40,7 +39,7 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
     bulk: number;
   }>({ single: 0, medium: 0, bulk: 0 });
 
-  // モーダルが開かれたときの初期化
+  // モーダルが開かれた時の初期化
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('revonizer');
@@ -64,7 +63,7 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
     }
   }, [isOpen, items]);
 
-  // レボナイザーの台数変更時の処理
+  // レボナイザーの台数変更時にプラン別の数量を計算
   useEffect(() => {
     if (totalRevonizerQuantity <= 0) {
       setCalculatedQuantities({ single: 0, medium: 0, bulk: 0 });
@@ -94,12 +93,9 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
       case 'revonizer':
         return (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">現在の合計台数: {totalRevonizerQuantity}台</p>
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="revonizer-quantity">
-                  レボナイザーの希望台数を入力してください
-                </Label>
+                <Label htmlFor="revonizer-quantity">レボナイザーの希望台数</Label>
                 <Input
                   id="revonizer-quantity"
                   type="number"
@@ -108,21 +104,53 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
                   onChange={(e) => setTotalRevonizerQuantity(Number(e.target.value))}
                   className="w-full"
                 />
+                <p className="text-sm text-muted-foreground">
+                  現在の合計台数: {totalRevonizerQuantity}台
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">プランの自動計算結果：</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>標準プラン（1台目）</span>
+                    </div>
+                    <span>{calculatedQuantities.single}台</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>2-4台目用プラン</span>
+                    </div>
+                    <span>{calculatedQuantities.medium}台</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>5台目以降用プラン</span>
+                    </div>
+                    <span>{calculatedQuantities.bulk}台</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2">
+              <Button onClick={onClose} variant="outline">
+                キャンセル
+              </Button>
               <Button onClick={() => setCurrentStep('other_items')}>
                 次へ
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         );
 
       case 'other_items':
         return (
           <div className="space-y-6">
-            {/* レボナイザー関連商品の表示（変更不可） */}
             <div className="space-y-4">
               <h3 className="font-medium">レボナイザー関連商品（自動計算）</h3>
               <div className="space-y-2">
@@ -166,8 +194,8 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
                 if (isRevonizerProduct) return null;
 
                 return (
-                  <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor={item.subscription_item_id} className="col-span-2">
+                  <div key={item.subscription_item_id} className="space-y-2">
+                    <Label htmlFor={item.subscription_item_id}>
                       {item.product.name}
                     </Label>
                     <Input
@@ -176,21 +204,21 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
                       min="0"
                       value={quantities[item.subscription_item_id] || 0}
                       onChange={(e) => handleQuantityChange(item.subscription_item_id, Number(e.target.value))}
-                      className="col-span-2"
+                      className="w-full"
                     />
                   </div>
                 );
               })}
             </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCurrentStep('revonizer')}>
                 戻る
               </Button>
               <Button onClick={() => setCurrentStep('confirm')}>
-                変更内容を確認
+                内容を確認
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         );
 
@@ -244,17 +272,17 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
               })}
             </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCurrentStep('other_items')}>
                 戻る
               </Button>
               <Button onClick={() => {
-                onConfirm();
+                onConfirm(quantities);
                 onClose();
               }}>
                 確定する
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         );
     }
