@@ -37,6 +37,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { calculateProductQuantities, getTotalQuantityFromProducts, isRevonaizer, getQuantityDifference, REVONAIZER_PRODUCTS } from "@/lib/subscription-utils";
 
 
+
 // フォームのスキーマ定義を更新（必須バリデーションを削除）
 const storeFormSchema = z.object({
   name: z.string(),
@@ -353,13 +354,27 @@ function ConfirmUpdateDialog({
   onConfirm: () => Promise<void>;
   isUpdating: boolean;
 }) {
-  // 変更のある商品のみをフィルタリング
-  const changedItems = items.filter((item) => {
-    const itemId = item.subscription_item_id;
-    return updatedQuantities[itemId] !== item.quantity;
-  });
+  // レボナイザー製品の処理
+  const revoItems = items.filter(item =>
+    isRevonaizer(item.product.id)
+  );
 
-  // 合計金額の計算（全商品の合計）
+  // その他の製品の処理
+  const otherItems = items.filter(item =>
+    !isRevonaizer(item.product.id)
+  );
+
+  // レボナイザーの合計数量を計算
+  const currentRevoTotal = getTotalQuantityFromProducts(items);
+  const newRevoTotal = revoItems.length > 0
+    ? Object.entries(updatedQuantities)
+      .filter(([id]) => items.find(item =>
+        item.subscription_item_id === id && isRevonaizer(item.product.id)
+      ))
+      .reduce((sum, [_, qty]) => sum + qty, 0)
+    : 0;
+
+  // 合計金額の計算
   const totalAmount = items.reduce((total, item) => {
     const itemId = item.subscription_item_id;
     const quantity = updatedQuantities[itemId] || item.quantity;
@@ -380,35 +395,76 @@ function ConfirmUpdateDialog({
         </DialogHeader>
         <div className="overflow-y-auto pr-6 -mr-6">
           <div className="space-y-6 pb-2">
-            <div className="space-y-4">
-              {items.map((item) => {
-                const itemId = item.subscription_item_id;
-                const updatedQuantity = updatedQuantities[itemId];
-                const hasChanged = updatedQuantity !== item.quantity;
-
-                return (
-                  <div key={itemId} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{item.product.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.quantity}個 → {updatedQuantity || item.quantity}個
-                      </p>
-                    </div>
-                    {item.amount && (
-                      <p className="font-medium">
-                        {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="pt-4 border-t border-primary/10">
-                <div className="flex justify-between items-center">
-                  <p className="font-medium">次回請求額（合計）</p>
-                  <p className="font-medium text-lg">
-                    {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
-                  </p>
+            {/* レボナイザー製品の表示 */}
+            {revoItems.length > 0 && (
+              <div className="space-y-4">
+                <div className="font-medium text-lg border-b pb-2">
+                  レボナイザー
+                  <span className="text-sm font-normal ml-2">
+                    合計: {currentRevoTotal}台 → {newRevoTotal}台
+                  </span>
                 </div>
+                {Object.entries(REVONAIZER_PRODUCTS).map(([tier, config]) => {
+                  const item = items.find(i => i.product.id === config.product_id);
+                  if (!item) return null;
+
+                  const currentQty = item.quantity;
+                  const newQty = updatedQuantities[item.subscription_item_id] || 0;
+
+                  // 変更がない場合はスキップ
+                  if (currentQty === newQty) return null;
+
+                  return (
+                    <div key={tier} className="flex justify-between items-center pl-4">
+                      <div>
+                        <p className="font-medium">{item.product.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {currentQty}台 → {newQty}台
+                        </p>
+                      </div>
+                      {item.amount && (
+                        <p className="font-medium">
+                          {(newQty * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* その他の製品の表示 */}
+            {otherItems.map((item) => {
+              const itemId = item.subscription_item_id;
+              const currentQty = item.quantity;
+              const newQty = updatedQuantities[itemId] || currentQty;
+
+              // 変更がない場合はスキップ
+              if (currentQty === newQty) return null;
+
+              return (
+                <div key={itemId} className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">{item.product.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {currentQty}個 → {newQty}個
+                    </p>
+                  </div>
+                  {item.amount && (
+                    <p className="font-medium">
+                      {(newQty * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="pt-4 border-t border-primary/10">
+              <div className="flex justify-between items-center">
+                <p className="font-medium">次回請求額（合計）</p>
+                <p className="font-medium text-lg">
+                  {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
+                </p>
               </div>
             </div>
 
@@ -422,7 +478,7 @@ function ConfirmUpdateDialog({
               </Button>
               <Button
                 onClick={onConfirm}
-                disabled={isUpdating || changedItems.length === 0}
+                disabled={isUpdating}
               >
                 {isUpdating ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -934,7 +990,7 @@ function SubscriptionDetailPage() {
       });
       if (!response.ok) {
         throw new Error(await response.text());
-      }
+            }
       return response.json();
     },
     onSuccess: () => {
