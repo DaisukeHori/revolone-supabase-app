@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { QuantityInput } from "@/components/ui/QuantityInput";
 import {
   isRevonizerProduct,
+  calculateRevonizerQuantities,
   calculateTotalQuantityFromItems,
   filterRevonizerItems,
+  REVONIZER_PRODUCTS,
 } from "@/lib/revonizerCalculation";
 
 type SubscriptionItem = {
@@ -21,9 +23,6 @@ type SubscriptionItem = {
     description: string | null;
   };
   quantity: number;
-  amount?: number | null;
-  currency?: string;
-  interval?: string;
 };
 
 type Props = {
@@ -34,11 +33,9 @@ type Props = {
 };
 
 export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props) {
-  // Step 1: レボナイザーの台数設定
-  // Step 2: その他の商品の数量設定
   const [step, setStep] = useState(1);
 
-  // レボナイザー関連の商品の合計台数
+  // レボナイザーの合計台数
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(
     calculateTotalQuantityFromItems(filterRevonizerItems(items))
   );
@@ -77,21 +74,18 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
       if (hasNonRevonizerItems) {
         setStep(2);
       } else {
-        const quantities = {};
-        const revonizerItems = filterRevonizerItems(items);
-        revonizerItems.forEach(item => {
-          quantities[item.subscription_item_id] = totalRevonizerQuantity;
-        });
-        onConfirm(quantities);
+        setStep(3);
       }
+    } else if (step === 2) {
+      setStep(3);
     } else {
-      // レボナイザー以外の商品の数量をそのまま使用
+      // 確認画面で確定ボタンが押された場合
       const quantities = { ...otherQuantities };
 
-      // レボナイザー商品の数量を設定
-      const revonizerItems = filterRevonizerItems(items);
-      revonizerItems.forEach(item => {
-        quantities[item.subscription_item_id] = totalRevonizerQuantity;
+      // レボナイザー商品の数量を自動計算
+      const calculatedQuantities = calculateRevonizerQuantities(totalRevonizerQuantity);
+      Object.entries(calculatedQuantities).forEach(([productId, quantity]) => {
+        quantities[productId] = quantity;
       });
 
       onConfirm(quantities);
@@ -106,33 +100,39 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {step === 1 ? "レボナイザーの台数設定" : "その他の商品の数量設定"}
+            {step === 1 
+              ? "レボナイザーの台数設定" 
+              : step === 2 
+              ? "その他の商品の数量設定"
+              : "変更内容の確認"}
           </DialogTitle>
           <DialogDescription>
             {step === 1
               ? "レボナイザーの必要台数を入力してください"
-              : "その他の商品の数量を入力してください"}
+              : step === 2
+              ? "その他の商品の数量を入力してください"
+              : "以下の内容で変更を適用します"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {step === 1 ? (
-            // Step 1: レボナイザーの台数設定
-            filterRevonizerItems(items).length > 0 && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <div className="col-span-2">
-                  <h3 className="font-medium">レボナイザー（合計台数）</h3>
-                </div>
-                <div className="col-span-2">
-                  <QuantityInput
-                    initialQuantity={totalRevonizerQuantity}
-                    onChange={handleRevonizerQuantityChange}
-                    min={1}
-                  />
-                </div>
+          {step === 1 && (
+            // Step 1: レボナイザーの合計台数設定
+            <div className="grid grid-cols-4 items-center gap-4">
+              <div className="col-span-2">
+                <h3 className="font-medium">レボナイザー（合計台数）</h3>
               </div>
-            )
-          ) : (
+              <div className="col-span-2">
+                <QuantityInput
+                  initialQuantity={totalRevonizerQuantity}
+                  onChange={handleRevonizerQuantityChange}
+                  min={1}
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
             // Step 2: その他の商品の数量設定
             items.map(item => {
               if (!isRevonizerProduct(item.subscription_item_id)) {
@@ -157,6 +157,55 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
               return null;
             })
           )}
+
+          {step === 3 && (
+            // Step 3: 変更内容の確認
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="font-medium">レボナイザー利用ライセンス</h3>
+                <div className="space-y-1 text-sm">
+                  <p>合計: {totalRevonizerQuantity}台</p>
+                  <div className="pl-4 space-y-1 text-muted-foreground">
+                    <p>・基本ライセンス（1台目）: 1台</p>
+                    {totalRevonizerQuantity > 1 && (
+                      <p>・2-4台目: {Math.min(totalRevonizerQuantity - 1, 3)}台</p>
+                    )}
+                    {totalRevonizerQuantity > 4 && (
+                      <p>・5台目以降: {totalRevonizerQuantity - 4}台</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {hasNonRevonizerItems && (
+                <div className="space-y-2">
+                  <h3 className="font-medium">その他の商品</h3>
+                  {items.map(item => {
+                    if (!isRevonizerProduct(item.subscription_item_id)) {
+                      const newQuantity = otherQuantities[item.subscription_item_id];
+                      const quantityDiff = newQuantity - item.quantity;
+
+                      return (
+                        <div key={item.subscription_item_id} className="pl-4 space-y-1 text-sm">
+                          <p>{item.product.name}</p>
+                          <div className="pl-4 text-muted-foreground">
+                            <p>変更前: {item.quantity}個</p>
+                            <p>変更後: {newQuantity}個</p>
+                            {quantityDiff !== 0 && (
+                              <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
+                                {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3">
@@ -164,10 +213,11 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
             キャンセル
           </Button>
           <Button onClick={handleNext}>
-            {step === 1 
-              ? (hasNonRevonizerItems ? "次へ" : "変更内容を確認")
-              : "変更内容を確認"
-            }
+            {step === 3 
+              ? "変更を確定"
+              : hasNonRevonizerItems && step === 1 
+              ? "次へ" 
+              : "変更内容を確認"}
           </Button>
         </div>
       </DialogContent>
