@@ -1005,16 +1005,14 @@ function SubscriptionDetailPage() {
 
         {/* 店舗情報カード */}
         <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <Store className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl">店舗情報</CardTitle>
-                </div>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>店舗情報</CardTitle>
+              <CardDescription>
+                店舗情報、請求先住所、配送先住所の確認・編集
+              </CardDescription>
+            </div>
+            <div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -1055,6 +1053,17 @@ function SubscriptionDetailPage() {
               </div>
             </div>
           </CardContent>
+
+          {/* モーダルの呼び出し */}
+          {customer && (
+            <StoreEditModal
+              isOpen={isEditingStore}
+              onClose={() => setIsEditingStore(false)}
+              customer={customer}
+              onSubmit={handleUpdateStore}
+            />
+          )}
+
         </Card>
 
         <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
