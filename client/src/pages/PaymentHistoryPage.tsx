@@ -26,7 +26,7 @@ type StripeCustomerData = {
     metadata: Record<string, string>;
   };
   payment_history: StripePaymentHistory[];
-}[];
+};
 
 const container = {
   hidden: { opacity: 0 },
@@ -44,7 +44,8 @@ const item = {
 };
 
 function getStatusBadgeColor(status: string) {
-  switch (status) {
+  switch (status.toLowerCase()) {
+    case 'paid':
     case 'succeeded':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'pending':
@@ -59,7 +60,8 @@ function getStatusBadgeColor(status: string) {
 }
 
 function formatStatus(status: string) {
-  switch (status) {
+  switch (status.toLowerCase()) {
+    case 'paid':
     case 'succeeded':
       return '支払い完了';
     case 'pending':
@@ -75,7 +77,7 @@ function formatStatus(status: string) {
 
 export default function PaymentHistoryPage() {
   const [, setLocation] = useLocation();
-  const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData>({
+  const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
   });
 
@@ -134,10 +136,7 @@ export default function PaymentHistoryPage() {
               {customerData?.payment_history?.length > 0 ? (
                 <div className="space-y-4">
                   {customerData.payment_history.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="flex items-center justify-between py-4 border-b border-primary/10 last:border-0"
-                    >
+                    <div key={payment.id} className="flex justify-between items-center py-4 border-b border-primary/10 last:border-0">
                       <div className="space-y-1">
                         <p className="font-medium">
                           {payment.amount.toLocaleString()} {payment.currency.toUpperCase()}
@@ -151,9 +150,7 @@ export default function PaymentHistoryPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge
-                          className={getStatusBadgeColor(payment.status)}
-                        >
+                        <Badge className={getStatusBadgeColor(payment.status)}>
                           {formatStatus(payment.status)}
                         </Badge>
                         <div className="flex gap-2">
