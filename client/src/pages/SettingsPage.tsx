@@ -1,14 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { Bell, Moon, Mail, Shield, ArrowLeft } from "lucide-react";
+import { Bell, Moon, Shield, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useTheme } from "@/hooks/use-theme";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useUser } from "@/hooks/use-user";
+
+interface MFAStatus {
+  enabled: boolean;
+  type?: string;
+  phoneNumber?: string;
+}
 
 const container = {
   hidden: { opacity: 0 },
@@ -28,8 +38,126 @@ const item = {
 export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const { isDark, toggleTheme } = useTheme();
-  const [twoFactorAuth, setTwoFactorAuth] = useState(false);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
   const [, setLocation] = useLocation();
+  const { user } = useUser();
+
+  // MFA設定の取得
+  const { data: mfaStatus, isLoading, error, refetch } = useQuery<MFAStatus>({
+    queryKey: ['/api/mfa/status'],
+  });
+
+  // MFA有効化のミューテーション
+  const setupMFAMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/mfa/setup/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: user?.phoneNumber }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+  });
+
+  // SMS認証コードの検証
+  const verifySMSMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/mfa/verify/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: verificationCode }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+  });
+
+  // MFA無効化のミューテーション
+  const disableMFAMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/mfa/disable', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+  });
+
+  const handleMFAToggle = async () => {
+    if (!user?.phoneNumber) {
+      alert("プロフィールで電話番号を設定してください。");
+      return;
+    }
+
+    if (mfaStatus?.enabled) {
+      // MFAの無効化
+      try {
+        await disableMFAMutation.mutateAsync();
+        refetch();
+      } catch (error) {
+        console.error('MFA無効化エラー:', error);
+      }
+    } else {
+      // MFAの有効化プロセスを開始
+      try {
+        await setupMFAMutation.mutateAsync();
+        setShowPhoneVerification(true);
+      } catch (error) {
+        console.error('MFA設定エラー:', error);
+      }
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    try {
+      await verifySMSMutation.mutateAsync();
+      setShowPhoneVerification(false);
+      refetch();
+    } catch (error) {
+      console.error('認証コード検証エラー:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            セキュリティ設定の取得に失敗しました
+          </AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -137,12 +265,58 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">
                     ログイン時に追加の認証を要求します
                   </p>
+                  {!user?.phoneNumber && (
+                    <p className="text-sm text-red-500">
+                      ※プロフィールで電話番号を設定してください
+                    </p>
+                  )}
                 </div>
                 <Switch
-                  checked={twoFactorAuth}
-                  onCheckedChange={setTwoFactorAuth}
+                  checked={mfaStatus?.enabled || false}
+                  onCheckedChange={handleMFAToggle}
+                  disabled={!user?.phoneNumber || setupMFAMutation.isPending || disableMFAMutation.isPending}
                 />
               </div>
+
+              {/* SMS認証コード入力モーダル */}
+              <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>認証コードの確認</DialogTitle>
+                    <DialogDescription>
+                      登録された電話番号（{user?.phoneNumber}）にSMSで送信された6桁の認証コードを入力してください。
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>認証コード</Label>
+                      <Input
+                        placeholder="123456"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowPhoneVerification(false)}
+                        disabled={verifySMSMutation.isPending}
+                      >
+                        キャンセル
+                      </Button>
+                      <Button
+                        onClick={handleVerifyCode}
+                        disabled={!verificationCode || verifySMSMutation.isPending}
+                      >
+                        {verifySMSMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        認証する
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </motion.div>

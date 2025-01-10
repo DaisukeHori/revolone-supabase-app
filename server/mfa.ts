@@ -80,8 +80,8 @@ export function setupMFARoutes(app: Express) {
     }
 
     try {
-      const secret = generateTOTPSecret(req.user.username);
-      const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
+      const secret = generateTOTPSecret(req.user.username || '');
+      const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
       const backupCodes = generateBackupCodes();
 
       await db
