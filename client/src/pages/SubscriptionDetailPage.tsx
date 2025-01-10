@@ -35,38 +35,6 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// レボナイザー関連の定数
-const REVONIZER_PRODUCTS = {
-  SINGLE: 'prod_OkRTix5Mimwc9p',
-  MEDIUM: 'prod_P0DB3wRLVlz8GV',
-  BULK: 'prod_P1IWo9CT6gNkX2'
-};
-
-// レボナイザー商品かどうかを判定
-function isRevonizerProduct(productId: string): boolean {
-  return Object.values(REVONIZER_PRODUCTS).includes(productId);
-}
-
-// レボナイザーの総数を計算
-function calculateTotalRevonizerQuantity(items: StripeSubscription['items']): number {
-  return items.reduce((total, item) => {
-    const productId = item.product.id; //Corrected to access product ID correctly.
-    if (isRevonizerProduct(productId)) {
-      return total + item.quantity;
-    }
-    return total;
-  }, 0);
-}
-
-// 商品の表示名を取得
-function getDisplayProductName(item: StripeSubscription['items'][0]): string {
-  const productId = item.product.id; //Corrected to access product ID correctly.
-  if (productId === REVONIZER_PRODUCTS.SINGLE) {
-    return 'レボナイザー';
-  }
-  return item.product.name;
-}
-
 // フォームのスキーマ定義を更新（必須バリデーションを削除）
 const storeFormSchema = z.object({
   name: z.string(),
@@ -143,7 +111,6 @@ type StripeSubscription = {
     interval: string;
     quantity: number;
     product: {
-      id: string; // Added product ID
       name: string;
       description: string | null;
     };
@@ -230,40 +197,36 @@ function UpdateQuantityModal({
   isOpen: boolean;
   onClose: () => void;
   items: StripeSubscription['items'];
-  onConfirm: (quantities: Record<string, number>, totalRevonizerQuantity?: number) => void;
+  onConfirm: (quantities: Record<string, number>) => void;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [revonizerQuantity, setRevonizerQuantity] = useState<number>(0);
-  const hasRevonizer = items.some(item => isRevonizerProduct(item.product.id));
 
   useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed');
+    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
     const initialQuantities: Record<string, number> = {};
-
-    if (hasRevonizer) {
-      const total = calculateTotalRevonizerQuantity(items);
-      setRevonizerQuantity(total);
-    }
-
     items.forEach((item) => {
-      if (!isRevonizerProduct(item.product.id)) {
-        const itemId = item.subscription_item_id;
-        initialQuantities[itemId] = item.quantity;
-      }
+      const itemId = item.subscription_item_id;
+      console.log(`[UpdateQuantityModal] Processing item:`, {
+        id: itemId,
+        name: item.product.name,
+        quantity: item.quantity
+      });
+      initialQuantities[itemId] = item.quantity;
     });
-
+    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
     setQuantities(initialQuantities);
-  }, [items, isOpen, hasRevonizer]);
+  }, [items, isOpen]);
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
-    setQuantities(prev => ({
-      ...prev,
-      [itemId]: quantity
-    }));
-  };
-
-  const handleRevonizerQuantityChange = (quantity: number) => {
-    setRevonizerQuantity(quantity);
+    console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
+    setQuantities(prev => {
+      const next = {
+        ...prev,
+        [itemId]: quantity
+      };
+      console.log('[UpdateQuantityModal] Updated quantities:', next);
+      return next;
+    });
   };
 
   return (
@@ -276,27 +239,15 @@ function UpdateQuantityModal({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 pb-2">
-          {hasRevonizer && (
-            <div className="p-4 bg-primary/5 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h4 className="font-medium text-lg">レボナイザー</h4>
-                  <p className="text-sm text-muted-foreground">
-                    合計契約台数
-                  </p>
-                </div>
-                <QuantityInput
-                  initialQuantity={revonizerQuantity}
-                  onChange={handleRevonizerQuantityChange}
-                  min={1}
-                  max={99}
-                />
-              </div>
-            </div>
-          )}
-
-          {items.filter(item => !isRevonizerProduct(item.product.id)).map((item) => {
+          {items.map((item) => {
             const itemId = item.subscription_item_id;
+            console.log(`[UpdateQuantityModal] Rendering item:`, {
+              id: itemId,
+              name: item.product.name,
+              currentQuantity: quantities[itemId],
+              originalQuantity: item.quantity
+            });
+
             return (
               <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
                 <div className="flex items-center justify-between">
@@ -315,11 +266,10 @@ function UpdateQuantityModal({
                     </div>
                   </div>
                   <QuantityInput
+                    key={`${itemId}-${quantities[itemId] || item.quantity}`}
+                    itemId={itemId}
                     initialQuantity={quantities[itemId] || item.quantity}
                     onChange={(quantity) => handleQuantityChange(itemId, quantity)}
-                    min={1}
-                    max={99}
-                    itemId={itemId}
                   />
                 </div>
               </div>
@@ -334,10 +284,8 @@ function UpdateQuantityModal({
               キャンセル
             </Button>
             <Button
-              onClick={() => onConfirm(
-                quantities,
-                hasRevonizer ? revonizerQuantity : undefined
-              )}
+              onClick={() => onConfirm(quantities)}
+              disabled={Object.keys(quantities).length === 0}
             >
               変更内容を確認
             </Button>
@@ -353,7 +301,6 @@ function ConfirmUpdateDialog({
   onClose,
   items,
   updatedQuantities,
-  updatedRevonizerQuantity,
   onConfirm,
   isUpdating
 }: {
@@ -361,40 +308,24 @@ function ConfirmUpdateDialog({
   onClose: () => void;
   items: StripeSubscription['items'];
   updatedQuantities: Record<string, number>;
-  updatedRevonizerQuantity?: number;
   onConfirm: () => Promise<void>;
   isUpdating: boolean;
 }) {
-  const hasRevonizer = items.some(item => isRevonizerProduct(item.product.id));
-  const currentRevonizerQuantity = hasRevonizer ? calculateTotalRevonizerQuantity(items) : 0;
-
   // 変更のある商品のみをフィルタリング
   const changedItems = items.filter((item) => {
     const itemId = item.subscription_item_id;
-    if (isRevonizerProduct(item.product.id)) {
-      return updatedRevonizerQuantity !== undefined && 
-             updatedRevonizerQuantity !== currentRevonizerQuantity;
-    }
     return updatedQuantities[itemId] !== item.quantity;
   });
 
-  // 合計金額の計算
-  const calculateTotalAmount = () => {
-    let total = 0;
-    items.forEach((item) => {
-      if (isRevonizerProduct(item.product.id)) {
-        if (updatedRevonizerQuantity !== undefined) {
-          // レボナイザーの価格計算は複雑なため、サーバーサイドに任せる
-          // ここでは概算を表示
-          total += (item.amount || 0) * updatedRevonizerQuantity;
-        }
-      } else {
-        const quantity = updatedQuantities[item.subscription_item_id] || item.quantity;
-        total += (item.amount || 0) * quantity;
-      }
-    });
+  // 合計金額の計算（全商品の合計）
+  const totalAmount = items.reduce((total, item) => {
+    const itemId = item.subscription_item_id;
+    const quantity = updatedQuantities[itemId] || item.quantity;
+    if (item.amount) {
+      return total + (item.amount * quantity);
+    }
     return total;
-  };
+  }, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -408,53 +339,34 @@ function ConfirmUpdateDialog({
         <div className="overflow-y-auto pr-6 -mr-6">
           <div className="space-y-6 pb-2">
             <div className="space-y-4">
-              {hasRevonizer && updatedRevonizerQuantity !== undefined && (
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">レボナイザー</p>
-                    <p className="text-sm text-muted-foreground">
-                      {currentRevonizerQuantity}台 → {updatedRevonizerQuantity}台
-                    </p>
-                  </div>
-                </div>
-              )}
+              {items.map((item) => {
+                const itemId = item.subscription_item_id;
+                const updatedQuantity = updatedQuantities[itemId];
+                const hasChanged = updatedQuantity !== item.quantity;
 
-              {items
-                .filter(item => !isRevonizerProduct(item.product.id))
-                .map((item) => {
-                  const itemId = item.subscription_item_id;
-                  const updatedQuantity = updatedQuantities[itemId];
-                  const hasChanged = updatedQuantity !== item.quantity;
-
-                  return (
-                    <div key={itemId} className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.quantity}個 → {updatedQuantity || item.quantity}個
-                        </p>
-                      </div>
-                      {item.amount && (
-                        <p className="font-medium">
-                          {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
-                        </p>
-                      )}
+                return (
+                  <div key={itemId} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">{item.product.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.quantity}個 → {updatedQuantity || item.quantity}個
+                      </p>
                     </div>
-                  );
-                })}
-
+                    {item.amount && (
+                      <p className="font-medium">
+                        {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
               <div className="pt-4 border-t border-primary/10">
                 <div className="flex justify-between items-center">
-                  <p className="font-medium">次回請求額（概算）</p>
+                  <p className="font-medium">次回請求額（合計）</p>
                   <p className="font-medium text-lg">
-                    {calculateTotalAmount().toLocaleString()} {items[0]?.currency.toUpperCase()}
+                    {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
                   </p>
                 </div>
-                {hasRevonizer && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    ※ レボナイザーの価格は台数に応じて変動します。実際の請求額は変更確定後に確認できます。
-                  </p>
-                )}
               </div>
             </div>
 
@@ -814,7 +726,6 @@ function SubscriptionDetailPage() {
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
-  const [updatedRevonizerQuantity, setUpdatedRevonizerQuantity] = useState<number | undefined>(undefined); // Added state for revonizer quantity
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
 
@@ -933,7 +844,7 @@ function SubscriptionDetailPage() {
   };
 
   const handleUpdateQuantities = async () => {
-    if (Object.keys(updatedQuantities).length === 0 && updatedRevonizerQuantity === undefined) {
+    if (Object.keys(updatedQuantities).length === 0) {
       return;
     }
 
@@ -946,8 +857,7 @@ function SubscriptionDetailPage() {
           items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
             id,
             quantity
-          })),
-          totalRevonizerQuantity: updatedRevonizerQuantity
+          }))
         }),
         credentials: 'include',
       });
@@ -976,7 +886,7 @@ function SubscriptionDetailPage() {
 
   const toggleAutoRenewalMutation = useMutation({
     mutationFn: async (subscriptionId: string) => {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal, {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -1086,8 +996,6 @@ function SubscriptionDetailPage() {
     visible: { opacity: 1, y: 0 }
   };
 
-  const totalRevonizerQuantity = calculateTotalRevonizerQuantity(subscription.items);
-
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -1145,7 +1053,7 @@ function SubscriptionDetailPage() {
                   <div key={item.subscription_item_id} className="bg-primary/5 rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <p className="font-medium">{getDisplayProductName(item)}</p>
+                        <p className="font-medium">{item.product.name}</p>
                         {item.product.description && (
                           <p className="text-sm text-muted-foreground">
                             {item.product.description}
@@ -1167,15 +1075,6 @@ function SubscriptionDetailPage() {
                   </div>
                 ))}
               </div>
-
-              {/* レボナイザー合計数量 */}
-              {totalRevonizerQuantity > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">レボナイザー合計</h3>
-                  <p className="font-medium">{totalRevonizerQuantity}台</p>
-                </div>
-              )}
-
 
               {/* 支払い情報 */}
               <div className="space-y-2">
@@ -1282,9 +1181,8 @@ function SubscriptionDetailPage() {
             isOpen={showQuantityModal}
             onClose={() => setShowQuantityModal(false)}
             items={subscription.items}
-            onConfirm={(quantities, totalRevonizerQuantity) => {
+            onConfirm={(quantities) => {
               setUpdatedQuantities(quantities);
-              setUpdatedRevonizerQuantity(totalRevonizerQuantity);
               setShowQuantityModal(false);
               setShowConfirmDialog(true);
             }}
@@ -1297,7 +1195,6 @@ function SubscriptionDetailPage() {
             onClose={() => setShowConfirmDialog(false)}
             items={subscription.items}
             updatedQuantities={updatedQuantities}
-            updatedRevonizerQuantity={updatedRevonizerQuantity}
             onConfirm={handleUpdateQuantities}
             isUpdating={isUpdating}
           />
