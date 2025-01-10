@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
-  Receipt, History, Settings, CreditCard as CardIcon, RefreshCw,
+  Receipt, History, Settings, RefreshCw,
   CheckCircle, Ban, ExternalLink, Loader2, Pencil, Store
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -53,7 +53,6 @@ const storeFormSchema = z.object({
 
 type StoreFormValues = z.infer<typeof storeFormSchema>;
 
-// 型定義部分を更新
 type StripeCustomerData = {
   customer: {
     id: string;
@@ -414,7 +413,7 @@ function formatAddress(address: {
   return parts.join(' ') || '未設定';
 }
 
-function formatCardBrand(brand: string) {
+function formatCardBrand(brand: string): string {
   switch (brand.toLowerCase()) {
     case 'visa':
       return 'VISA';
@@ -539,6 +538,7 @@ function SubscriptionDetailPage() {
             city: values.city,
             line1: values.line1,
             line2: values.line2,
+            country: 'JP'
           },
           shipping: {
             address: {
@@ -547,7 +547,10 @@ function SubscriptionDetailPage() {
               city: values.shippingCity,
               line1: values.shippingLine1,
               line2: values.shippingLine2,
-            }
+              country: 'JP'
+            },
+            name: customer.name,
+            phone: values.phoneNumber
           },
           phone: values.phoneNumber,
           metadata: {
@@ -558,8 +561,13 @@ function SubscriptionDetailPage() {
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        console.error('店舗情報更新エラー:', errorText);
+        throw new Error(errorText);
       }
+
+      const data = await response.json();
+      console.log('Updated customer data:', data);
 
       await refetch();
       toast({
@@ -1119,21 +1127,23 @@ function SubscriptionDetailPage() {
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
               <div className="flex items-start gap-3">
-                <CardIcon className="h-5 w-5 text-muted-foreground mt-1" />
+                <CreditCard className="h-5 w-5 text-muted-foreground mt-1" />
                 <div>
-                  {subscription.default_payment_method ? (
-                    <>
-                      <p className="text-lg font-medium">
-                        {formatCardBrand(subscription.default_payment_method.card.brand)}
-                        **** {subscription.default_payment_method.card.last4}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        有効期限: {subscription.default_payment_method.card.exp_month}/{subscription.default_payment_method.card.exp_year}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground">支払い方法が設定されていません</p>
-                  )}
+                  <div>
+                    {subscription.default_payment_method?.card ? (
+                      <>
+                        <p className="text-lg font-medium">
+                          {formatCardBrand(subscription.default_payment_method.card.brand)}
+                          **** {subscription.default_payment_method.card.last4}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          有効期限: {subscription.default_payment_method.card.exp_month}/{subscription.default_payment_method.card.exp_year}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">支払い方法が設定されていません</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

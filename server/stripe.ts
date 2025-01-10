@@ -170,7 +170,7 @@ export function setupStripeRoutes(app: Express) {
     }
   });
 
-  // 顧客メタデータの更新エンドポイント
+  // 顧客メタデータの更新エンドポイントを修正
   app.post("/api/stripe/customer/:id/metadata", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -186,28 +186,38 @@ export function setupStripeRoutes(app: Express) {
         return res.status(403).json({ message: "この顧客情報にアクセスする権限がありません" });
       }
 
-      // 現在の顧客情報を取得
-      const currentCustomer = await stripe.customers.retrieve(customerId);
-
-      // 既存のメタデータと新しいメタデータをマージ
-      const updatedMetadata = {
-        ...currentCustomer.metadata,
-        ...metadata,
-      };
+      console.log('[Stripe] Updating customer with data:', {
+        customerId,
+        metadata,
+        address,
+        shipping,
+        phone
+      });
 
       // 顧客情報を更新（メタデータ、住所、電話番号、配送先）
       const customer = await stripe.customers.update(customerId, {
-        metadata: updatedMetadata,
-        address,
-        shipping,
-        phone,
+        metadata,
+        address: {
+          ...address,
+          country: 'JP'
+        },
+        shipping: shipping ? {
+          address: {
+            ...shipping.address,
+            country: 'JP'
+          },
+          name: shipping.name || null,
+          phone: shipping.phone || null
+        } : null,
+        phone
       });
 
       console.log('[Stripe] Updated customer:', {
+        id: customer.id,
         metadata: customer.metadata,
         address: customer.address,
         shipping: customer.shipping,
-        phone: customer.phone,
+        phone: customer.phone
       });
 
       res.json({
