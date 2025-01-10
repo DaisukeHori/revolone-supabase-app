@@ -1,5 +1,6 @@
 import { type Express } from "express";
 import Stripe from 'stripe';
+import { REVONIZER } from "./routes";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
@@ -381,7 +382,10 @@ export function setupStripeRoutes(app: Express) {
     }
 
     const subscriptionId = req.params.id;
-    const { items } = req.body as { items: { id: string; quantity: number }[] };
+    const { totalRevonizerQuantity, items } = req.body as {
+      totalRevonizerQuantity?: number;
+      items: { id: string; quantity: number }[];
+    };
 
     try {
       const customersData = await getCustomersByEmail(req.user.email);
@@ -397,13 +401,100 @@ export function setupStripeRoutes(app: Express) {
         expand: ['items.data.price.product'],
       });
 
-      // 各アイテムの数量を更新
-      await Promise.all(items.map(async (item) => {
-        console.log('Updating subscription item:', item);
-        await stripe.subscriptionItems.update(item.id, {
-          quantity: item.quantity,
+      if (totalRevonizerQuantity !== undefined) {
+        // レボナイザーの数量が指定されている場合、適切な数量を計算
+        const quantities = REVONIZER.calculateQuantities(totalRevonizerQuantity);
+
+        // 既存のサブスクリプションアイテムをチェック
+        const existingItems = new Map(
+          subscription.items.data.map(item => [
+            typeof item.price.product === 'string' ? item.price.product : item.price.product.id,
+            item
+          ])
+        );
+
+        // レボナイザー関連の商品IDを取得
+        const { SINGLE, MEDIUM, BULK } = REVONIZER.PRODUCTS;
+
+        // 各プランの数量を更新
+        const updatePromises = [];
+
+        // SINGLEプラン
+        const singleItem = existingItems.get(SINGLE.PRODUCT_ID);
+        if (singleItem) {
+          updatePromises.push(
+            stripe.subscriptionItems.update(singleItem.id, {
+              quantity: quantities.single,
+            })
+          );
+        } else if (quantities.single > 0) {
+          updatePromises.push(
+            stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: SINGLE.PRICE_ID,
+              quantity: quantities.single,
+            })
+          );
+        }
+
+        // MEDIUMプラン
+        const mediumItem = existingItems.get(MEDIUM.PRODUCT_ID);
+        if (mediumItem) {
+          updatePromises.push(
+            stripe.subscriptionItems.update(mediumItem.id, {
+              quantity: quantities.medium,
+            })
+          );
+        } else if (quantities.medium > 0) {
+          updatePromises.push(
+            stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: MEDIUM.PRICE_ID,
+              quantity: quantities.medium,
+            })
+          );
+        }
+
+        // BULKプラン
+        const bulkItem = existingItems.get(BULK.PRODUCT_ID);
+        if (bulkItem) {
+          updatePromises.push(
+            stripe.subscriptionItems.update(bulkItem.id, {
+              quantity: quantities.bulk,
+            })
+          );
+        } else if (quantities.bulk > 0) {
+          updatePromises.push(
+            stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: BULK.PRICE_ID,
+              quantity: quantities.bulk,
+            })
+          );
+        }
+
+        // レボナイザー以外の商品の数量更新
+        items.forEach(item => {
+          if (![SINGLE.PRICE_ID, MEDIUM.PRICE_ID, BULK.PRICE_ID].includes(item.id)) {
+            updatePromises.push(
+              stripe.subscriptionItems.update(item.id, {
+                quantity: item.quantity,
+              })
+            );
+          }
         });
-      }));
+
+        // すべての更新を実行
+        await Promise.all(updatePromises);
+      } else {
+        // レボナイザー以外の商品の数量のみを更新
+        await Promise.all(items.map(async (item) => {
+          console.log('Updating subscription item:', item);
+          await stripe.subscriptionItems.update(item.id, {
+            quantity: item.quantity,
+          });
+        }));
+      }
 
       // 更新後のサブスクリプションを返す
       const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
