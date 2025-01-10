@@ -1,11 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  AlertCircle, CreditCard, Calendar, Package, ArrowLeft, Clock,
-  Receipt, History, Settings, RefreshCw,
-  CheckCircle, Ban, ExternalLink, Loader2, Pencil, Store
+  AlertCircle, CreditCard, Calendar, Package, ArrowLeft,
+  RefreshCw, CheckCircle, Ban, History, Settings, Loader2, Pencil, Store
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -36,59 +35,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 
-// フォームのスキーマ定義を更新（必須バリデーションを削除）
-const storeFormSchema = z.object({
-  name: z.string(),
-  postalCode: z.string(),
-  state: z.string(),
-  city: z.string(),
-  line1: z.string(),
-  line2: z.string(),
-  phoneNumber: z.string(),
-  shippingPostalCode: z.string(),
-  shippingState: z.string(),
-  shippingCity: z.string(),
-  shippingLine1: z.string(),
-  shippingLine2: z.string(),
-});
-
-type StoreFormValues = z.infer<typeof storeFormSchema>;
-
-type StripeCustomerData = {
-  customer: {
-    id: string;
-    name: string | null;
-    email: string;
-    created: number;
-    phone: string | null;
-    address: {
-      line1: string | null;
-      line2: string | null;
-      city: string | null;
-      state: string | null;
-      postal_code: string | null;
-      country: string | null;
-    } | null;
-    shipping: {
-      address: {
-        line1: string | null;
-        line2: string | null;
-        city: string | null;
-        state: string | null;
-        postal_code: string | null;
-        country: string | null;
-      };
-      name: string | null;
-      phone: string | null;
-    } | null;
-    metadata: {
-      サロン名?: string;
-      [key: string]: string | undefined;
-    };
-  };
-  subscriptions: StripeSubscription[];
-  payment_history: StripePaymentHistory[];
-};
 
 type StripeSubscription = {
   id: string;
@@ -117,6 +63,39 @@ type StripeSubscription = {
     };
   }[];
 };
+
+type StripeCustomerData = {
+  customer: {
+    id: string;
+    name: string | null;
+    email: string;
+    created: number;
+    phone: string | null;
+    address: {
+      line1: string | null;
+      line2: string | null;
+      city: string | null;
+      state: string | null;
+      postal_code: string | null;
+      country: string | null;
+    } | null;
+    shipping: {
+      address: {
+        line1: string | null;
+        line2: string | null;
+        city: string | null;
+        state: string | null;
+        postal_code: string | null;
+        country: string | null;
+      };
+      name: string | null;
+      phone: string | null;
+    } | null;
+    metadata: Record<string, string>;
+  };
+  subscriptions: StripeSubscription[];
+  payment_history: StripePaymentHistory[];
+}[];
 
 type StripePaymentHistory = {
   id: string;
@@ -288,7 +267,6 @@ function ConfirmUpdateDialog({
 function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -296,7 +274,7 @@ function SubscriptionDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
 
-  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData>({
     queryKey: ['/api/stripe/customer'],
     staleTime: 0,
   });
@@ -469,7 +447,7 @@ function SubscriptionDetailPage() {
 
   const item = {
     hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0 }
+    show: { opacity: 1, y: 0 }
   };
 
   return (
@@ -558,10 +536,7 @@ function SubscriptionDetailPage() {
                     <CreditCard className="h-4 w-4" />
                     <span>
                       {subscription.default_payment_method ? (
-                        `${formatCardBrand(subscription.default_payment_method.card.brand)}
-                        **** ${subscription.default_payment_method.card.last4} (
-                        ${subscription.default_payment_method.card.exp_month}/
-                        ${subscription.default_payment_method.card.exp_year})`
+                        `${formatCardBrand(subscription.default_payment_method.card.brand)} **** ${subscription.default_payment_method.card.last4} (${subscription.default_payment_method.card.exp_month}/${subscription.default_payment_method.card.exp_year})`
                       ) : (
                         '支払い方法が設定されていません'
                       )}
@@ -653,18 +628,6 @@ function SubscriptionDetailPage() {
             }}
           />
         )}
-
-        {/* 確認ダイアログ */}
-        {subscription && (
-          <ConfirmUpdateDialog
-            isOpen={showConfirmDialog}
-            onClose={() => setShowConfirmDialog(false)}
-            items={subscription.items}
-            updatedQuantities={updatedQuantities}
-            onConfirm={handleUpdateQuantities}
-            isUpdating={isUpdating}
-          />
-        )}
       </motion.div>
     </AppLayout>
   );
@@ -746,6 +709,23 @@ function StoreEditModal({
   customer: StripeCustomerData['customer'];
   onSubmit: (values: StoreFormValues) => Promise<void>;
 }) {
+  const storeFormSchema = z.object({
+    name: z.string(),
+    postalCode: z.string(),
+    state: z.string(),
+    city: z.string(),
+    line1: z.string(),
+    line2: z.string(),
+    phoneNumber: z.string(),
+    shippingPostalCode: z.string(),
+    shippingState: z.string(),
+    shippingCity: z.string(),
+    shippingLine1: z.string(),
+    shippingLine2: z.string(),
+  });
+
+  type StoreFormValues = z.infer<typeof storeFormSchema>;
+
   const form = useForm<StoreFormValues>({
     resolver: zodResolver(storeFormSchema),
     defaultValues: {
