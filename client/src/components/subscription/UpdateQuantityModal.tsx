@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,17 +24,16 @@ type Props = {
   onClose: () => void;
   subscriptionId: string;
   items: SubscriptionItem[];
-  onConfirm: () => Promise<void>;
+  onConfirm: () => void;
 };
 
 type Step = 'revonizer' | 'other_items' | 'confirm';
 
 export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, onConfirm }: Props) {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>('revonizer');
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(0);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [calculatedQuantities, setCalculatedQuantities] = useState<{
     single: number;
     medium: number;
@@ -88,45 +87,6 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     setQuantities(prev => ({ ...prev, [itemId]: newQuantity }));
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          totalRevonizerQuantity,
-          items: Object.entries(quantities).map(([id, quantity]) => ({
-            id,
-            quantity: Number(quantity)
-          }))
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      toast({
-        description: "サブスクリプションの数量を更新しました",
-      });
-
-      onConfirm();
-      onClose();
-    } catch (error) {
-      console.error('数量更新エラー:', error);
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const renderStepContent = () => {
@@ -288,8 +248,10 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
               <Button variant="outline" onClick={() => setCurrentStep('other_items')}>
                 戻る
               </Button>
-              <Button onClick={handleSubmit} disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button onClick={() => {
+                onConfirm();
+                onClose();
+              }}>
                 確定する
               </Button>
             </DialogFooter>

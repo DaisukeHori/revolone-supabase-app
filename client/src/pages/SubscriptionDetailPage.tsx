@@ -861,8 +861,7 @@ function SubscriptionDetailPage() {
   };
 
   const handleUpdateQuantities = async () => {
-
-    setShowConfirmDialog(true);
+    setShowQuantityModal(true);
   };
 
   const toggleAutoRenewalMutation = useMutation({
@@ -1162,16 +1161,54 @@ function SubscriptionDetailPage() {
           onClose={() => setShowQuantityModal(false)}
           subscriptionId={subscriptionId}
           items={subscription?.items || []}
-          onConfirm={handleUpdateQuantities}
+          onConfirm={async () => {
+            setShowQuantityModal(false);
+            setShowConfirmDialog(true);
+          }}
         />
 
-        {showConfirmDialog && (
+        {showConfirmDialog && subscription && (
           <ConfirmUpdateDialog
             isOpen={showConfirmDialog}
             onClose={() => setShowConfirmDialog(false)}
             items={subscription.items}
             updatedQuantities={updatedQuantities}
-            onConfirm={handleUpdateQuantities}
+            onConfirm={async () => {
+              setIsUpdating(true);
+              try {
+                const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
+                      id,
+                      quantity
+                    }))
+                  }),
+                  credentials: 'include',
+                });
+
+                if (!response.ok) {
+                  throw new Error(await response.text());
+                }
+
+                await refetch();
+                toast({
+                  description: "プランの数量を更新しました",
+                });
+
+                setUpdatedQuantities({});
+                setShowConfirmDialog(false);
+              } catch (error) {
+                console.error('数量更新エラー:', error);
+                toast({
+                  variant: "destructive",
+                  description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+                });
+              } finally {
+                setIsUpdating(false);
+              }
+            }}
             isUpdating={isUpdating}
           />
         )}
