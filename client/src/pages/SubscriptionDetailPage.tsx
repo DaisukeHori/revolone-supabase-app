@@ -741,27 +741,20 @@ function SubscriptionDetailPage() {
   const queryClient = useQueryClient();
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
-  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
-    staleTime: 0, // 常に最新のデータを取得
+    staleTime: 0,
   });
-
-  console.log('Stripe Data:', stripeData); // デバッグログ
 
   const customerData = stripeData?.find(data =>
     data.subscriptions.some(sub => sub.id === subscriptionId)
   );
 
-  console.log('Customer Data:', customerData); // デバッグログ
-
   const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
   const customer = customerData?.customer;
 
-  console.log('Customer:', customer); // デバッグログ
 
   const form = useForm<StoreFormValues>({
     resolver: zodResolver(storeFormSchema),
@@ -860,7 +853,7 @@ function SubscriptionDetailPage() {
   };
 
   const handleUpdateQuantities = async (quantities: Record<string, number>) => {
-    setIsUpdating(true);
+    // setIsUpdating(true); // Removed as per intention
     try {
       const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
         method: 'POST',
@@ -891,7 +884,7 @@ function SubscriptionDetailPage() {
         description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
       });
     } finally {
-      setIsUpdating(false);
+      // setIsUpdating(false); // Removed as per intention
     }
   };
 
@@ -1133,24 +1126,25 @@ function SubscriptionDetailPage() {
 
               {/* アクション */}
               <div className="flex flex-wrap gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setShowQuantityModal(true)}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  数量を変更
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-[140px]"
+                    onClick={() => setShowQuantityModal(true)}
+                  >
+                    数量を変更
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setLocation("/payment-history")}
-                >
-                  <History className="h-4 w-4" />
-                  支払い履歴
-                </Button>
-
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setLocation("/payment-history")}
+                  >
+                    <History className="h-4 w-4" />
+                    支払い履歴
+                  </Button>
+                </div>
                 {subscription.status !== 'canceled' && (
                   <>
                     <Button
@@ -1187,13 +1181,14 @@ function SubscriptionDetailPage() {
         </motion.div>
 
         {/* モーダルの部分を修正 */}
-        <UpdateQuantityModal
-          isOpen={showQuantityModal}
-          onClose={() => setShowQuantityModal(false)}
-          subscriptionId={subscriptionId}
-          items={subscription?.items || []}
-          onConfirm={handleUpdateQuantities}
-        />
+        {showQuantityModal && (
+          <UpdateQuantityModal
+            isOpen={showQuantityModal}
+            onClose={() => setShowQuantityModal(false)}
+            items={subscription?.items || []}
+            onConfirm={handleUpdateQuantities}
+          />
+        )}
       </div>
     </AppLayout>
   );
