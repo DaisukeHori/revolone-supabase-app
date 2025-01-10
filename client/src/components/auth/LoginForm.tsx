@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { MFAVerificationForm } from "./MFAVerificationForm";
+import { useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません"),
@@ -27,6 +28,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
   const [mfaRequired, setMfaRequired] = useState<{ required: boolean; type?: string }>({
     required: false,
   });
+  const queryClient = useQueryClient();
 
   const form = useForm<FormData>({
     resolver: zodResolver(loginSchema),
@@ -59,6 +61,8 @@ export function LoginForm({ onComplete }: LoginFormProps) {
         return;
       }
 
+      // ユーザー情報のキャッシュを更新
+      await queryClient.invalidateQueries({ queryKey: ['user'] });
       onComplete();
     } catch (error) {
       setError("予期せぬエラーが発生しました");
