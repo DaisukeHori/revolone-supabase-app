@@ -111,6 +111,7 @@ function formatAddress(address: {
   if (!address) return '未設定';
 
   const parts = [
+    address.postal_code,
     address.state,
     address.city,
     address.line1,
@@ -435,7 +436,7 @@ export default function SubscriptionDetailPage() {
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={!subscription.cancel_at_period_end}
-                        onCheckedChange={() => handleAutoRenewalToggle()}
+                        onCheckedChange={handleAutoRenewalToggle}
                       />
                       <span className="text-sm">自動更新</span>
                     </div>
@@ -467,16 +468,43 @@ export default function SubscriptionDetailPage() {
                       )}
                     </span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
-                    className="gap-2"
-                  >
-                    <Settings className="h-4 w-4" />
-                    変更
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
+                      className="gap-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      変更
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLocation("/payment-history")}
+                      className="gap-2"
+                    >
+                      <History className="h-4 w-4" />
+                      購入履歴
+                    </Button>
+                  </div>
                 </div>
+              </div>
+
+              {/* 更新日情報 */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">次回更新日</h3>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
+                  </span>
+                </div>
+                {isTrialing && subscription.trial_end && (
+                  <p className="text-sm text-muted-foreground">
+                    トライアル期間: {new Date(subscription.trial_end * 1000).toLocaleDateString("ja-JP")}まで
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
