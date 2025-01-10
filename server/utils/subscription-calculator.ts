@@ -12,7 +12,7 @@ export function calculateQuantities(totalQuantity: number): SubscriptionQuantity
   const quantities: SubscriptionQuantity[] = [];
   let remainingQuantity = totalQuantity;
 
-  // 最初の1台は必ずprice_1NwwacAPdno01lSPWH92pzrl
+  // 最初の1台は必ずprice_1NwwacAPdno01lSPWH92pzrl（基本ライセンス）
   if (remainingQuantity >= 1) {
     quantities.push({
       priceId: REVONAIZER_PRICES[0].priceId,
@@ -21,7 +21,7 @@ export function calculateQuantities(totalQuantity: number): SubscriptionQuantity
     remainingQuantity -= 1;
   }
 
-  // 2-4台目はprice_1OCCkvAPdno01lSP44FyPiZ3
+  // 2-4台目はprice_1OCCkvAPdno01lSP44FyPiZ3（追加利用ライセンス 2-4台）
   if (remainingQuantity > 0) {
     const secondTierQuantity = Math.min(remainingQuantity, 3); // 最大3台まで
     quantities.push({
@@ -31,7 +31,7 @@ export function calculateQuantities(totalQuantity: number): SubscriptionQuantity
     remainingQuantity -= secondTierQuantity;
   }
 
-  // 5台目以降はprice_1OED1uAPdno01lSP3UESyV7C
+  // 5台目以降はprice_1OED1uAPdno01lSP3UESyV7C（追加利用ライセンス 5台以上）
   if (remainingQuantity > 0) {
     quantities.push({
       priceId: REVONAIZER_PRICES[2].priceId,
@@ -57,6 +57,7 @@ export function calculateQuantityChanges(
     const currentQty = currentQuantities.find(q => q.priceId === price.priceId)?.quantity || 0;
     const targetQty = targetQuantities.find(q => q.priceId === price.priceId)?.quantity || 0;
 
+    // 数量が変更された場合のみ変更を記録
     if (currentQty !== targetQty) {
       changes.push({
         priceId: price.priceId,

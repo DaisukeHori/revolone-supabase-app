@@ -395,14 +395,19 @@ export function setupStripeRoutes(app: Express) {
 
       // サブスクリプションの現在の状態を取得
       const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-        expand: ['items.data.price'],
+        expand: ['items.data.price.product'],
       });
 
-      // 現在の数量構成を取得
-      const currentQuantities = subscription.items.data.map(item => ({
-        priceId: item.price.id,
-        quantity: item.quantity,
-      }));
+      // 現在のレボナイザー関連の数量構成を取得
+      const currentQuantities = subscription.items.data
+        .filter(item => {
+          const product = typeof item.price.product === 'object' ? item.price.product : null;
+          return product?.name?.includes('レボナイザー') || false;
+        })
+        .map(item => ({
+          priceId: item.price.id,
+          quantity: item.quantity,
+        }));
 
       // 目標の総数から必要な変更を計算
       const quantityChanges = calculateQuantityChanges(currentQuantities, targetQuantity);
@@ -410,16 +415,28 @@ export function setupStripeRoutes(app: Express) {
       // 変更がある場合のみ更新を実行
       if (quantityChanges.length > 0) {
         const items = subscription.items.data.map(item => {
-          const change = quantityChanges.find(q => q.priceId === item.price.id);
-          if (change) {
+          // レボナイザー関連の商品のみ更新
+          const isRevonaizer = typeof item.price.product === 'object' && 
+                             item.price.product?.name?.includes('レボナイザー');
+
+          if (isRevonaizer) {
+            const change = quantityChanges.find(q => q.priceId === item.price.id);
+            if (change) {
+              return {
+                id: item.id,
+                quantity: change.quantity,
+              };
+            }
             return {
               id: item.id,
-              quantity: change.quantity,
+              deleted: true,
             };
           }
+
+          // レボナイザー以外の商品は変更なし
           return {
             id: item.id,
-            deleted: true,
+            quantity: item.quantity,
           };
         });
 

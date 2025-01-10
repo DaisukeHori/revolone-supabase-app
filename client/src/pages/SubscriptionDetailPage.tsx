@@ -280,12 +280,6 @@ function ConfirmUpdateDialog({
   onConfirm: () => Promise<void>;
   isUpdating: boolean;
 }) {
-  // 変更のある商品のみをフィルタリング
-  const changedItems = items.filter((item) => {
-    const itemId = item.subscription_item_id;
-    return updatedQuantities[itemId] !== item.quantity;
-  });
-
   // レボナイザー関連の商品とその他の商品を分類
   const revonizerItems = items.filter(item =>
     item.product.name.includes('レボナイザー')
@@ -434,7 +428,7 @@ function ConfirmUpdateDialog({
             </Button>
             <Button
               onClick={onConfirm}
-              disabled={isUpdating || changedItems.length === 0}
+              disabled={isUpdating}
             >
               {isUpdating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
