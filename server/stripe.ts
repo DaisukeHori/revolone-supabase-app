@@ -105,12 +105,24 @@ export async function getCustomersByEmail(email: string) {
     // 顧客のメタデータをログ出力して確認
     console.log(`[Stripe] Customer metadata for ${customer.id}:`, customer.metadata);
 
+    // 住所情報を整形
+    const address = customer.address ? {
+      line1: customer.address.line1,
+      line2: customer.address.line2,
+      city: customer.address.city,
+      state: customer.address.state,
+      postal_code: customer.address.postal_code,
+      country: customer.address.country,
+    } : null;
+
     return {
       customer: {
         id: customer.id,
         name: customer.name,
         email: customer.email,
         created: customer.created,
+        phone: customer.phone,
+        address,
         metadata: customer.metadata || {},
       },
       subscriptions: formattedSubscriptions,

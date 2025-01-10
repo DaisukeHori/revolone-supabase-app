@@ -35,12 +35,32 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// フォームのスキーマ定義
-const storeFormSchema = z.object({
-  name: z.string().min(1, "店舗名を入力してください"),
-  address: z.string().min(1, "住所を入力してください"),
-  phoneNumber: z.string().min(1, "電話番号を入力してください"),
-});
+// 型定義部分を更新
+type StripeCustomerData = {
+  customer: {
+    id: string;
+    name: string | null;
+    email: string;
+    created: number;
+    phone: string | null;
+    address: {
+      line1: string | null;
+      line2: string | null;
+      city: string | null;
+      state: string | null;
+      postal_code: string | null;
+      country: string | null;
+    } | null;
+    metadata: {
+      サロン名?: string;
+      住所?: string;
+      電話番号?: string;
+      [key: string]: string | undefined;
+    };
+  };
+  subscriptions: StripeSubscription[];
+  payment_history: StripePaymentHistory[];
+};
 
 type StoreFormValues = z.infer<typeof storeFormSchema>;
 
@@ -80,23 +100,6 @@ type StripePaymentHistory = {
   created: number;
   invoice_pdf: string | null;
 };
-
-type StripeCustomerData = {
-  customer: {
-    id: string;
-    name: string | null;
-    email: string;
-    created: number;
-    metadata: {
-      サロン名?: string;
-      住所?: string;
-      電話番号?: string;
-      [key: string]: string | undefined;
-    };
-  };
-  subscriptions: StripeSubscription[];
-  payment_history: StripePaymentHistory[];
-}[];
 
 function getStatusBadgeColor(status: string) {
   switch (status) {
@@ -410,6 +413,14 @@ function ConfirmUpdateDialog({
   );
 }
 
+// フォームのスキーマ定義を更新
+const storeFormSchema = z.object({
+  name: z.string().min(1, "店舗名を入力してください"),
+  address: z.string().min(1, "住所を入力してください"),
+  phoneNumber: z.string().min(1, "電話番号を入力してください"),
+});
+
+
 function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -443,18 +454,18 @@ function SubscriptionDetailPage() {
     resolver: zodResolver(storeFormSchema),
     defaultValues: {
       name: customer?.metadata?.サロン名 || '',
-      address: customer?.metadata?.住所 || '',
-      phoneNumber: customer?.metadata?.電話番号 || '',
+      address: customer?.address?.line1 || customer?.metadata?.住所 || '',
+      phoneNumber: customer?.phone || customer?.metadata?.電話番号 || '',
     },
   });
 
-  // useEffectを追加してフォームの値を更新
+  // useEffectを更新
   useEffect(() => {
-    if (customer?.metadata) {
+    if (customer) {
       form.reset({
-        name: customer.metadata.サロン名 || '',
-        address: customer.metadata.住所 || '',
-        phoneNumber: customer.metadata.電話番号 || '',
+        name: customer.metadata?.サロン名 || '',
+        address: customer.address?.line1 || customer.metadata?.住所 || '',
+        phoneNumber: customer.phone || customer.metadata?.電話番号 || '',
       });
     }
   }, [customer, form]);
@@ -551,7 +562,6 @@ function SubscriptionDetailPage() {
     }
   });
 
-
   if (isLoading) {
     return (
       <AppLayout>
@@ -575,7 +585,6 @@ function SubscriptionDetailPage() {
     );
   }
 
-  
 
   if (!subscription || !customerData) {
     return (
@@ -591,7 +600,6 @@ function SubscriptionDetailPage() {
   }
 
   const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
-  
 
   const handleAutoRenewalToggle = async () => {
     try {
@@ -645,8 +653,6 @@ function SubscriptionDetailPage() {
       });
     }
   };
-
-  
 
   return (
     <AppLayout>
@@ -750,11 +756,14 @@ function SubscriptionDetailPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-2">住所</div>
-                  <div className="text-lg">{customer?.metadata?.住所 || '未設定'}</div>
+                  <div className="text-lg">
+                    {customer?.address?.line1 || customer?.metadata?.住所 || '未設定'}
+                    {customer?.address?.line2 ? ` ${customer.address.line2}` : ''}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
-                  <div className="text-lg">{customer?.metadata?.電話番号 || '未設定'}</div>
+                  <div className="text-lg">{customer?.phone || customer?.metadata?.電話番号 || '未設定'}</div>
                 </div>
               </div>
             )}
