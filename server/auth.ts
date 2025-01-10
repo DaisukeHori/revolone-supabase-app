@@ -21,8 +21,9 @@ declare module 'express-session' {
 
 declare module 'passport-local' {
   interface IVerifyOptions {
-    message?: string;
+    message: string;
     needsEmailVerification?: boolean;
+    email?: string;
   }
 }
 
@@ -114,8 +115,9 @@ export function setupAuth(app: Express) {
         // メール認証が済んでいない場合はログイン不可
         if (!user.emailVerified) {
           return done(null, false, {
-            message: "メールアドレスの確認が必要です",
-            needsEmailVerification: true
+            message: "メールアドレスの確認が必要です。認証メールをご確認ください。",
+            needsEmailVerification: true,
+            email: user.email // メール再送信用にemailを返す
           });
         }
 
@@ -220,21 +222,21 @@ export function setupAuth(app: Express) {
 
   // ログイン時にメール認証済みかチェックを追加
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: { message?: string; needsEmailVerification?: boolean }) => {
+    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: { message?: string; needsEmailVerification?: boolean; email?: string }) => {
       if (err) {
         return next(err);
       }
 
       if (!user) {
+        // メール未認証の場合は専用のレスポンスを返す
+        if (info.needsEmailVerification) {
+          return res.status(403).json({
+            message: info.message,
+            needsEmailVerification: true,
+            email: info.email // メール再送信用にemailを含める
+          });
+        }
         return res.status(400).json({ message: info.message ?? "ログインに失敗しました" });
-      }
-
-      // メール認証が済んでいない場合はログイン不可
-      if (!user.emailVerified) {
-        return res.status(403).json({
-          message: "メールアドレスの確認が必要です",
-          needsEmailVerification: true
-        });
       }
 
       // 2段階認証が必要な場合

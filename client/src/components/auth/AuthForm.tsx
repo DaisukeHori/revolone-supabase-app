@@ -30,6 +30,7 @@ export function AuthForm() {
   const { register } = useUser();
   const [, setLocation] = useLocation();
   const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(insertUserSchema),
@@ -64,6 +65,32 @@ export function AuthForm() {
     }
   };
 
+  // メール認証メールの再送信
+  const handleResendVerification = async (email: string) => {
+    try {
+      setResendingEmail(true);
+      const response = await fetch('/api/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message);
+      }
+
+      setError(null);
+      alert("認証メールを再送信しました。メールをご確認ください。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "認証メールの再送信に失敗しました");
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   // 登録完了後の表示
   if (registrationComplete) {
     return (
@@ -92,7 +119,10 @@ export function AuthForm() {
   if (isLogin) {
     return (
       <div className="space-y-4">
-        <LoginForm onComplete={onLoginComplete} />
+        <LoginForm 
+          onComplete={onLoginComplete} 
+          onNeedVerification={handleResendVerification}
+        />
         <Button
           type="button"
           variant="ghost"

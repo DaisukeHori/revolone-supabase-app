@@ -20,9 +20,10 @@ type FormData = z.infer<typeof loginSchema>;
 
 interface LoginFormProps {
   onComplete: () => void;
+  onNeedVerification?: (email: string) => Promise<void>;
 }
 
-export function LoginForm({ onComplete }: LoginFormProps) {
+export function LoginForm({ onComplete, onNeedVerification }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mfaRequired, setMfaRequired] = useState<{ required: boolean; type?: string }>({
@@ -86,27 +87,14 @@ export function LoginForm({ onComplete }: LoginFormProps) {
   };
 
   const handleResendVerification = async () => {
+    if (!onNeedVerification) return;
+
     try {
       setResendingVerification(true);
       setError(null);
-
-      const response = await fetch("/api/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: verificationEmail }),
-        credentials: "include",
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.message || "認証メールの再送信に失敗しました");
-        return;
-      }
-
-      setError("認証メールを再送信しました。メールをご確認ください。");
+      await onNeedVerification(verificationEmail);
     } catch (error) {
-      setError("予期せぬエラーが発生しました");
+      setError("認証メールの再送信に失敗しました");
       console.error(error);
     } finally {
       setResendingVerification(false);
