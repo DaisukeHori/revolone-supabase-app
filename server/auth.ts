@@ -34,7 +34,15 @@ const crypto = {
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User extends SelectUser {
+      requiresMFA?: boolean;
+    }
+  }
+
+  namespace Express.Session {
+    interface SessionData {
+      mfaPendingUserId?: number;
+    }
   }
 }
 
@@ -193,7 +201,7 @@ export function setupAuth(app: Express) {
 
             if (twilioClient) {
               await twilioClient.messages.create({
-                body: `【RevolOne】認証コード：${verificationCode}\n\nこちらの認証コードを入力してログインを完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
+                body: `【RevolOne】認証コード：${verificationCode}\n\nこのコードを使用してログインを完了してください。有効期限は10分です。\n\nこのコードに関するご不明な点がございましたら、カスタマーサポートまでお問い合わせください。\n\nセキュリティを確保するため、このコードを他者と共有しないでください。`,
                 to: user.phoneNumber,
                 from: process.env.TWILIO_PHONE_NUMBER
               });
