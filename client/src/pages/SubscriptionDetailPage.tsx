@@ -741,6 +741,7 @@ function SubscriptionDetailPage() {
 
             <Separator />
 
+            {/* アクション */}
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-medium text-muted-foreground">アクション</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -755,6 +756,7 @@ function SubscriptionDetailPage() {
                 <Button
                   variant="outline"
                   className="w-full gap-2"
+                  onClick={() => setLocation("/payment-history")}
                 >
                   <History className="h-4 w-4" />
                   支払い履歴を表示
@@ -778,73 +780,6 @@ function SubscriptionDetailPage() {
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <Receipt className="h-6 w-6 text-primary" />
-              </div>
-              <CardTitle className="text-xl">支払い履歴</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {customerData.payment_history?.length > 0 ? (
-              <div className="space-y-4">
-                {customerData.payment_history.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex items-center justify-between py-4 border-b border-primary/10 last:border-0"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium">
-                        {payment.amount.toLocaleString()} {payment.currency.toUpperCase()}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(payment.created * 1000).toLocaleDateString("ja-JP", {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Badge
-                        className={
-                          payment.status === 'succeeded'
-                            ? 'bg-green-100 text-green-800 border-green-200'
-                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                        }
-                      >
-                        {payment.status === 'succeeded' ? '支払い完了' : '処理中'}
-                      </Badge>
-                      {payment.invoice_pdf && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-primary/10"
-                          asChild
-                        >
-                          <a
-                            href={payment.invoice_pdf}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-8">
-                支払い履歴はありません
-              </div>
-            )}
           </CardContent>
         </Card>
 
