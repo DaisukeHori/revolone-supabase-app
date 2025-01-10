@@ -1,5 +1,5 @@
-import Stripe from 'stripe';
 import { type Express } from "express";
+import Stripe from 'stripe';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
@@ -12,6 +12,7 @@ export async function getCustomersByEmail(email: string) {
   const customers = await stripe.customers.list({
     email,
     limit: 100,
+    expand: ['data.subscriptions'],
   });
 
   if (customers.data.length === 0) {
@@ -101,13 +102,16 @@ export async function getCustomersByEmail(email: string) {
       invoice_pdf: invoice.invoice_pdf,
     }));
 
+    // 顧客のメタデータをログ出力して確認
+    console.log(`[Stripe] Customer metadata for ${customer.id}:`, customer.metadata);
+
     return {
       customer: {
         id: customer.id,
         name: customer.name,
         email: customer.email,
         created: customer.created,
-        metadata: customer.metadata,
+        metadata: customer.metadata || {},
       },
       subscriptions: formattedSubscriptions,
       payment_history: formattedPaymentHistory,
@@ -155,8 +159,21 @@ export function setupStripeRoutes(app: Express) {
         return res.status(403).json({ message: "この顧客情報にアクセスする権限がありません" });
       }
 
+      // 現在の顧客情報を取得
+      const currentCustomer = await stripe.customers.retrieve(customerId);
+
+      // 既存のメタデータと新しいメタデータをマージ
+      const updatedMetadata = {
+        ...currentCustomer.metadata,
+        ...metadata,
+      };
+
       // メタデータを更新
-      const customer = await stripe.customers.update(customerId, { metadata });
+      const customer = await stripe.customers.update(customerId, {
+        metadata: updatedMetadata,
+      });
+
+      console.log('[Stripe] Updated customer metadata:', customer.metadata);
 
       res.json({
         message: "顧客情報を更新しました",
