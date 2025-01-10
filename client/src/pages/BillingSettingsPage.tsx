@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { CreditCard, ArrowLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { CreditCard, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
@@ -10,11 +10,6 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 // フレーマーモーションのアニメーション設定
 const animations = {
@@ -178,12 +173,11 @@ function getPageTitle(subscription: StripeSubscription | undefined): string {
 }
 
 export default function BillingSettingsPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [publishableKey, setPublishableKey] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const isSubscriptionPayment = window.location.pathname.includes("/subscription/");
   const subscriptionId = isSubscriptionPayment ? window.location.pathname.split("/subscription/")[1] : undefined;
 
@@ -266,6 +260,10 @@ export default function BillingSettingsPage() {
     );
   }
 
+  const handleBack = () => {
+    window.history.back();
+  };
+
   return (
     <AppLayout>
       <motion.div
@@ -278,7 +276,7 @@ export default function BillingSettingsPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation(-1)}
+            onClick={handleBack}
             className="hover:bg-primary/10"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -303,43 +301,7 @@ export default function BillingSettingsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {isSubscriptionPayment && subscription && (
-                <Collapsible
-                  open={isDetailsOpen}
-                  onOpenChange={setIsDetailsOpen}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium">現在のサブスクリプション情報</h3>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="w-9 p-0">
-                        {isDetailsOpen ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                  </div>
-                  <CollapsibleContent className="space-y-2">
-                    {subscription.items.map((item) => (
-                      <div key={item.subscription_item_id} className="flex justify-between items-center p-3 bg-primary/5 rounded-lg text-sm">
-                        <div className="flex-1">
-                          <p className="font-medium">{item.product.name}</p>
-                          <p className="text-muted-foreground text-xs">
-                            数量: {item.quantity}
-                          </p>
-                        </div>
-                        <p className="font-medium">
-                          {item.amount?.toLocaleString()} {item.currency.toUpperCase()}
-                        </p>
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-
+            <CardContent>
               {clientSecret && stripePromise ? (
                 <Elements
                   stripe={stripePromise}
@@ -351,7 +313,7 @@ export default function BillingSettingsPage() {
                   }}
                 >
                   <PaymentForm
-                    onComplete={() => setLocation(-1)}
+                    onComplete={() => handleBack()}
                     isSubscriptionPayment={isSubscriptionPayment}
                   />
                 </Elements>
