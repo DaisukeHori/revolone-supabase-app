@@ -401,7 +401,7 @@ function formatAddress(address: {
   state: string | null;
   postal_code: string | null;
   country: string | null;
-} | null): string {
+} | null | undefined): string {
   if (!address) return '未設定';
 
   const parts = [

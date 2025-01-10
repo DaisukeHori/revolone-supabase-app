@@ -115,6 +115,20 @@ export async function getCustomersByEmail(email: string) {
       country: customer.address.country,
     } : null;
 
+    // 配送先情報を整形
+    const shipping = customer.shipping ? {
+      address: {
+        line1: customer.shipping.address.line1,
+        line2: customer.shipping.address.line2,
+        city: customer.shipping.address.city,
+        state: customer.shipping.address.state,
+        postal_code: customer.shipping.address.postal_code,
+        country: customer.shipping.address.country,
+      },
+      name: customer.shipping.name,
+      phone: customer.shipping.phone,
+    } : null;
+
     return {
       customer: {
         id: customer.id,
@@ -123,6 +137,7 @@ export async function getCustomersByEmail(email: string) {
         created: customer.created,
         phone: customer.phone,
         address,
+        shipping,
         metadata: customer.metadata || {},
       },
       subscriptions: formattedSubscriptions,
