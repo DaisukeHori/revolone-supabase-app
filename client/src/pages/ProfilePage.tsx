@@ -94,6 +94,10 @@ export default function ProfilePage() {
                     <div className="text-lg">{user?.email}</div>
                   </div>
                   <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
+                    <div className="text-lg">{user?.phoneNumber || "未設定"}</div>
+                  </div>
+                  <div>
                     <div className="text-sm font-medium text-muted-foreground mb-2">登録日</div>
                     <div className="text-lg">
                       {new Date(user!.createdAt).toLocaleDateString("ja-JP", {
