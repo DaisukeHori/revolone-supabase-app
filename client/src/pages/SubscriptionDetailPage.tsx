@@ -742,8 +742,7 @@ function SubscriptionDetailPage() {
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
-  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({}); // Added state for updated quantities
-
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
@@ -1001,7 +1000,7 @@ function SubscriptionDetailPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
+      <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -1125,25 +1124,22 @@ function SubscriptionDetailPage() {
 
               {/* アクション */}
               <div className="flex flex-wrap gap-2 pt-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-[140px]"
-                    onClick={() => setShowQuantityModal(true)}
-                  >
-                    数量を変更
-                  </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowQuantityModal(true)}
+                >
+                  数量を変更
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setLocation("/payment-history")}
-                  >
-                    <History className="h-4 w-4" />
-                    支払い履歴
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setLocation("/payment-history")}
+                >
+                  <History className="h-4 w-4" />
+                  支払い履歴
+                </Button>
                 {subscription.status !== 'canceled' && (
                   <>
                     <Button
@@ -1179,7 +1175,6 @@ function SubscriptionDetailPage() {
           </Card>
         </motion.div>
 
-        {/* モーダルの部分を修正 */}
         <UpdateQuantityModal
           isOpen={showQuantityModal}
           onClose={() => setShowQuantityModal(false)}
