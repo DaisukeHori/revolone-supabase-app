@@ -991,6 +991,11 @@ function SubscriptionDetailPage() {
   };
 
 
+  const item = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -998,7 +1003,7 @@ function SubscriptionDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/")}
+            onClick={() => setLocation("/store/" + customer?.id)}
             className="hover:bg-primary/10"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -1006,144 +1011,49 @@ function SubscriptionDetailPage() {
           <h1 className="text-2xl font-semibold">サブスクリプション詳細</h1>
         </div>
 
-        {/* 店舗情報カード */}
-        <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>店舗情報</CardTitle>
-              <CardDescription>
-                店舗情報、請求先住所、配送先住所の確認・編集
-              </CardDescription>
-            </div>
-            <div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsEditingStore(true)}
-                className="hover:bg-primary/10"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">店舗名</div>
-                <div className="text-lg">{customer?.metadata?.サロン名 || '未設定'}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
-                <div className="text-lg">{customer?.phone || '未設定'}</div>
-              </div>
-              <div className="col-span-2">
-                <div className="text-sm font-medium text-muted-foreground mb-2">請求先住所</div>
-                <div className="text-lg">
-                  {customer?.address?.postal_code && (
-                    <div className="text-sm text-muted-foreground">〒{customer.address.postal_code}</div>
-                  )}
-                  {formatAddress(customer?.address)}
-                </div>
-              </div>
-              <div className="col-span-2">
-                <div className="text-sm font-medium text-muted-foreground mb-2">配送先住所</div>
-                <div className="text-lg">
-                  {customer?.shipping?.address?.postal_code && (
-                    <div className="text-sm text-muted-foreground">〒{customer.shipping.address.postal_code}</div>
-                  )}
-                  {formatAddress(customer?.shipping?.address)}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-
-          {/* モーダルの呼び出し */}
-          {customer && (
-            <StoreEditModal
-              isOpen={isEditingStore}
-              onClose={() => setIsEditingStore(false)}
-              customer={customer}
-              onSubmit={handleUpdateStore}
-            />
-          )}
-
-        </Card>
-
-        <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        {/* メインのサブスクリプション情報 */}
+        <motion.div initial="hidden" animate="visible" variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="bg-primary/10 p-3 rounded-lg">
                   <Package className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-2xl">
-                    {subscription.items[0]?.product?.name || 'サブスクリプション'}
+                    契約内容
                   </CardTitle>
-                  {subscription.items[0]?.product?.description && (
+                  {customer?.metadata?.サロン名 && (
                     <CardDescription>
-                      {subscription.items[0].product.description}
+                      {customer.metadata.サロン名}
                     </CardDescription>
                   )}
                 </div>
               </div>
-              <Badge className={`${getStatusBadgeColor(subscription.status)} px-3 py-1`}>
-                {formatStatus(subscription.status)}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">契約情報</h3>
-              <div className="grid gap-4md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">契約者名</p>
-                  <p className="text-lg">{customer.metadata?.サロン名 || customer.name || '未設定'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">契約番号</p>
-                  <p className="text-lg font-mono">{subscription.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">契約開始日</p>
-                  <p className="text-lg">
-                    {new Date(customer.created * 1000).toLocaleDateString("ja-JP", {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">契約ステータス</p>
-                  <Badge className={`${getStatusBadgeColor(subscription.status)} mt-1`}>
-                    {formatStatus(subscription.status)}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-muted-foreground">契約中のサービス</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowQuantityModal(true)}
-                  className="gap-2"
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* サブスクリプションステータス */}
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className={getStatusBadgeColor(subscription.status)}
                 >
-                  <Settings className="h-4 w-4" />
-                  数量を変更
-                </Button>
+                  {formatStatus(subscription.status)}
+                </Badge>
+                {subscription.cancel_at_period_end && (
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                    次回更新時に終了
+                  </Badge>
+                )}
               </div>
+
+              {/* サブスクリプションアイテム一覧 */}
               <div className="space-y-4">
                 {subscription.items.map((item) => (
-                  <div key={item.subscription_item_id} className="p-4 bg-primary/5 rounded-lg">
-                    <div className="flex items-start justify-between">
+                  <div key={item.subscription_item_id} className="bg-primary/5 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <h4 className="font-medium text-lg">{item.product.name}</h4>
+                        <p className="font-medium">{item.product.name}</p>
                         {item.product.description && (
                           <p className="text-sm text-muted-foreground">
                             {item.product.description}
@@ -1154,167 +1064,170 @@ function SubscriptionDetailPage() {
                           <span>
                             {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
                           </span>
-                          <span>×</span>
-                          <span>{item.quantity}個</span>
                         </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          数量: {item.quantity}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            <Separator />
+              {/* 支払い情報 */}
+              {subscription.default_payment_method && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    <span>
+                      {formatCardBrand(subscription.default_payment_method.card.brand)}
+                      **** {subscription.default_payment_method.card.last4} (
+                      {subscription.default_payment_method.card.exp_month}/
+                      {subscription.default_payment_method.card.exp_year})
+                    </span>
+                  </div>
+                </div>
+              )}
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">次回更新日</h3>
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-lg font-medium">
-                    {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP", {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+              {/* 更新日情報 */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">次回更新日</h3>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
+                  </span>
+                </div>
+                {isTrialing && subscription.trial_end && (
+                  <p className="text-sm text-muted-foreground">
+                    トライアル期間: {new Date(subscription.trial_end * 1000).toLocaleDateString("ja-JP")}まで
                   </p>
-                </div>
-              </div>
-            </div>
-            {isTrialing && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-muted-foreground">トライアル期間</h3>
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-lg font-medium">
-                      {new Date(subscription.trial_end! * 1000).toLocaleDateString("ja-JP", {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}まで
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      開始日: {new Date(subscription.trial_start! * 1000).toLocaleDateString("ja-JP")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
-              <div className="flex items-start gap-3">
-                <CreditCard className="h-5 w-5 text-muted-foreground mt-1" />
-                <div>
-                  <div>
-                    {subscription.default_payment_method?.card ? (
-                      <>
-                        <p className="text-lg font-medium">
-                          {formatCardBrand(subscription.default_payment_method.card.brand)}
-                          **** {subscription.default_payment_method.card.last4}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          有効期限: {subscription.default_payment_method.card.exp_month}/{subscription.default_payment_method.card.exp_year}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground">支払い方法が設定されていません</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">自動更新設定</h3>
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-3">
-                  <RefreshCw className="h-5 w-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-lg font-medium">自動更新</p>
-                    <p className="text-sm text-muted-foreground">
-                      {subscription.cancel_at_period_end
-                        ? '次回更新日で自動更新を停止します'
-                        : '自動更新が有効です'}
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={!subscription.cancel_at_period_end}
-                  onCheckedChange={handleAutoRenewalToggle}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* アクション */}
-            <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-medium text-muted-foreground">アクション</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => setLocation("/billing")}
-                >
-                  <Settings className="h-4 w-4" />
-                  支払い設定を変更
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => setLocation("/payment-history")}
-                >
-                  <History className="h-4 w-4" />
-                  支払い履歴を表示
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 text-blue-600 hover:text-blue-600 hover:bg-blue-50"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  プランを変更
-                </Button>
-                {subscription.status === 'active' && !subscription.cancel_at_period_end && (
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 text-red-600 hover:text-red-600 hover:bg-red-50"
-                    onClick={handleCancelSubscription}
-                  >
-                    <Ban className="h-4 w-4" />
-                    解約する
-                  </Button>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <UpdateQuantityModal
-          isOpen={showQuantityModal}
-          onClose={() => setShowQuantityModal(false)}
-          items={subscription.items}
-          onConfirm={(quantities) => {
-            setUpdatedQuantities(quantities);
-            setShowQuantityModal(false);
-            setShowConfirmDialog(true);
-          }}
-        />
+              {/* アクション */}
+              <div className="flex flex-wrap gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setShowQuantityModal(true)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  数量を変更
+                </Button>
 
-        <ConfirmUpdateDialog
-          isOpen={showConfirmDialog}
-          onClose={() => setShowConfirmDialog(false)}
-          items={subscription.items}
-          updatedQuantities={updatedQuantities}
-          onConfirm={handleUpdateQuantities}
-          isUpdating={isUpdating}
-        />
+                {subscription.status !== 'canceled' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleAutoRenewalToggle}
+                    >
+                      {subscription.cancel_at_period_end ? (
+                        <>
+                          <CheckCircle className="h-4 w-4" />
+                          自動更新を有効化
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="h-4 w-4" />
+                          自動更新を無効化
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="gap-2 text-red-600 hover:text-red-700"
+                      onClick={handleCancelSubscription}
+                    >
+                      <Ban className="h-4 w-4" />
+                      今すぐキャンセル
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* 支払い履歴 */}
+        {customerData.payment_history && customerData.payment_history.length > 0 && (
+          <motion.div initial="hidden" animate="visible" variants={item}>
+            <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                    <History className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl">支払い履歴</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {customerData.payment_history.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex justify-between items-center p-4 bg-primary/5 rounded-lg"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {payment.amount.toLocaleString()} {payment.currency.toUpperCase()}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(payment.created * 1000).toLocaleDateString("ja-JP")}
+                      </p>
+                    </div>
+                    {payment.invoice_pdf && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        asChild
+                      >
+                        <a
+                          href={payment.invoice_pdf}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Receipt className="h-4 w-4" />
+                          請求書
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {showQuantityModal && (
+          <UpdateQuantityModal
+            isOpen={showQuantityModal}
+            onClose={() => setShowQuantityModal(false)}
+            items={subscription.items}
+            onConfirm={(quantities) => {
+              setUpdatedQuantities(quantities);
+              setShowQuantityModal(false);
+              setShowConfirmDialog(true);
+            }}
+          />
+        )}
+
+        {showConfirmDialog && (
+          <ConfirmUpdateDialog
+            isOpen={showConfirmDialog}
+            onClose={() => setShowConfirmDialog(false)}
+            items={subscription.items}
+            updatedQuantities={updatedQuantities}
+            onConfirm={handleUpdateQuantities}
+            isUpdating={isUpdating}
+          />
+        )}
       </div>
     </AppLayout>
   );

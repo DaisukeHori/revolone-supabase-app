@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 const storeFormSchema = z.object({
   name: z.string(),
@@ -80,6 +82,7 @@ export function StoreEditModal({
   customer,
   onSubmit,
 }: StoreEditModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<StoreFormValues>({
     resolver: zodResolver(storeFormSchema),
     defaultValues: {
@@ -100,10 +103,13 @@ export function StoreEditModal({
 
   const handleSubmit = async (values: StoreFormValues) => {
     try {
+      setIsSubmitting(true);
       await onSubmit(values);
       onClose();
     } catch (error) {
       console.error('店舗情報更新エラー:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -296,10 +302,12 @@ export function StoreEditModal({
                   type="button"
                   variant="outline"
                   onClick={onClose}
+                  disabled={isSubmitting}
                 >
                   キャンセル
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   保存
                 </Button>
               </div>
