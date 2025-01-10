@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema } from "@db/schema";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,12 +16,16 @@ import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
 import { LoginForm } from "./LoginForm";
+import { PasswordStrengthIndicator } from "./PasswordStrengthIndicator";
+import { z } from "zod";
 
-type FormData = {
-  email: string;
-  username: string;
-  password: string;
-};
+const authSchema = z.object({
+  email: z.string().email("メールアドレスの形式が正しくありません"),
+  username: z.string().min(3, "ユーザー名は3文字以上である必要があります"),
+  password: z.string().min(8, "パスワードは8文字以上である必要があります"),
+});
+
+type FormData = z.infer<typeof authSchema>;
 
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,8 +35,8 @@ export function AuthForm() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(isLogin 
-      ? insertUserSchema.omit({ username: true }) 
-      : insertUserSchema
+      ? authSchema.omit({ username: true }) 
+      : authSchema
     ),
     defaultValues: {
       email: "",
@@ -41,6 +44,8 @@ export function AuthForm() {
       password: "",
     },
   });
+
+  const password = form.watch("password");
 
   const onLoginComplete = () => {
     setLocation("/");
@@ -145,6 +150,7 @@ export function AuthForm() {
                   className="bg-background/80 border-primary/20 focus:border-primary/40"
                 />
               </FormControl>
+              <PasswordStrengthIndicator password={password} />
               <FormMessage />
             </FormItem>
           )}
