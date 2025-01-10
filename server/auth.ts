@@ -35,7 +35,7 @@ const crypto = {
 declare global {
   namespace Express {
     interface User extends SelectUser {
-      requiresMFA?: boolean;
+      requiresMfa?: boolean;
     }
   }
 
@@ -64,7 +64,7 @@ export const changePasswordSchema = z.object({
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "wabi-sabi-auth",
+    secret: process.env.REPL_ID || "auth-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {},
@@ -85,35 +85,43 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy({
-      usernameField: 'email',
-      passwordField: 'password'
-    }, async (email, password, done) => {
-      try {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+    new LocalStrategy(
+      {
+        usernameField: "email",
+        passwordField: "password",
+      },
+      async (email, password, done) => {
+        try {
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
-        if (!user) {
-          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
-        }
-        const isMatch = await crypto.compare(password, user.password);
-        if (!isMatch) {
-          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
-        }
+          if (!user) {
+            return done(null, false, {
+              message: "メールアドレスまたはパスワードが正しくありません",
+            });
+          }
 
-        // 2段階認証が有効な場合は、要認証フラグを立てる
-        if (user.mfaEnabled) {
-          return done(null, { ...user, requiresMFA: true });
-        }
+          const isMatch = await crypto.compare(password, user.password);
+          if (!isMatch) {
+            return done(null, false, {
+              message: "メールアドレスまたはパスワードが正しくありません",
+            });
+          }
 
-        return done(null, user);
-      } catch (err) {
-        return done(err);
+          // 2段階認証が有効な場合は、要認証フラグを立てる
+          if (user.mfaEnabled) {
+            return done(null, { ...user, requiresMFA: true });
+          }
+
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
       }
-    })
+    )
   );
 
   passport.serializeUser((user, done) => {
