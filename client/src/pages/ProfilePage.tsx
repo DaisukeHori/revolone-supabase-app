@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, User as UserIcon, Pencil, ArrowLeft } from "lucide-react";
+import { Loader2, User as UserIcon, Pencil, ArrowLeft, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
+import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
 import { useLocation } from "wouter";
 
 const container = {
@@ -26,6 +27,7 @@ const item = {
 export default function ProfilePage() {
   const { user, isLoading } = useUser();
   const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [, setLocation] = useLocation();
 
   if (isLoading) {
@@ -102,6 +104,33 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <Lock className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">パスワード変更</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isChangingPassword ? (
+                <ChangePasswordForm onComplete={() => setIsChangingPassword(false)} />
+              ) : (
+                <Button
+                  onClick={() => setIsChangingPassword(true)}
+                  className="bg-primary/90 hover:bg-primary transition-colors"
+                >
+                  パスワードを変更
+                </Button>
               )}
             </CardContent>
           </Card>

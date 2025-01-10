@@ -41,6 +41,11 @@ export const updateProfileSchema = z.object({
   username: z.string().min(3, "ユーザー名は3文字以上である必要があります"),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "現在のパスワードを入力してください"),
+  newPassword: z.string().min(8, "パスワードは8文字以上である必要があります"),
+});
+
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
@@ -354,6 +359,46 @@ export function setupAuth(app: Express) {
       res.status(500).json({ 
         message: "プロフィールの更新中にエラーが発生しました" 
       });
+    }
+  });
+
+  app.post("/api/change-password", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const result = changePasswordSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: result.error.issues.map(i => i.message).join("、")
+      });
+    }
+
+    const { currentPassword, newPassword } = result.data;
+
+    try {
+      // 現在のパスワードを検証
+      const isMatch = await crypto.compare(currentPassword, req.user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "現在のパスワードが正しくありません" });
+      }
+
+      // 新しいパスワードをハッシュ化
+      const hashedPassword = await crypto.hash(newPassword);
+
+      // パスワードを更新
+      await db
+        .update(users)
+        .set({
+          password: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, req.user.id));
+
+      res.json({ message: "パスワードを更新しました" });
+    } catch (error) {
+      console.error("パスワード更新エラー:", error);
+      res.status(500).json({ message: "パスワードの更新中にエラーが発生しました" });
     }
   });
 }
