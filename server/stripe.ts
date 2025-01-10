@@ -7,6 +7,66 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// レボナイザー関連の定数
+const REVONIZER_PRODUCTS = {
+  SINGLE: {
+    productId: 'prod_OkRTix5Mimwc9p',
+    priceId: 'price_1NwwacAPdno01lSPWH92pzrl',
+    maxQuantity: 1
+  },
+  MEDIUM: {
+    productId: 'prod_P0DB3wRLVlz8GV',
+    priceId: 'price_1OCCkvAPdno01lSP44FyPiZ3',
+    maxQuantity: 3
+  },
+  BULK: {
+    productId: 'prod_P1IWo9CT6gNkX2',
+    priceId: 'price_1OED1uAPdno01lSP3UESyV7C',
+    maxQuantity: null // 無制限
+  }
+};
+
+// レボナイザーの数量に基づいて適切な商品の組み合わせを計算
+function calculateRevonizerQuantities(totalQuantity: number): { 
+  single: number;
+  medium: number;
+  bulk: number;
+} {
+  let remaining = totalQuantity;
+  const result = {
+    single: 0,
+    medium: 0,
+    bulk: 0
+  };
+
+  // 1台目は必ずSINGLEプラン
+  if (remaining > 0) {
+    result.single = 1;
+    remaining--;
+  }
+
+  // 2-4台目はMEDIUMプラン
+  if (remaining > 0) {
+    const mediumQuantity = Math.min(remaining, 3);
+    result.medium = mediumQuantity;
+    remaining -= mediumQuantity;
+  }
+
+  // 5台目以降はBULKプラン
+  if (remaining > 0) {
+    result.bulk = remaining;
+  }
+
+  return result;
+}
+
+// プロダクトIDがレボナイザー関連かどうかを判定
+function isRevonizerProduct(productId: string): boolean {
+  return Object.values(REVONIZER_PRODUCTS).some(product => 
+    product.productId === productId
+  );
+}
+
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
   const customers = await stripe.customers.list({
@@ -381,7 +441,10 @@ export function setupStripeRoutes(app: Express) {
     }
 
     const subscriptionId = req.params.id;
-    const { items } = req.body as { items: { id: string; quantity: number }[] };
+    const { items, totalRevonizerQuantity } = req.body as {
+      items: { id: string; quantity: number }[];
+      totalRevonizerQuantity?: number;
+    };
 
     try {
       const customersData = await getCustomersByEmail(req.user.email);
@@ -397,20 +460,114 @@ export function setupStripeRoutes(app: Express) {
         expand: ['items.data.price.product'],
       });
 
-      // 各アイテムの数量を更新
-      await Promise.all(items.map(async (item) => {
-        console.log('Updating subscription item:', item);
-        await stripe.subscriptionItems.update(item.id, {
-          quantity: item.quantity,
-        });
-      }));
+      // 更新するアイテムを準備
+      const updatePromises = [];
+
+      if (totalRevonizerQuantity !== undefined) {
+        // レボナイザーの数量計算
+        const quantities = calculateRevonizerQuantities(totalRevonizerQuantity);
+
+        // 既存のレボナイザー関連アイテムを取得
+        const revonizerItems = subscription.items.data.filter(item => 
+          isRevonizerProduct(typeof item.price.product === 'string' ? 
+            item.price.product : item.price.product.id)
+        );
+
+        // レボナイザーアイテムの更新
+        for (const item of revonizerItems) {
+          const productId = typeof item.price.product === 'string' ? 
+            item.price.product : item.price.product.id;
+
+          let newQuantity = 0;
+          if (productId === REVONIZER_PRODUCTS.SINGLE.productId) {
+            newQuantity = quantities.single;
+          } else if (productId === REVONIZER_PRODUCTS.MEDIUM.productId) {
+            newQuantity = quantities.medium;
+          } else if (productId === REVONIZER_PRODUCTS.BULK.productId) {
+            newQuantity = quantities.bulk;
+          }
+
+          if (newQuantity === 0) {
+            // 数量が0の場合は削除
+            updatePromises.push(
+              stripe.subscriptionItems.del(item.id)
+            );
+          } else {
+            // 数量を更新
+            updatePromises.push(
+              stripe.subscriptionItems.update(item.id, {
+                quantity: newQuantity,
+              })
+            );
+          }
+        }
+
+        // 新しく必要なアイテムを追加
+        const existingProductIds = revonizerItems.map(item => 
+          typeof item.price.product === 'string' ? 
+            item.price.product : item.price.product.id
+        );
+
+        if (quantities.single > 0 && !existingProductIds.includes(REVONIZER_PRODUCTS.SINGLE.productId)) {
+          updatePromises.push(
+            stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: REVONIZER_PRODUCTS.SINGLE.priceId,
+              quantity: quantities.single,
+            })
+          );
+        }
+
+        if (quantities.medium > 0 && !existingProductIds.includes(REVONIZER_PRODUCTS.MEDIUM.productId)) {
+          updatePromises.push(
+            stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: REVONIZER_PRODUCTS.MEDIUM.priceId,
+              quantity: quantities.medium,
+            })
+          );
+        }
+
+        if (quantities.bulk > 0 && !existingProductIds.includes(REVONIZER_PRODUCTS.BULK.productId)) {
+          updatePromises.push(
+            stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: REVONIZER_PRODUCTS.BULK.priceId,
+              quantity: quantities.bulk,
+            })
+          );
+        }
+      }
+
+      // レボナイザー以外のアイテムの更新
+      const nonRevonizerItems = items.filter(item => {
+        const subscriptionItem = subscription.items.data.find(i => i.id === item.id);
+        if (!subscriptionItem) return false;
+        const productId = typeof subscriptionItem.price.product === 'string' ? 
+          subscriptionItem.price.product : subscriptionItem.price.product.id;
+        return !isRevonizerProduct(productId);
+      });
+
+      for (const item of nonRevonizerItems) {
+        updatePromises.push(
+          stripe.subscriptionItems.update(item.id, {
+            quantity: item.quantity,
+          })
+        );
+      }
+
+      // すべての更新を実行
+      await Promise.all(updatePromises);
 
       // 更新後のサブスクリプションを返す
       const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
         expand: ['items.data.price.product'],
       });
 
-      res.json({ message: "数量を更新しました", subscription: updatedSubscription });
+      res.json({ 
+        message: "数量を更新しました",
+        subscription: updatedSubscription 
+      });
     } catch (error) {
       console.error('[Stripe] 数量更新エラー:', error);
       res.status(500).json({ message: "数量の更新中にエラーが発生しました" });
