@@ -43,6 +43,36 @@ const item = {
   show: { opacity: 1, y: 0 }
 };
 
+function getStatusBadgeColor(status: string) {
+  switch (status) {
+    case 'succeeded':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'failed':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'canceled':
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+}
+
+function formatStatus(status: string) {
+  switch (status) {
+    case 'succeeded':
+      return '支払い完了';
+    case 'pending':
+      return '処理中';
+    case 'failed':
+      return '失敗';
+    case 'canceled':
+      return 'キャンセル';
+    default:
+      return status;
+  }
+}
+
 export default function PaymentHistoryPage() {
   const [, setLocation] = useLocation();
   const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData>({
@@ -122,13 +152,9 @@ export default function PaymentHistoryPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge
-                          className={
-                            payment.status === 'succeeded'
-                              ? 'bg-green-100 text-green-800 border-green-200'
-                              : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                          }
+                          className={getStatusBadgeColor(payment.status)}
                         >
-                          {payment.status === 'succeeded' ? '支払い完了' : '処理中'}
+                          {formatStatus(payment.status)}
                         </Badge>
                         <div className="flex gap-2">
                           {payment.invoice_pdf && (
