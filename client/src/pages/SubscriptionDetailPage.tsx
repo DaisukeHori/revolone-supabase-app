@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { calculateProductQuantities, getTotalQuantityFromProducts, isRevonaizer, getQuantityDifference, REVONAIZER_PRODUCTS } from "@/lib/subscription-utils";
+
 
 // フォームのスキーマ定義を更新（必須バリデーションを削除）
 const storeFormSchema = z.object({
@@ -111,6 +113,7 @@ type StripeSubscription = {
     interval: string;
     quantity: number;
     product: {
+      id: string;
       name: string;
       description: string | null;
     };
@@ -200,10 +203,16 @@ function UpdateQuantityModal({
   onConfirm: (quantities: Record<string, number>) => void;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [totalRevoQuantity, setTotalRevoQuantity] = useState<number>(0);
 
   useEffect(() => {
     console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
     const initialQuantities: Record<string, number> = {};
+
+    // レボナイザー製品の合計数を計算
+    const revoTotal = getTotalQuantityFromProducts(items);
+    setTotalRevoQuantity(revoTotal);
+
     items.forEach((item) => {
       const itemId = item.subscription_item_id;
       console.log(`[UpdateQuantityModal] Processing item:`, {
@@ -219,14 +228,40 @@ function UpdateQuantityModal({
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
     console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
-    setQuantities(prev => {
-      const next = {
+
+    // レボナイザー製品の場合は特別な処理
+    const isRevoItem = items.some(item =>
+      isRevonaizer(item.product.id) && item.subscription_item_id === itemId
+    );
+
+    if (isRevoItem) {
+      try {
+        const newQuantities = calculateProductQuantities(quantity);
+        setTotalRevoQuantity(quantity);
+        // ここで新しい数量を設定
+        items.forEach(item => {
+          if (isRevonaizer(item.product.id)) {
+            const tier = Object.entries(REVONAIZER_PRODUCTS).find(
+              ([_, config]) => config.product_id === item.product.id
+            )?.[0];
+            if (tier) {
+              quantities[item.subscription_item_id] = newQuantities[tier as keyof typeof REVONAIZER_PRODUCTS] || 0;
+            }
+          }
+        });
+      } catch (error) {
+        console.error('数量計算エラー:', error);
+        return;
+      }
+    } else {
+      // 通常の製品の場合は直接数量を設定
+      setQuantities(prev => ({
         ...prev,
         [itemId]: quantity
-      };
-      console.log('[UpdateQuantityModal] Updated quantities:', next);
-      return next;
-    });
+      }));
+    }
+
+    console.log('[UpdateQuantityModal] Updated quantities:', quantities);
   };
 
   return (
@@ -241,10 +276,17 @@ function UpdateQuantityModal({
         <div className="space-y-6 pb-2">
           {items.map((item) => {
             const itemId = item.subscription_item_id;
+            const isRevoProduct = isRevonaizer(item.product.id);
+
+            // レボナイザー製品の場合、最初の1つだけ表示
+            if (isRevoProduct && itemId !== items.find(i => isRevonaizer(i.product.id))?.subscription_item_id) {
+              return null;
+            }
+
             console.log(`[UpdateQuantityModal] Rendering item:`, {
               id: itemId,
               name: item.product.name,
-              currentQuantity: quantities[itemId],
+              currentQuantity: isRevoProduct ? totalRevoQuantity : quantities[itemId],
               originalQuantity: item.quantity
             });
 
@@ -266,9 +308,9 @@ function UpdateQuantityModal({
                     </div>
                   </div>
                   <QuantityInput
-                    key={`${itemId}-${quantities[itemId] || item.quantity}`}
+                    key={`${itemId}-${isRevoProduct ? totalRevoQuantity : quantities[itemId]}`}
                     itemId={itemId}
-                    initialQuantity={quantities[itemId] || item.quantity}
+                    initialQuantity={isRevoProduct ? totalRevoQuantity : quantities[itemId] || item.quantity}
                     onChange={(quantity) => handleQuantityChange(itemId, quantity)}
                   />
                 </div>

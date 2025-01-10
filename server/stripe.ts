@@ -7,6 +7,64 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// レボナイザー製品の設定
+const REVONAIZER_PRODUCTS = {
+  TIER1: {
+    price_id: 'price_1NwwacAPdno01lSPWH92pzrl',
+    product_id: 'prod_OkRTix5Mimwc9p',
+    min_quantity: 1,
+    max_quantity: 1,
+  },
+  TIER2: {
+    price_id: 'price_1OCCkvAPdno01lSP44FyPiZ3',
+    product_id: 'prod_P0DB3wRLVlz8GV',
+    min_quantity: 0,
+    max_quantity: 3,
+  },
+  TIER3: {
+    price_id: 'price_1OED1uAPdno01lSP3UESyV7C',
+    product_id: 'prod_P1IWo9CT6gNkX2',
+    min_quantity: 0,
+    max_quantity: Infinity,
+  },
+} as const;
+
+// レボナイザー製品かどうかを判定する関数
+function isRevonaizerProduct(productId: string): boolean {
+  return Object.values(REVONAIZER_PRODUCTS).some(
+    product => product.product_id === productId
+  );
+}
+
+// 数量計算関数
+function calculateProductQuantities(totalQuantity: number) {
+  if (totalQuantity < 1) {
+    throw new Error('数量は1以上である必要があります');
+  }
+
+  const quantities: Record<string, number> = {
+    [REVONAIZER_PRODUCTS.TIER1.product_id]: 1,
+  };
+
+  if (totalQuantity === 1) {
+    return quantities;
+  }
+
+  // 2-4台目はTIER2
+  const tier2Quantity = Math.min(3, totalQuantity - 1);
+  if (tier2Quantity > 0) {
+    quantities[REVONAIZER_PRODUCTS.TIER2.product_id] = tier2Quantity;
+  }
+
+  // 5台目以降はTIER3
+  const remainingQuantity = totalQuantity - 1 - (quantities[REVONAIZER_PRODUCTS.TIER2.product_id] || 0);
+  if (remainingQuantity > 0) {
+    quantities[REVONAIZER_PRODUCTS.TIER3.product_id] = remainingQuantity;
+  }
+
+  return quantities;
+}
+
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
   const customers = await stripe.customers.list({
@@ -397,13 +455,69 @@ export function setupStripeRoutes(app: Express) {
         expand: ['items.data.price.product'],
       });
 
-      // 各アイテムの数量を更新
-      await Promise.all(items.map(async (item) => {
-        console.log('Updating subscription item:', item);
+      // 更新対象のアイテムを分類（レボナイザー製品とその他）
+      const revoItems: typeof items = [];
+      const otherItems: typeof items = [];
+
+      items.forEach(item => {
+        const subItem = subscription.items.data.find(i => i.id === item.id);
+        if (subItem && typeof subItem.price.product === 'object' &&
+            isRevonaizerProduct(subItem.price.product.id)) {
+          revoItems.push(item);
+        } else {
+          otherItems.push(item);
+        }
+      });
+
+      // レボナイザー製品の数量を更新
+      if (revoItems.length > 0) {
+        const totalQuantity = revoItems.reduce((sum, item) => sum + item.quantity, 0);
+        const newQuantities = calculateProductQuantities(totalQuantity);
+
+        // 既存のアイテムを更新または削除
+        for (const item of subscription.items.data) {
+          if (typeof item.price.product === 'object' &&
+              isRevonaizerProduct(item.price.product.id)) {
+            const newQuantity = newQuantities[item.price.product.id] || 0;
+            if (newQuantity > 0) {
+              await stripe.subscriptionItems.update(item.id, {
+                quantity: newQuantity,
+              });
+            } else {
+              await stripe.subscriptionItems.del(item.id);
+            }
+          }
+        }
+
+        // 新しいアイテムを追加
+        for (const [productId, quantity] of Object.entries(newQuantities)) {
+          const existingItem = subscription.items.data.find(
+            item => typeof item.price.product === 'object' &&
+                   item.price.product.id === productId
+          );
+
+          if (!existingItem && quantity > 0) {
+            const priceId = Object.values(REVONAIZER_PRODUCTS).find(
+              p => p.product_id === productId
+            )?.price_id;
+
+            if (priceId) {
+              await stripe.subscriptionItems.create({
+                subscription: subscriptionId,
+                price: priceId,
+                quantity,
+              });
+            }
+          }
+        }
+      }
+
+      // その他の製品の数量を更新
+      for (const item of otherItems) {
         await stripe.subscriptionItems.update(item.id, {
           quantity: item.quantity,
         });
-      }));
+      }
 
       // 更新後のサブスクリプションを返す
       const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
