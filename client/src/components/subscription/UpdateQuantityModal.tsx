@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { REVONIZER } from '@/lib/constants';
 
 type SubscriptionItem = {
@@ -27,26 +27,26 @@ type Props = {
   onSuccess: () => void;
 };
 
+type Step = 'revonizer' | 'other_items' | 'confirm';
+
 export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, onSuccess }: Props) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isConfirmStep, setIsConfirmStep] = useState(false);
+  const [currentStep, setCurrentStep] = useState<Step>('revonizer');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(0);
+  const [calculatedQuantities, setCalculatedQuantities] = useState<{
+    single: number;
+    medium: number;
+    bulk: number;
+  }>({ single: 0, medium: 0, bulk: 0 });
 
   // 初期値の設定
   useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
     const initialQuantities: Record<string, number> = {};
     let initialRevonizerCount = 0;
 
     items.forEach(item => {
-      console.log('[UpdateQuantityModal] Processing item:', {
-        id: item.subscription_item_id,
-        name: item.product.name,
-        quantity: item.quantity
-      });
-
       // 商品がレボナイザー関連かどうかをチェック
       const isRevonizerProduct = Object.values(REVONIZER.PRODUCTS).some(
         product => item.subscription_item_id.includes(product.PRICE_ID)
@@ -59,10 +59,30 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
       initialQuantities[item.subscription_item_id] = item.quantity;
     });
 
-    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
     setQuantities(initialQuantities);
     setTotalRevonizerQuantity(initialRevonizerCount);
   }, [items]);
+
+  // レボナイザーの台数が変更されたときの処理
+  useEffect(() => {
+    if (totalRevonizerQuantity <= 0) {
+      setCalculatedQuantities({ single: 0, medium: 0, bulk: 0 });
+      return;
+    }
+
+    // 1台目は必ずSINGLEプラン
+    let single = Math.min(1, totalRevonizerQuantity);
+    let remaining = totalRevonizerQuantity - single;
+
+    // 2-4台目はMEDIUMプラン
+    let medium = Math.min(3, Math.max(0, remaining));
+    remaining -= medium;
+
+    // 5台目以降はBULKプラン
+    let bulk = Math.max(0, remaining);
+
+    setCalculatedQuantities({ single, medium, bulk });
+  }, [totalRevonizerQuantity]);
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     setQuantities(prev => ({ ...prev, [itemId]: newQuantity }));
@@ -107,55 +127,78 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
     }
   };
 
-  const handleProceedToConfirm = () => {
-    setIsConfirmStep(true);
-  };
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 'revonizer':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="revonizer-quantity">
+                レボナイザーの希望台数を入力してください
+              </Label>
+              <Input
+                id="revonizer-quantity"
+                type="number"
+                min="0"
+                value={totalRevonizerQuantity}
+                onChange={(e) => setTotalRevonizerQuantity(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
 
-  const handleBack = () => {
-    setIsConfirmStep(false);
-  };
+            <DialogFooter>
+              <Button onClick={() => setCurrentStep('other_items')}>
+                次へ
+              </Button>
+            </DialogFooter>
+          </div>
+        );
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isConfirmStep ? "変更内容の確認" : "数量の変更"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-4">
-          {!isConfirmStep ? (
-            <>
-              {/* レボナイザーの合計数量入力 */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="revonizer-quantity" className="col-span-2">
-                  レボナイザー（合計）
-                </Label>
-                <Input
-                  id="revonizer-quantity"
-                  type="number"
-                  min="0"
-                  value={totalRevonizerQuantity}
-                  onChange={(e) => setTotalRevonizerQuantity(Number(e.target.value))}
-                  className="col-span-2"
-                />
+      case 'other_items':
+        return (
+          <div className="space-y-6">
+            {/* レボナイザー関連商品の表示（変更不可） */}
+            <div className="space-y-4">
+              <h3 className="font-medium">レボナイザー関連商品（自動計算）</h3>
+              <div className="space-y-2">
+                {calculatedQuantities.single > 0 && (
+                  <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>標準プラン</span>
+                    </div>
+                    <span>{calculatedQuantities.single}台</span>
+                  </div>
+                )}
+                {calculatedQuantities.medium > 0 && (
+                  <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>2-4台目用プラン</span>
+                    </div>
+                    <span>{calculatedQuantities.medium}台</span>
+                  </div>
+                )}
+                {calculatedQuantities.bulk > 0 && (
+                  <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>5台目以降用プラン</span>
+                    </div>
+                    <span>{calculatedQuantities.bulk}台</span>
+                  </div>
+                )}
               </div>
+            </div>
 
-              {/* 他の商品の数量入力 */}
+            <div className="space-y-4">
+              <h3 className="font-medium">その他の商品</h3>
               {items.map((item) => {
                 // レボナイザー関連商品はスキップ
                 const isRevonizerProduct = Object.values(REVONIZER.PRODUCTS).some(
                   product => item.subscription_item_id.includes(product.PRICE_ID)
                 );
                 if (isRevonizerProduct) return null;
-
-                console.log('[UpdateQuantityModal] Rendering item:', {
-                  id: item.subscription_item_id,
-                  name: item.product.name,
-                  currentQuantity: quantities[item.subscription_item_id],
-                  originalQuantity: item.quantity
-                });
 
                 return (
                   <div key={item.subscription_item_id} className="grid grid-cols-4 items-center gap-4">
@@ -173,17 +216,44 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
                   </div>
                 );
               })}
-            </>
-          ) : (
-            // 確認ステップの表示
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCurrentStep('revonizer')}>
+                戻る
+              </Button>
+              <Button onClick={() => setCurrentStep('confirm')}>
+                変更内容を確認
+              </Button>
+            </DialogFooter>
+          </div>
+        );
+
+      case 'confirm':
+        return (
+          <div className="space-y-6">
             <div className="space-y-4">
+              <h3 className="font-medium">レボナイザー</h3>
               <div className="space-y-2">
-                <h4 className="font-medium">レボナイザー</h4>
                 <p className="text-sm text-muted-foreground">
                   合計台数: {totalRevonizerQuantity}台
                 </p>
+                <div className="space-y-1">
+                  {calculatedQuantities.single > 0 && (
+                    <p className="text-sm">標準プラン: {calculatedQuantities.single}台</p>
+                  )}
+                  {calculatedQuantities.medium > 0 && (
+                    <p className="text-sm">2-4台目用プラン: {calculatedQuantities.medium}台</p>
+                  )}
+                  {calculatedQuantities.bulk > 0 && (
+                    <p className="text-sm">5台目以降用プラン: {calculatedQuantities.bulk}台</p>
+                  )}
+                </div>
               </div>
+            </div>
 
+            <div className="space-y-4">
+              <h3 className="font-medium">その他の商品</h3>
               {items.map((item) => {
                 const isRevonizerProduct = Object.values(REVONIZER.PRODUCTS).some(
                   product => item.subscription_item_id.includes(product.PRICE_ID)
@@ -195,7 +265,7 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
 
                 return (
                   <div key={item.subscription_item_id} className="space-y-1">
-                    <h4 className="font-medium">{item.product.name}</h4>
+                    <p className="text-sm font-medium">{item.product.name}</p>
                     <p className="text-sm text-muted-foreground">
                       数量: {item.quantity} → {newQuantity}
                       {quantityDiff !== 0 && (
@@ -208,26 +278,35 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
                 );
               })}
             </div>
-          )}
-        </div>
 
-        <DialogFooter>
-          {isConfirmStep ? (
-            <>
-              <Button variant="outline" onClick={handleBack} disabled={isLoading}>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCurrentStep('other_items')}>
                 戻る
               </Button>
               <Button onClick={handleSubmit} disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 確定する
               </Button>
-            </>
-          ) : (
-            <Button onClick={handleProceedToConfirm}>
-              変更内容を確認
-            </Button>
-          )}
-        </DialogFooter>
+            </DialogFooter>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            {currentStep === 'revonizer' && "レボナイザーの台数設定"}
+            {currentStep === 'other_items' && "商品数量の変更"}
+            {currentStep === 'confirm' && "変更内容の確認"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="py-4">
+          {renderStepContent()}
+        </div>
       </DialogContent>
     </Dialog>
   );
