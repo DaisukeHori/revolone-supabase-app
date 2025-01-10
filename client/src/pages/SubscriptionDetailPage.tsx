@@ -231,14 +231,14 @@ function UpdateQuantityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>プランの数量を変更</DialogTitle>
           <DialogDescription>
             各プランの数量を設定してください。
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6">
+        <div className="space-y-6 pb-2">
           {items.map((item) => {
             const itemId = item.subscription_item_id;
             console.log(`[UpdateQuantityModal] Rendering item:`, {
@@ -276,7 +276,7 @@ function UpdateQuantityModal({
             );
           })}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 mt-6">
             <Button
               variant="outline"
               onClick={onClose}
@@ -329,63 +329,65 @@ function ConfirmUpdateDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>変更内容の確認</DialogTitle>
           <DialogDescription>
             以下の内容で更新します。更新後、次回の請求から反映されます。
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6">
-          <div className="space-y-4">
-            {items.map((item) => {
-              const itemId = item.subscription_item_id;
-              const updatedQuantity = updatedQuantities[itemId];
-              const hasChanged = updatedQuantity !== item.quantity;
+        <div className="overflow-y-auto pr-6 -mr-6">
+          <div className="space-y-6 pb-2">
+            <div className="space-y-4">
+              {items.map((item) => {
+                const itemId = item.subscription_item_id;
+                const updatedQuantity = updatedQuantities[itemId];
+                const hasChanged = updatedQuantity !== item.quantity;
 
-              return (
-                <div key={itemId} className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{item.product.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.quantity}個 → {updatedQuantity || item.quantity}個
-                    </p>
+                return (
+                  <div key={itemId} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">{item.product.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.quantity}個 → {updatedQuantity || item.quantity}個
+                      </p>
+                    </div>
+                    {item.amount && (
+                      <p className="font-medium">
+                        {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
+                      </p>
+                    )}
                   </div>
-                  {item.amount && (
-                    <p className="font-medium">
-                      {((updatedQuantity || item.quantity) * item.amount).toLocaleString()} {item.currency.toUpperCase()}
-                    </p>
-                  )}
+                );
+              })}
+              <div className="pt-4 border-t border-primary/10">
+                <div className="flex justify-between items-center">
+                  <p className="font-medium">次回請求額（合計）</p>
+                  <p className="font-medium text-lg">
+                    {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
+                  </p>
                 </div>
-              );
-            })}
-            <div className="pt-4 border-t border-primary/10">
-              <div className="flex justify-between items-center">
-                <p className="font-medium">次回請求額（合計）</p>
-                <p className="font-medium text-lg">
-                  {totalAmount.toLocaleString()} {items[0]?.currency.toUpperCase()}
-                </p>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isUpdating}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={onConfirm}
-              disabled={isUpdating || changedItems.length === 0}
-            >
-              {isUpdating ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              更新する
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isUpdating}
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={onConfirm}
+                disabled={isUpdating || changedItems.length === 0}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                更新する
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
