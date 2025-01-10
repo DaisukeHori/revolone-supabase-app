@@ -1,0 +1,55 @@
+[vite] connecting...
+[vite] connected.
+Stripe Data: 
+(2) [{…}, {…}]
+Customer Data: 
+Object {customer: {…}, subscriptions: Array(1), payment_history: Array(14)}
+Customer: 
+Object {id: "cus_PCvnk7s61noGQW", name: "堀大輔（カード保有者の名前欄）", email: "hori@revol.co.jp", created: 1702864075, phone: "+818095756500", …}
+Stripe Data: 
+(2) [{…}, {…}]
+Customer Data: 
+Object {customer: {…}, subscriptions: Array(1), payment_history: Array(14)}
+Customer: 
+Object {id: "cus_PCvnk7s61noGQW", name: "堀大輔（カード保有者の名前欄）", email: "hori@revol.co.jp", created: 1702864075, phone: "+818095756500", …}
+formatCardBrand is not defined
+Stripe Data: 
+(2) [{…}, {…}]
+Customer Data: 
+Object {customer: {…}, subscriptions: Array(1), payment_history: Array(14)}
+Customer: 
+Object {id: "cus_PCvnk7s61noGQW", name: "堀大輔（カード保有者の名前欄）", email: "hori@revol.co.jp", created: 1702864075, phone: "+818095756500", …}
+Stripe Data: 
+(2) [{…}, {…}]
+0: Object
+1: Object
+length: 2
+[[Prototype]]: Array(0)
+Customer Data: 
+Object {customer: {…}, subscriptions: Array(1), payment_history: Array(14)}
+customer: Object
+payment_history: Array(14)
+subscriptions: Array(1)
+[[Prototype]]: Object
+Customer: 
+Object {id: "cus_PCvnk7s61noGQW", name: "堀大輔（カード保有者の名前欄）", email: "hori@revol.co.jp", created: 1702864075, phone: "+818095756500", …}
+address: Object
+created: 1702864075
+email: "hori@revol.co.jp"
+id: "cus_PCvnk7s61noGQW"
+metadata: Object
+name: "堀大輔（カード保有者の名前欄）"
+phone: "+818095756500"
+[[Prototype]]: Object
+formatCardBrand is not defined
+The above error occurred in the <SubscriptionDetailPage> component:
+
+    at SubscriptionDetailPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/SubscriptionDetailPage.tsx:552:27)
+    at Route (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1c1b6026:323:16)
+    at Switch (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1c1b6026:379:17)
+    at App (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/App.tsx:34:31)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1c1b6026:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+formatCardBrand is not defined

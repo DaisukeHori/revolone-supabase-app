@@ -392,6 +392,21 @@ function formatAddress(address: StripeCustomerData['customer']['address'] | null
   return parts.join(' ') || '未設定';
 }
 
+function formatCardBrand(brand: string) {
+  switch (brand.toLowerCase()) {
+    case 'visa':
+      return 'VISA';
+    case 'mastercard':
+      return 'Mastercard';
+    case 'amex':
+      return 'American Express';
+    case 'jcb':
+      return 'JCB';
+    default:
+      return brand.toUpperCase();
+  }
+}
+
 function formatStatus(status: string) {
   switch (status) {
     case 'active':
@@ -975,7 +990,7 @@ function SubscriptionDetailPage() {
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
+              <h3 className="text-smfont-medium text-muted-foreground">支払い方法</h3>
               <div className="flex items-start gap-3">
                 <CardIcon className="h-5 w-5 text-muted-foreground mt-1" />
                 <div>
