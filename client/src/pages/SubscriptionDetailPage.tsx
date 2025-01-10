@@ -192,12 +192,24 @@ function UpdateQuantityModal({
   isOpen,
   onClose,
   items,
-  onConfirm
+  onConfirm,
+  subscriptionId
 }: {
   isOpen: boolean;
   onClose: () => void;
-  items: StripeSubscription['items'];
-  onConfirm: (quantities: Record<string, number>) => void;
+  items: {
+    subscription_item_id: string;
+    amount: number | null;
+    currency: string;
+    interval: string;
+    quantity: number;
+    product: {
+      name: string;
+      description: string | null;
+    };
+  }[];
+  onConfirm: () => void;
+  subscriptionId: string | undefined;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
@@ -228,6 +240,11 @@ function UpdateQuantityModal({
       return next;
     });
   };
+
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -284,7 +301,7 @@ function UpdateQuantityModal({
               キャンセル
             </Button>
             <Button
-              onClick={() => onConfirm(quantities)}
+              onClick={handleConfirm}
               disabled={Object.keys(quantities).length === 0}
             >
               変更内容を確認
@@ -844,44 +861,8 @@ function SubscriptionDetailPage() {
   };
 
   const handleUpdateQuantities = async () => {
-    if (Object.keys(updatedQuantities).length === 0) {
-      return;
-    }
 
-    setIsUpdating(true);
-    try {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
-            id,
-            quantity
-          }))
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      await refetch();
-      toast({
-        description: "プランの数量を更新しました",
-      });
-
-      setUpdatedQuantities({});
-      setShowConfirmDialog(false);
-    } catch (error) {
-      console.error('数量更新エラー:', error);
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
+    setShowConfirmDialog(true);
   };
 
   const toggleAutoRenewalMutation = useMutation({
@@ -1035,8 +1016,7 @@ function SubscriptionDetailPage() {
               {/* サブスクリプションステータス */}
               <div className="flex items-center gap-2">
                 <Badge
-                  variant="secondary"
-                  className={getStatusBadgeColor(subscription.status)}
+                  className={`${getStatusBadgeColor(subscription.status)} border`}
                 >
                   {formatStatus(subscription.status)}
                 </Badge>
@@ -1176,18 +1156,14 @@ function SubscriptionDetailPage() {
           </Card>
         </motion.div>
 
-        {showQuantityModal && (
-          <UpdateQuantityModal
-            isOpen={showQuantityModal}
-            onClose={() => setShowQuantityModal(false)}
-            items={subscription.items}
-            onConfirm={(quantities) => {
-              setUpdatedQuantities(quantities);
-              setShowQuantityModal(false);
-              setShowConfirmDialog(true);
-            }}
-          />
-        )}
+        {/* モーダルの部分を修正 */}
+        <UpdateQuantityModal
+          isOpen={showQuantityModal}
+          onClose={() => setShowQuantityModal(false)}
+          subscriptionId={subscriptionId}
+          items={subscription?.items || []}
+          onConfirm={handleUpdateQuantities}
+        />
 
         {showConfirmDialog && (
           <ConfirmUpdateDialog

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Lock } from "lucide-react";
 import { REVONIZER } from '@/lib/constants';
+import { useState, useEffect } from 'react';
 
 type SubscriptionItem = {
   subscription_item_id: string;
@@ -24,12 +24,12 @@ type Props = {
   onClose: () => void;
   subscriptionId: string;
   items: SubscriptionItem[];
-  onSuccess: () => void;
+  onConfirm: () => Promise<void>;
 };
 
 type Step = 'revonizer' | 'other_items' | 'confirm';
 
-export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, onSuccess }: Props) {
+export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, onConfirm }: Props) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>('revonizer');
@@ -41,29 +41,31 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
     bulk: number;
   }>({ single: 0, medium: 0, bulk: 0 });
 
-  // 初期値の設定
+  // モーダルが開かれたときの初期化
   useEffect(() => {
-    const initialQuantities: Record<string, number> = {};
-    let initialRevonizerCount = 0;
+    if (isOpen) {
+      setCurrentStep('revonizer');
+      const initialQuantities: Record<string, number> = {};
+      let initialRevonizerCount = 0;
 
-    items.forEach(item => {
-      // 商品がレボナイザー関連かどうかをチェック
-      const isRevonizerProduct = Object.values(REVONIZER.PRODUCTS).some(
-        product => item.subscription_item_id.includes(product.PRICE_ID)
-      );
+      items.forEach(item => {
+        const isRevonizerProduct = Object.values(REVONIZER.PRODUCTS).some(
+          product => item.subscription_item_id.includes(product.PRICE_ID)
+        );
 
-      if (isRevonizerProduct) {
-        initialRevonizerCount += item.quantity;
-      }
+        if (isRevonizerProduct) {
+          initialRevonizerCount += item.quantity;
+        }
 
-      initialQuantities[item.subscription_item_id] = item.quantity;
-    });
+        initialQuantities[item.subscription_item_id] = item.quantity;
+      });
 
-    setQuantities(initialQuantities);
-    setTotalRevonizerQuantity(initialRevonizerCount);
-  }, [items]);
+      setQuantities(initialQuantities);
+      setTotalRevonizerQuantity(initialRevonizerCount);
+    }
+  }, [isOpen, items]);
 
-  // レボナイザーの台数が変更されたときの処理
+  // レボナイザーの台数変更時の処理
   useEffect(() => {
     if (totalRevonizerQuantity <= 0) {
       setCalculatedQuantities({ single: 0, medium: 0, bulk: 0 });
@@ -114,7 +116,7 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
         description: "サブスクリプションの数量を更新しました",
       });
 
-      onSuccess();
+      onConfirm();
       onClose();
     } catch (error) {
       console.error('数量更新エラー:', error);
@@ -133,7 +135,7 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">現在の台数: {totalRevonizerQuantity}台</p>
+              <p className="text-sm text-muted-foreground">現在の合計台数: {totalRevonizerQuantity}台</p>
               <div className="space-y-2">
                 <Label htmlFor="revonizer-quantity">
                   レボナイザーの希望台数を入力してください
@@ -305,6 +307,11 @@ export function UpdateQuantityModal({ isOpen, onClose, subscriptionId, items, on
             {currentStep === 'other_items' && "商品数量の変更"}
             {currentStep === 'confirm' && "変更内容の確認"}
           </DialogTitle>
+          <DialogDescription>
+            {currentStep === 'revonizer' && "希望するレボナイザーの合計台数を入力してください"}
+            {currentStep === 'other_items' && "レボナイザー以外の商品の数量を変更できます"}
+            {currentStep === 'confirm' && "変更内容を確認してください"}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
