@@ -12,10 +12,11 @@ type StripePaymentHistory = {
   id: string;
   amount: number;
   currency: string;
-  status: string; // Added
+  status: string;
   created: number;
   invoice_pdf: string | null;
-  hosted_invoice_url: string | null; // Added
+  receipt_url: string | null;
+  hosted_invoice_url: string | null;
 };
 
 type StripeCustomerData = {
@@ -28,19 +29,20 @@ type StripeCustomerData = {
   payment_history: StripePaymentHistory[];
 };
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
+const animations = {
+  container: {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
     }
+  },
+  item: {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
   }
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
 };
 
 function getStatusBadgeColor(status: string) {
@@ -98,7 +100,7 @@ export default function PaymentHistoryPage() {
   return (
     <AppLayout>
       <motion.div
-        variants={container}
+        variants={animations.container}
         initial="hidden"
         animate="show"
         className="space-y-8"
@@ -107,7 +109,7 @@ export default function PaymentHistoryPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation(-1)}
+            onClick={() => window.history.back()}
             className="hover:bg-primary/10"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -115,7 +117,7 @@ export default function PaymentHistoryPage() {
           <h1 className="text-2xl font-semibold">支払い履歴</h1>
         </div>
 
-        <motion.div variants={item}>
+        <motion.div variants={animations.item}>
           <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
             <CardHeader>
               <div className="flex items-center gap-3">
