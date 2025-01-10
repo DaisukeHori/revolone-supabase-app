@@ -40,8 +40,9 @@ app.use((req, res, next) => {
   try {
     const server = registerRoutes(app);
 
+    // エラーハンドリングミドルウェア
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error('Error:', err);
+      console.error('エラー:', err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "予期せぬエラーが発生しました";
 
@@ -54,10 +55,31 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = 5000;
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`サーバーが起動しました。ポート: ${PORT}`);
-    });
+    const PORT = process.env.PORT || 5000;
+    const startServer = (port: number) => {
+      server.listen(port, "0.0.0.0", () => {
+        log(`サーバーが起動しました。ポート: ${port}`);
+      }).on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          log(`ポート ${port} は使用中です。別のポートを試します...`);
+          startServer(port + 1);
+        } else {
+          console.error('サーバー起動エラー:', err);
+          process.exit(1);
+        }
+      });
+
+      // Graceful shutdown
+      process.on('SIGTERM', () => {
+        log('SIGTERM received. サーバーを終了します...');
+        server.close(() => {
+          log('サーバーを正常に終了しました。');
+          process.exit(0);
+        });
+      });
+    };
+
+    startServer(Number(PORT));
   } catch (error) {
     console.error('アプリケーション起動エラー:', error);
     process.exit(1);
