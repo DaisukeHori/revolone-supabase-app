@@ -37,7 +37,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { calculateProductQuantities, getTotalQuantityFromProducts, isRevonaizer, getQuantityDifference, REVONAIZER_PRODUCTS } from "@/lib/subscription-utils";
 
 
-
 // フォームのスキーマ定義を更新（必須バリデーションを削除）
 const storeFormSchema = z.object({
   name: z.string(),
@@ -146,16 +145,13 @@ function QuantityInput({
   const [quantity, setQuantity] = useState(initialQuantity);
 
   useEffect(() => {
-    console.log(`[QuantityInput ${itemId}] initialQuantity:`, initialQuantity, 'current quantity:', quantity);
     if (initialQuantity !== quantity) {
-      console.log(`[QuantityInput ${itemId}] Updating quantity to:`, initialQuantity);
       setQuantity(initialQuantity);
     }
-  }, [initialQuantity, quantity, itemId]);
+  }, [initialQuantity, quantity]);
 
   const handleChange = (value: number) => {
     const newQuantity = Math.max(min, Math.min(max, value));
-    console.log(`[QuantityInput ${itemId}] handleChange:`, newQuantity);
     setQuantity(newQuantity);
     onChange(newQuantity);
   };
@@ -204,36 +200,51 @@ function UpdateQuantityModal({
   onConfirm: (quantities: Record<string, number>) => void;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [totalRevoQuantity, setTotalRevoQuantity] = useState<number>(0);
+  const [totalRevoQuantity, setTotalRevoQuantity] = useState<number>(1);
 
   // 初期化時に現在のレボナイザー数量を計算
   useEffect(() => {
+    if (!isOpen) return;
+
     const initialQuantities: Record<string, number> = {};
     const revoProducts = items.filter(item => isRevonaizer(item.product.id));
     const otherProducts = items.filter(item => !isRevonaizer(item.product.id));
 
     // レボナイザー製品の合計数を計算
     const revoTotal = getTotalQuantityFromProducts(items);
-    setTotalRevoQuantity(revoTotal);
+    setTotalRevoQuantity(Math.max(1, revoTotal));
 
-    // レボナイザー製品の現在の数量を設定
-    const currentRevoQuantities = calculateProductQuantities(revoTotal);
-    revoProducts.forEach(item => {
-      const tier = Object.entries(REVONAIZER_PRODUCTS).find(
-        ([_, config]) => config.product_id === item.product.id
-      )?.[0];
-      if (tier) {
-        const tierKey = tier as keyof typeof REVONAIZER_PRODUCTS;
-        initialQuantities[item.subscription_item_id] = currentRevoQuantities[tierKey] || 0;
-      }
-    });
+    try {
+      // レボナイザー製品の現在の数量を設定
+      const currentRevoQuantities = calculateProductQuantities(Math.max(1, revoTotal));
+      revoProducts.forEach(item => {
+        const tier = Object.entries(REVONAIZER_PRODUCTS).find(
+          ([_, config]) => config.product_id === item.product.id
+        )?.[0];
+        if (tier) {
+          const tierKey = tier as keyof typeof REVONAIZER_PRODUCTS;
+          initialQuantities[item.subscription_item_id] = currentRevoQuantities[tierKey] || 0;
+        }
+      });
 
-    // その他の製品の数量を設定
-    otherProducts.forEach(item => {
-      initialQuantities[item.subscription_item_id] = item.quantity;
-    });
+      // その他の製品の数量を設定
+      otherProducts.forEach(item => {
+        initialQuantities[item.subscription_item_id] = item.quantity;
+      });
 
-    setQuantities(initialQuantities);
+      setQuantities(initialQuantities);
+    } catch (error) {
+      console.error('初期化エラー:', error);
+      // エラー時はデフォルト値を設定
+      setTotalRevoQuantity(1);
+      revoProducts.forEach(item => {
+        initialQuantities[item.subscription_item_id] = item.quantity || 1;
+      });
+      otherProducts.forEach(item => {
+        initialQuantities[item.subscription_item_id] = item.quantity;
+      });
+      setQuantities(initialQuantities);
+    }
   }, [items, isOpen]);
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
@@ -243,23 +254,27 @@ function UpdateQuantityModal({
     const isRevoProduct = isRevonaizer(item.product.id);
 
     if (isRevoProduct) {
-      // レボナイザー製品の場合は全体の数量を更新
-      const newQuantities = calculateProductQuantities(quantity);
-      setTotalRevoQuantity(quantity);
+      try {
+        // レボナイザー製品の場合は全体の数量を更新
+        const newQuantities = calculateProductQuantities(Math.max(1, quantity));
+        setTotalRevoQuantity(quantity);
 
-      // 各tierの数量を更新
-      const updatedQuantities = { ...quantities };
-      items.forEach(item => {
-        if (isRevonaizer(item.product.id)) {
-          const tier = Object.entries(REVONAIZER_PRODUCTS).find(
-            ([_, config]) => config.product_id === item.product.id
-          )?.[0];
-          if (tier) {
-            updatedQuantities[item.subscription_item_id] = newQuantities[tier as keyof typeof REVONAIZER_PRODUCTS] || 0;
+        // 各tierの数量を更新
+        const updatedQuantities = { ...quantities };
+        items.forEach(item => {
+          if (isRevonaizer(item.product.id)) {
+            const tier = Object.entries(REVONAIZER_PRODUCTS).find(
+              ([_, config]) => config.product_id === item.product.id
+            )?.[0];
+            if (tier) {
+              updatedQuantities[item.subscription_item_id] = newQuantities[tier as keyof typeof REVONAIZER_PRODUCTS] || 0;
+            }
           }
-        }
-      });
-      setQuantities(updatedQuantities);
+        });
+        setQuantities(updatedQuantities);
+      } catch (error) {
+        console.error('数量計算エラー:', error);
+      }
     } else {
       // 通常の製品の場合は直接数量を更新
       setQuantities(prev => ({
@@ -999,7 +1014,7 @@ function SubscriptionDetailPage() {
     }
   };
 
-const toggleAutoRenewalMutation = useMutation({
+  const toggleAutoRenewalMutation = useMutation({
     mutationFn: async (subscriptionId: string) => {
       const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
         method: 'POST',
