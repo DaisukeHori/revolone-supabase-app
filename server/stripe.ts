@@ -5,9 +5,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
@@ -50,15 +48,17 @@ export async function getCustomersByEmail(email: string) {
           expand: ['product'],
         });
 
+        const product = typeof price.product === 'object' ? price.product : null;
+
         return {
-          subscription_item_id: item.id, // 本物のsubscription_item idを追加
+          subscription_item_id: item.id,
           amount: price.unit_amount,
           currency: price.currency,
           interval: price.recurring?.interval || 'month',
           quantity: item.quantity,
           product: {
-            name: typeof price.product === 'object' ? price.product.name : 'Product',
-            description: typeof price.product === 'object' ? price.product.description : null,
+            name: product?.name ?? 'Product',
+            description: product?.description ?? null,
           }
         };
       }));
@@ -136,6 +136,40 @@ export function setupStripeRoutes(app: Express) {
     } catch (error) {
       console.error('[Stripe] APIエラー:', error);
       res.status(500).json({ message: "顧客情報の取得中にエラーが発生しました" });
+    }
+  });
+
+  // 顧客メタデータの更新エンドポイント
+  app.post("/api/stripe/customer/:id/metadata", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const customerId = req.params.id;
+    const { metadata } = req.body;
+
+    try {
+      // ユーザーの認証確認
+      const customersData = await getCustomersByEmail(req.user.email);
+      if (!customersData?.some(data => data.customer.id === customerId)) {
+        return res.status(403).json({ message: "この顧客情報にアクセスする権限がありません" });
+      }
+
+      // メタデータを更新
+      const customer = await stripe.customers.update(customerId, { metadata });
+
+      res.json({
+        message: "顧客情報を更新しました",
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          metadata: customer.metadata,
+        },
+      });
+    } catch (error) {
+      console.error('[Stripe] メタデータ更新エラー:', error);
+      res.status(500).json({ message: "顧客情報の更新中にエラーが発生しました" });
     }
   });
 
