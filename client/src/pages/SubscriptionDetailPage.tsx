@@ -250,7 +250,7 @@ function UpdateQuantityModal({
 
             return (
               <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <h4 className="font-medium text-lg">{item.product.name}</h4>
                     {item.product.description && (
@@ -1077,20 +1077,33 @@ function SubscriptionDetailPage() {
               </div>
 
               {/* 支払い情報 */}
-              {subscription.default_payment_method && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
                     <span>
-                      {formatCardBrand(subscription.default_payment_method.card.brand)}
-                      **** {subscription.default_payment_method.card.last4} (
-                      {subscription.default_payment_method.card.exp_month}/
-                      {subscription.default_payment_method.card.exp_year})
+                      {subscription.default_payment_method ? (
+                        `${formatCardBrand(subscription.default_payment_method.card.brand)}
+                        **** ${subscription.default_payment_method.card.last4} (
+                        ${subscription.default_payment_method.card.exp_month}/
+                        ${subscription.default_payment_method.card.exp_year})`
+                      ) : (
+                        '支払い方法が設定されていません'
+                      )}
                     </span>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLocation("/billing")}
+                    className="gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    変更
+                  </Button>
                 </div>
-              )}
+              </div>
 
               {/* 更新日情報 */}
               <div className="space-y-2">
@@ -1117,6 +1130,15 @@ function SubscriptionDetailPage() {
                 >
                   <RefreshCw className="h-4 w-4" />
                   数量を変更
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setLocation("/payment-history")}
+                >
+                  <History className="h-4 w-4" />
+                  支払い履歴
                 </Button>
 
                 {subscription.status !== 'canceled' && (
@@ -1153,57 +1175,6 @@ function SubscriptionDetailPage() {
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* 支払い履歴 */}
-        {customerData.payment_history && customerData.payment_history.length > 0 && (
-          <motion.div initial="hidden" animate="visible" variants={item}>
-            <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
-                    <History className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-2xl">支払い履歴</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {customerData.payment_history.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex justify-between items-center p-4 bg-primary/5 rounded-lg"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium">
-                        {payment.amount.toLocaleString()} {payment.currency.toUpperCase()}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(payment.created * 1000).toLocaleDateString("ja-JP")}
-                      </p>
-                    </div>
-                    {payment.invoice_pdf && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        asChild
-                      >
-                        <a
-                          href={payment.invoice_pdf}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Receipt className="h-4 w-4" />
-                          請求書
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
 
         {showQuantityModal && (
           <UpdateQuantityModal

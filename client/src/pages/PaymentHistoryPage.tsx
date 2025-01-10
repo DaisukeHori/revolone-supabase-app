@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Receipt, ArrowLeft, ExternalLink } from "lucide-react";
+import { Receipt, ArrowLeft, ExternalLink, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ type StripePaymentHistory = {
   status: string;
   created: number;
   invoice_pdf: string | null;
+  receipt_pdf: string | null;
 };
 
 type StripeCustomerData = {
@@ -119,7 +120,7 @@ export default function PaymentHistoryPage() {
                           })}
                         </p>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
                         <Badge
                           className={
                             payment.status === 'succeeded'
@@ -129,22 +130,44 @@ export default function PaymentHistoryPage() {
                         >
                           {payment.status === 'succeeded' ? '支払い完了' : '処理中'}
                         </Badge>
-                        {payment.invoice_pdf && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-primary/10"
-                            asChild
-                          >
-                            <a
-                              href={payment.invoice_pdf}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                        <div className="flex gap-2">
+                          {payment.invoice_pdf && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              asChild
                             >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
+                              <a
+                                href={payment.invoice_pdf}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FileText className="h-4 w-4" />
+                                請求書
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          )}
+                          {payment.receipt_pdf && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              asChild
+                            >
+                              <a
+                                href={payment.receipt_pdf}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Receipt className="h-4 w-4" />
+                                領収書
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
