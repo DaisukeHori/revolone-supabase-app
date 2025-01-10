@@ -8,6 +8,7 @@ import SettingsPage from "./pages/SettingsPage";
 import SubscriptionDetailPage from "./pages/SubscriptionDetailPage";
 import BillingSettingsPage from "./pages/BillingSettingsPage";
 import PaymentHistoryPage from "./pages/PaymentHistoryPage";
+import SecuritySettingsPage from "./pages/SecuritySettingsPage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 import { useTheme } from "./hooks/use-theme";
@@ -45,6 +46,7 @@ function App() {
     <Switch>
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/settings/security" component={SecuritySettingsPage} />
       <Route path="/subscription/:id" component={SubscriptionDetailPage} />
       <Route path="/billing" component={BillingSettingsPage} />
       <Route path="/payment-history" component={PaymentHistoryPage} />
