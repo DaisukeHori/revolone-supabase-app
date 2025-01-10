@@ -16,19 +16,21 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
+// フレーマーモーションのアニメーション設定
+const animations = {
+  container: {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
     }
+  },
+  item: {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
   }
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
 };
 
 type StripeSubscription = {
@@ -67,6 +69,7 @@ type StripeCustomerData = {
     metadata: Record<string, string>;
   };
   subscriptions: StripeSubscription[];
+  payment_history: StripePaymentHistory[];
 };
 
 function PaymentForm({ onComplete, isSubscriptionPayment = false }: { onComplete: () => void, isSubscriptionPayment?: boolean }) {
@@ -157,6 +160,21 @@ function PaymentForm({ onComplete, isSubscriptionPayment = false }: { onComplete
       </Button>
     </form>
   );
+}
+
+function getPageTitle(subscription: StripeSubscription | undefined): string {
+  if (!subscription || subscription.items.length === 0) {
+    return "支払い設定";
+  }
+
+  const firstProduct = subscription.items[0].product;
+  const remainingItems = subscription.items.length - 1;
+
+  if (remainingItems === 0) {
+    return `${firstProduct.name}の支払い設定`;
+  }
+
+  return `${firstProduct.name}およびその他${remainingItems}個の商品の支払い設定`;
 }
 
 export default function BillingSettingsPage() {
@@ -251,7 +269,7 @@ export default function BillingSettingsPage() {
   return (
     <AppLayout>
       <motion.div
-        variants={container}
+        variants={animations.container}
         initial="hidden"
         animate="show"
         className="space-y-8"
@@ -265,10 +283,10 @@ export default function BillingSettingsPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-semibold">支払い設定</h1>
+          <h1 className="text-2xl font-semibold">{getPageTitle(subscription)}</h1>
         </div>
 
-        <motion.div variants={item}>
+        <motion.div variants={animations.item}>
           <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -349,3 +367,11 @@ export default function BillingSettingsPage() {
     </AppLayout>
   );
 }
+
+type StripePaymentHistory = {
+  id: string;
+  amount: number;
+  currency: string;
+  created: number;
+  description: string;
+};
