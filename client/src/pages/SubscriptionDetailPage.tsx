@@ -20,6 +20,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
@@ -191,106 +192,74 @@ function QuantityInput({
 function UpdateQuantityModal({
   isOpen,
   onClose,
-  items,
-  onConfirm
+  currentQuantity,
+  onConfirm,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  items: StripeSubscription['items'];
-  onConfirm: (quantities: Record<string, number>) => void;
+  currentQuantity: number;
+  onConfirm: (quantity: number) => void;
 }) {
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [quantity, setQuantity] = useState(currentQuantity);
 
   useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
-    const initialQuantities: Record<string, number> = {};
-    items.forEach((item) => {
-      const itemId = item.subscription_item_id;
-      console.log(`[UpdateQuantityModal] Processing item:`, {
-        id: itemId,
-        name: item.product.name,
-        quantity: item.quantity
-      });
-      initialQuantities[itemId] = item.quantity;
-    });
-    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
-    setQuantities(initialQuantities);
-  }, [items, isOpen]);
+    setQuantity(currentQuantity);
+  }, [currentQuantity, isOpen]);
 
-  const handleQuantityChange = (itemId: string, quantity: number) => {
-    console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
-    setQuantities(prev => {
-      const next = {
-        ...prev,
-        [itemId]: quantity
-      };
-      console.log('[UpdateQuantityModal] Updated quantities:', next);
-      return next;
-    });
+  const handleQuantityChange = (newQuantity: number) => {
+    setQuantity(Math.max(1, Math.min(99, newQuantity)));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>プランの数量を変更</DialogTitle>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>数量を変更</DialogTitle>
           <DialogDescription>
-            各プランの数量を設定してください。
+            レボナイザーの利用台数を設定してください
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 pb-2">
-          {items.map((item) => {
-            const itemId = item.subscription_item_id;
-            console.log(`[UpdateQuantityModal] Rendering item:`, {
-              id: itemId,
-              name: item.product.name,
-              currentQuantity: quantities[itemId],
-              originalQuantity: item.quantity
-            });
-
-            return (
-              <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-lg">{item.product.name}</h4>
-                    {item.product.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {item.product.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CreditCard className="h-4 w-4" />
-                      <span>
-                        {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
-                      </span>
-                    </div>
-                  </div>
-                  <QuantityInput
-                    key={`${itemId}-${quantities[itemId] || item.quantity}`}
-                    itemId={itemId}
-                    initialQuantity={quantities[itemId] || item.quantity}
-                    onChange={(quantity) => handleQuantityChange(itemId, quantity)}
-                  />
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="flex justify-end gap-2 mt-6">
+        <div className="space-y-4 py-4">
+          <div className="flex items-center justify-center gap-4">
             <Button
               variant="outline"
-              onClick={onClose}
+              size="icon"
+              onClick={() => handleQuantityChange(quantity - 1)}
+              disabled={quantity <= 1}
             >
-              キャンセル
+              -
             </Button>
+            <div className="w-20 text-center">
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                min={1}
+                max={99}
+                className="text-center"
+              />
+            </div>
             <Button
-              onClick={() => onConfirm(quantities)}
-              disabled={Object.keys(quantities).length === 0}
+              variant="outline"
+              size="icon"
+              onClick={() => handleQuantityChange(quantity + 1)}
+              disabled={quantity >= 99}
             >
-              変更内容を確認
+              +
             </Button>
           </div>
+          <div className="text-sm text-muted-foreground text-center">
+            ※ 価格は台数に応じて自動的に最適化されます
+          </div>
         </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            キャンセル
+          </Button>
+          <Button onClick={() => onConfirm(quantity)} disabled={quantity === currentQuantity}>
+            変更内容を確認
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -843,21 +812,14 @@ function SubscriptionDetailPage() {
     }
   };
 
-  const handleUpdateQuantities = async () => {
-    if (Object.keys(updatedQuantities).length === 0) {
-      return;
-    }
-
+  const handleUpdateQuantities = async (newQuantity: number) => {
     setIsUpdating(true);
     try {
       const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
-            id,
-            quantity
-          }))
+          targetQuantity: newQuantity
         }),
         credentials: 'include',
       });
@@ -868,11 +830,10 @@ function SubscriptionDetailPage() {
 
       await refetch();
       toast({
-        description: "プランの数量を更新しました",
+        description: "数量を更新しました",
       });
 
-      setUpdatedQuantities({});
-      setShowConfirmDialog(false);
+      setShowQuantityModal(false);
     } catch (error) {
       console.error('数量更新エラー:', error);
       toast({
@@ -995,6 +956,12 @@ function SubscriptionDetailPage() {
     hidden: { opacity: 0, y: 50 },
     visible: { opacity: 1, y: 0 }
   };
+
+  // 現在の合計数量を計算
+  const currentTotalQuantity = subscription?.items.reduce(
+    (total, item) => total + item.quantity,
+    0
+  ) || 0;
 
   return (
     <AppLayout>
@@ -1128,8 +1095,8 @@ function SubscriptionDetailPage() {
                   className="gap-2"
                   onClick={() => setShowQuantityModal(true)}
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  数量を変更
+                  <Package className="h-4 w-4" />
+                  数量変更
                 </Button>
 
                 <Button
@@ -1180,12 +1147,8 @@ function SubscriptionDetailPage() {
           <UpdateQuantityModal
             isOpen={showQuantityModal}
             onClose={() => setShowQuantityModal(false)}
-            items={subscription.items}
-            onConfirm={(quantities) => {
-              setUpdatedQuantities(quantities);
-              setShowQuantityModal(false);
-              setShowConfirmDialog(true);
-            }}
+            currentQuantity={currentTotalQuantity}
+            onConfirm={handleUpdateQuantities}
           />
         )}
 
