@@ -29,8 +29,6 @@ export function AuthForm() {
   const [error, setError] = useState<string | null>(null);
   const { register } = useUser();
   const [, setLocation] = useLocation();
-  const [registrationComplete, setRegistrationComplete] = useState(false);
-  const [resendingEmail, setResendingEmail] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(insertUserSchema),
@@ -54,8 +52,8 @@ export function AuthForm() {
           setError(result.message);
           return;
         }
-        // 登録完了メッセージを表示
-        setRegistrationComplete(true);
+        // 登録成功後は自動的にログインページに遷移
+        setIsLogin(true);
         form.reset();
         return;
       }
@@ -65,64 +63,10 @@ export function AuthForm() {
     }
   };
 
-  // メール認証メールの再送信
-  const handleResendVerification = async (email: string) => {
-    try {
-      setResendingEmail(true);
-      const response = await fetch('/api/resend-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message);
-      }
-
-      setError(null);
-      alert("認証メールを再送信しました。メールをご確認ください。");
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "認証メールの再送信に失敗しました");
-    } finally {
-      setResendingEmail(false);
-    }
-  };
-
-  // 登録完了後の表示
-  if (registrationComplete) {
-    return (
-      <div className="space-y-4">
-        <Alert className="bg-green-50 border-green-200">
-          <AlertDescription className="text-green-800">
-            登録が完了しました。メールアドレスの確認をお願いします。
-            <br />
-            確認メールに記載されたリンクをクリックして、メールアドレスの確認を完了してください。
-          </AlertDescription>
-        </Alert>
-        <Button
-          type="button"
-          className="w-full"
-          onClick={() => {
-            setRegistrationComplete(false);
-            setIsLogin(true);
-          }}
-        >
-          ログイン画面へ
-        </Button>
-      </div>
-    );
-  }
-
   if (isLogin) {
     return (
       <div className="space-y-4">
-        <LoginForm 
-          onComplete={onLoginComplete} 
-          onNeedVerification={handleResendVerification}
-        />
+        <LoginForm onComplete={onLoginComplete} />
         <Button
           type="button"
           variant="ghost"

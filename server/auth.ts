@@ -1,5 +1,5 @@
 import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
+import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -9,31 +9,9 @@ import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { sendMail, generatePasswordResetEmail, generateVerificationEmail } from "./mail";
+import { sendMail, generatePasswordResetEmail } from "./mail";
 import speakeasy from "speakeasy";
 import twilio from "twilio";
-
-declare module 'express-session' {
-  interface SessionData {
-    mfaPendingUserId?: number;
-  }
-}
-
-declare module 'passport-local' {
-  interface IVerifyOptions {
-    message: string;
-    needsEmailVerification?: boolean;
-    email?: string;
-  }
-}
-
-declare global {
-  namespace Express {
-    interface User extends SelectUser {
-      requiresMFA?: boolean;
-    }
-  }
-}
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -53,6 +31,12 @@ const crypto = {
     return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
   },
 };
+
+declare global {
+  namespace Express {
+    interface User extends SelectUser {}
+  }
+}
 
 export const updateProfileSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません"),
@@ -112,15 +96,6 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
         }
 
-        // メール認証が済んでいない場合はログイン不可
-        if (!user.emailVerified) {
-          return done(null, false, {
-            message: "メールアドレスの確認が必要です。認証メールをご確認ください。",
-            needsEmailVerification: true,
-            email: user.email // メール再送信用にemailを返す
-          });
-        }
-
         // 2段階認証が有効な場合は、要認証フラグを立てる
         if (user.mfaEnabled) {
           return done(null, { ...user, requiresMFA: true });
@@ -150,7 +125,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // registerエンドポイントを更新して、メール認証を追加
   app.post("/api/register", async (req, res, next) => {
     try {
       const result = insertUserSchema.safeParse(req.body);
@@ -172,70 +146,38 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "このメールアドレスは既に登録されています" });
       }
 
-      // パスワードのハッシュ化
       const hashedPassword = await crypto.hash(password);
 
-      // メール認証用トークンの生成
-      const verificationToken = randomBytes(32).toString("hex");
-      const verificationTokenExpiry = new Date(Date.now() + 86400000); // 24時間後
-
-      // 新規ユーザーの作成
       const [newUser] = await db
         .insert(users)
         .values({
           email,
           username,
           password: hashedPassword,
-          emailVerified: false,
-          emailVerificationToken: verificationToken,
-          emailVerificationTokenExpires: verificationTokenExpiry,
         })
         .returning();
 
-      // 認証メールの送信
-      const { subject, text, html } = generateVerificationEmail(email, verificationToken);
-      const mailResult = await sendMail({
-        to: email,
-        subject,
-        text,
-        html
-      });
-
-      if (!mailResult.success) {
-        console.error("認証メール送信エラー:", mailResult.error);
-        await db
-          .delete(users)
-          .where(eq(users.id, newUser.id));
-        return res.status(500).json({
-          message: "認証メールの送信に失敗しました"
+      req.login(newUser, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({
+          message: "登録が完了しました",
+          user: { id: newUser.id, username: newUser.username, email: newUser.email },
         });
-      }
-
-      res.json({
-        message: "登録が完了しました。メールアドレスの確認をお願いします",
-        user: { id: newUser.id, username: newUser.username, email: newUser.email },
       });
     } catch (error) {
       next(error);
     }
   });
 
-  // ログイン時にメール認証済みかチェックを追加
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: { message?: string; needsEmailVerification?: boolean; email?: string }) => {
+    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
 
       if (!user) {
-        // メール未認証の場合は専用のレスポンスを返す
-        if (info.needsEmailVerification) {
-          return res.status(403).json({
-            message: info.message,
-            needsEmailVerification: true,
-            email: info.email // メール再送信用にemailを含める
-          });
-        }
         return res.status(400).json({ message: info.message ?? "ログインに失敗しました" });
       }
 
@@ -297,116 +239,6 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // メール認証を行うエンドポイント
-  app.get("/api/verify-email", async (req, res) => {
-    const { token } = req.query;
-
-    if (!token || typeof token !== "string") {
-      return res.status(400).json({ message: "無効なトークンです" });
-    }
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.emailVerificationToken, token))
-        .limit(1);
-
-      if (!user || !user.emailVerificationTokenExpires || user.emailVerificationTokenExpires < new Date()) {
-        return res.status(400).json({ message: "無効または期限切れのトークンです" });
-      }
-
-      await db
-        .update(users)
-        .set({
-          emailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationTokenExpires: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, user.id));
-
-      // メール認証が完了したらログイン状態にする
-      req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "認証後のログインに失敗しました" });
-        }
-
-        res.json({
-          message: "メールアドレスの確認が完了しました",
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-          }
-        });
-      });
-    } catch (error) {
-      console.error("メール認証エラー:", error);
-      res.status(500).json({ message: "メール認証処理中にエラーが発生しました" });
-    }
-  });
-
-  // 認証メールの再送信
-  app.post("/api/resend-verification", async (req, res) => {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "メールアドレスが必要です" });
-    }
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-
-      if (!user) {
-        return res.status(404).json({ message: "ユーザーが見つかりません" });
-      }
-
-      if (user.emailVerified) {
-        return res.status(400).json({ message: "既にメール認証が完了しています" });
-      }
-
-      // 新しい認証トークンを生成
-      const verificationToken = randomBytes(32).toString("hex");
-      const verificationTokenExpiry = new Date(Date.now() + 86400000); // 24時間後
-
-      await db
-        .update(users)
-        .set({
-          emailVerificationToken: verificationToken,
-          emailVerificationTokenExpires: verificationTokenExpiry,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, user.id));
-
-      // 認証メールを再送信
-      const { subject, text, html } = generateVerificationEmail(email, verificationToken);
-      const result = await sendMail({
-        to: email,
-        subject,
-        text,
-        html
-      });
-
-      if (!result.success) {
-        console.error("認証メール再送信エラー:", result.error);
-        return res.status(500).json({
-          message: "認証メールの送信に失敗しました"
-        });
-      }
-
-      res.json({ message: "認証メールを再送信しました" });
-    } catch (error) {
-      console.error("認証メール再送信エラー:", error);
-      res.status(500).json({ message: "認証メールの再送信中にエラーが発生しました" });
-    }
-  });
-
-  // ログアウトエンドポイント
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
@@ -416,7 +248,6 @@ export function setupAuth(app: Express) {
     });
   });
 
-  // 現在のユーザー情報を取得するエンドポイント
   app.get("/api/user", (req, res) => {
     if (req.isAuthenticated()) {
       return res.json(req.user);
@@ -424,7 +255,6 @@ export function setupAuth(app: Express) {
     res.status(401).json({ message: "ログインが必要です" });
   });
 
-  // パスワードリセットリクエストエンドポイント
   app.post("/api/request-reset", async (req, res) => {
     const { email } = req.body;
 
@@ -481,7 +311,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // パスワードリセットエンドポイント
   app.post("/api/reset-password", async (req, res) => {
     const { token, password } = req.body;
 
@@ -515,7 +344,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // プロフィール更新エンドポイント
   app.put("/api/user/profile", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -595,7 +423,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // パスワード変更エンドポイント
   app.post("/api/change-password", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -636,7 +463,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-    // 2段階認証の検証エンドポイント
+  // 2段階認証の検証エンドポイント
   app.post("/api/verify-mfa", async (req, res) => {
     const { code } = req.body;
     const userId = req.session.mfaPendingUserId;

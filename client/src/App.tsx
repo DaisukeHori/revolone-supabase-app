@@ -9,7 +9,6 @@ import SubscriptionDetailPage from "./pages/SubscriptionDetailPage";
 import BillingSettingsPage from "./pages/BillingSettingsPage";
 import PaymentHistoryPage from "./pages/PaymentHistoryPage";
 import SecuritySettingsPage from "./pages/SecuritySettingsPage";
-import EmailVerificationPage from "./pages/EmailVerificationPage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 import { useTheme } from "./hooks/use-theme";
@@ -37,7 +36,6 @@ function App() {
   if (!user) {
     return (
       <Switch>
-        <Route path="/verify-email" component={EmailVerificationPage} />
         <Route path="/reset-password" component={PasswordResetPage} />
         <Route path="*" component={AuthPage} />
       </Switch>
