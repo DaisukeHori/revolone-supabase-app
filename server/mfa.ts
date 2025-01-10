@@ -38,7 +38,7 @@ async function sendSMSCode(phoneNumber: string, code: string) {
   }
 
   await twilioClient.messages.create({
-    body: `RevolOne verification code: ${code}`,
+    body: `【RevolOne】認証コード：${code}\n\nこちらの認証コードを入力して2段階認証の設定を完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
     to: phoneNumber,
     from: process.env.TWILIO_PHONE_NUMBER
   });

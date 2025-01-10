@@ -10,6 +10,8 @@ import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { sendMail, generatePasswordResetEmail } from "./mail";
+import speakeasy from "speakeasy";
+import twilio from "twilio";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -93,6 +95,12 @@ export function setupAuth(app: Express) {
         if (!isMatch) {
           return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
         }
+
+        // 2段階認証が有効な場合は、要認証フラグを立てる
+        if (user.mfaEnabled) {
+          return done(null, { ...user, requiresMFA: true });
+        }
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -164,13 +172,53 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: Express.User, info: IVerifyOptions) => {
+    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
 
       if (!user) {
         return res.status(400).json({ message: info.message ?? "ログインに失敗しました" });
+      }
+
+      // 2段階認証が必要な場合
+      if (user.requiresMFA) {
+        // SMS認証の場合、認証コードを送信
+        if (user.mfaType === 'sms' && user.phoneNumber) {
+          const verificationCode = Math.random().toString().slice(2, 8);
+          try {
+            const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+              ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+              : null;
+
+            if (twilioClient) {
+              await twilioClient.messages.create({
+                body: `【RevolOne】認証コード：${verificationCode}\n\nこちらの認証コードを入力してログインを完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
+                to: user.phoneNumber,
+                from: process.env.TWILIO_PHONE_NUMBER
+              });
+
+              // 認証コードを一時的に保存
+              await db
+                .update(users)
+                .set({
+                  mfaSecret: verificationCode,
+                  updatedAt: new Date(),
+                })
+                .where(eq(users.id, user.id));
+            }
+          } catch (error) {
+            console.error('SMS送信エラー:', error);
+            return res.status(500).json({ message: "認証コードの送信に失敗しました" });
+          }
+        }
+
+        // セッションに2段階認証待ちのユーザーIDを保存
+        req.session.mfaPendingUserId = user.id;
+        return res.status(403).json({
+          message: "2段階認証が必要です",
+          mfaType: user.mfaType
+        });
       }
 
       req.logIn(user, (err) => {
@@ -180,7 +228,12 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "ログインしました",
-          user: { id: user.id, username: user.username, email: user.email },
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            phoneNumber: user.phoneNumber
+          },
         });
       });
     })(req, res, next);
@@ -241,8 +294,8 @@ export function setupAuth(app: Express) {
       if (!result.success) {
         console.error("パスワードリセットメールの送信に失敗:", result.error);
         // ユーザーには一般的なエラーメッセージを返す
-        return res.status(500).json({ 
-          message: "パスワードリセットの処理中にエラーが発生しました" 
+        return res.status(500).json({
+          message: "パスワードリセットの処理中にエラーが発生しました"
         });
       }
 
@@ -298,7 +351,7 @@ export function setupAuth(app: Express) {
 
     const result = updateProfileSchema.safeParse(req.body);
     if (!result.success) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: result.error.issues.map(i => i.message).join("、")
       });
     }
@@ -315,8 +368,8 @@ export function setupAuth(app: Express) {
           .limit(1);
 
         if (existingUserWithEmail) {
-          return res.status(400).json({ 
-            message: "このメールアドレスは既に使用されています" 
+          return res.status(400).json({
+            message: "このメールアドレスは既に使用されています"
           });
         }
       }
@@ -330,8 +383,8 @@ export function setupAuth(app: Express) {
           .limit(1);
 
         if (existingUserWithUsername) {
-          return res.status(400).json({ 
-            message: "このユーザー名は既に使用されています" 
+          return res.status(400).json({
+            message: "このユーザー名は既に使用されています"
           });
         }
       }
@@ -353,7 +406,7 @@ export function setupAuth(app: Express) {
       req.user.username = updatedUser.username;
       req.user.phoneNumber = updatedUser.phoneNumber;
 
-      res.json({ 
+      res.json({
         message: "プロフィールを更新しました",
         user: {
           id: updatedUser.id,
@@ -364,8 +417,8 @@ export function setupAuth(app: Express) {
       });
     } catch (error) {
       console.error("プロフィール更新エラー:", error);
-      res.status(500).json({ 
-        message: "プロフィールの更新中にエラーが発生しました" 
+      res.status(500).json({
+        message: "プロフィールの更新中にエラーが発生しました"
       });
     }
   });
@@ -377,7 +430,7 @@ export function setupAuth(app: Express) {
 
     const result = changePasswordSchema.safeParse(req.body);
     if (!result.success) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: result.error.issues.map(i => i.message).join("、")
       });
     }
@@ -407,6 +460,90 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error("パスワード更新エラー:", error);
       res.status(500).json({ message: "パスワードの更新中にエラーが発生しました" });
+    }
+  });
+
+  // 2段階認証の検証エンドポイント
+  app.post("/api/verify-mfa", async (req, res) => {
+    const { code } = req.body;
+    const userId = req.session.mfaPendingUserId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "無効なセッションです" });
+    }
+
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(400).json({ message: "ユーザーが見つかりません" });
+      }
+
+      let isValid = false;
+
+      if (user.mfaType === 'totp') {
+        // TOTP認証の場合
+        isValid = speakeasy.totp.verify({
+          secret: user.mfaSecret!,
+          encoding: 'base32',
+          token: code,
+        });
+      } else if (user.mfaType === 'sms') {
+        // SMS認証の場合
+        isValid = code === user.mfaSecret;
+      } else if (user.backupCodes && Array.isArray(user.backupCodes)) {
+        // バックアップコードの場合
+        const backupCodes = user.backupCodes as string[];
+        const codeIndex = backupCodes.indexOf(code);
+        if (codeIndex !== -1) {
+          isValid = true;
+          // 使用済みのバックアップコードを削除
+          const updatedBackupCodes = backupCodes.filter((_, index) => index !== codeIndex);
+          await db
+            .update(users)
+            .set({ backupCodes: updatedBackupCodes })
+            .where(eq(users.id, user.id));
+        }
+      }
+
+      if (!isValid) {
+        return res.status(400).json({ message: "無効な認証コードです" });
+      }
+
+      // SMS認証の場合、使用済みの認証コードをクリア
+      if (user.mfaType === 'sms') {
+        await db
+          .update(users)
+          .set({ mfaSecret: null })
+          .where(eq(users.id, user.id));
+      }
+
+      // セッションからペンディングユーザーIDを削除
+      delete req.session.mfaPendingUserId;
+
+      // ユーザーをログイン状態にする
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "ログインに失敗しました" });
+        }
+
+        return res.json({
+          message: "認証が完了しました",
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            phoneNumber: user.phoneNumber
+          }
+        });
+      });
+    } catch (error) {
+      console.error('2段階認証エラー:', error);
+      res.status(500).json({ message: "認証処理中にエラーが発生しました" });
     }
   });
 }
