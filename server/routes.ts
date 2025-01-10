@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { setupStoreRoutes } from "./stores";
+import { setupMFARoutes } from "./mfa";
 
 export function registerRoutes(app: Express): Server {
   // 認証関連のルートを設定
@@ -11,6 +12,8 @@ export function registerRoutes(app: Express): Server {
   setupStripeRoutes(app);
   // 店舗管理関連のルートを設定
   setupStoreRoutes(app);
+  // MFA関連のルートを設定
+  setupMFARoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

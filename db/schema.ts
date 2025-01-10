@@ -10,6 +10,12 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  // MFA fields
+  mfaEnabled: boolean("mfa_enabled"),
+  mfaType: text("mfa_type"),
+  mfaSecret: text("mfa_secret"),
+  phoneNumber: text("phone_number"),
+  backupCodes: jsonb("backup_codes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -46,6 +52,11 @@ export const insertUserSchema = createInsertSchema(users, {
   resetTokenExpiry: true, 
   createdAt: true, 
   updatedAt: true,
+  mfaEnabled: true,
+  mfaType: true,
+  mfaSecret: true,
+  phoneNumber: true,
+  backupCodes: true,
 });
 
 export const insertStoreSchema = createInsertSchema(stores, {
