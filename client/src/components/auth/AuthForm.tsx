@@ -31,7 +31,10 @@ export function AuthForm() {
   const [, setLocation] = useLocation();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(isLogin 
+      ? insertUserSchema.omit({ username: true }) 
+      : insertUserSchema
+    ),
     defaultValues: {
       email: "",
       username: "",

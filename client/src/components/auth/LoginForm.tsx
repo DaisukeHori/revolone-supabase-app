@@ -63,9 +63,6 @@ export function LoginForm({ onComplete }: LoginFormProps) {
 
       // ユーザー情報のキャッシュを更新
       await queryClient.invalidateQueries({ queryKey: ['user'] });
-
-      // 必ずonCompleteを呼び出す前に少し待つ
-      await new Promise(resolve => setTimeout(resolve, 100));
       onComplete();
     } catch (error) {
       setError("予期せぬエラーが発生しました");

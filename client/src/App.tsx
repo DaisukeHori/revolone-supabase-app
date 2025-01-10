@@ -13,27 +13,16 @@ import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 import { useTheme } from "./hooks/use-theme";
 import { useEffect } from "react";
-import { useLocation } from "wouter";
 
 function App() {
   const { user, isLoading } = useUser();
   const { theme } = useTheme();
-  const [, setLocation] = useLocation();
 
   // テーマの初期設定
   useEffect(() => {
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(theme);
   }, [theme]);
-
-  // ユーザー認証状態が変更された時のリダイレクト処理
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        setLocation("/");
-      }
-    }
-  }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
