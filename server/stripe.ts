@@ -1,6 +1,5 @@
 import { type Express } from "express";
 import Stripe from 'stripe';
-import { calculateQuantityChanges } from './utils/subscription-calculator';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
@@ -382,7 +381,7 @@ export function setupStripeRoutes(app: Express) {
     }
 
     const subscriptionId = req.params.id;
-    const { targetQuantity } = req.body as { targetQuantity: number };
+    const { items } = req.body as { items: { id: string; quantity: number }[] };
 
     try {
       const customersData = await getCustomersByEmail(req.user.email);
@@ -393,70 +392,25 @@ export function setupStripeRoutes(app: Express) {
         return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
       }
 
-      // サブスクリプションの現在の状態を取得
+      // サブスクリプションの詳細を取得
       const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
         expand: ['items.data.price.product'],
       });
 
-      // 現在のレボナイザー関連の数量構成を取得
-      const currentQuantities = subscription.items.data
-        .filter(item => {
-          const product = typeof item.price.product === 'object' ? item.price.product : null;
-          return product?.name?.includes('レボナイザー') || false;
-        })
-        .map(item => ({
-          priceId: item.price.id,
+      // 各アイテムの数量を更新
+      await Promise.all(items.map(async (item) => {
+        console.log('Updating subscription item:', item);
+        await stripe.subscriptionItems.update(item.id, {
           quantity: item.quantity,
-        }));
-
-      // 目標の総数から必要な変更を計算
-      const quantityChanges = calculateQuantityChanges(currentQuantities, targetQuantity);
-
-      // 変更がある場合のみ更新を実行
-      if (quantityChanges.length > 0) {
-        const items = subscription.items.data.map(item => {
-          // レボナイザー関連の商品のみ更新
-          const isRevonaizer = typeof item.price.product === 'object' && 
-                             item.price.product?.name?.includes('レボナイザー');
-
-          if (isRevonaizer) {
-            const change = quantityChanges.find(q => q.priceId === item.price.id);
-            if (change) {
-              return {
-                id: item.id,
-                quantity: change.quantity,
-              };
-            }
-            return {
-              id: item.id,
-              deleted: true,
-            };
-          }
-
-          // レボナイザー以外の商品は変更なし
-          return {
-            id: item.id,
-            quantity: item.quantity,
-          };
         });
+      }));
 
-        // 新しく追加が必要なアイテムを追加
-        const newItems = quantityChanges
-          .filter(change => !subscription.items.data.some(item => item.price.id === change.priceId))
-          .map(change => ({
-            price: change.priceId,
-            quantity: change.quantity,
-          }));
+      // 更新後のサブスクリプションを返す
+      const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['items.data.price.product'],
+      });
 
-        // サブスクリプションを更新
-        await stripe.subscriptions.update(subscriptionId, {
-          items: [...items, ...newItems],
-        });
-
-        res.json({ message: "数量を更新しました" });
-      } else {
-        res.json({ message: "変更の必要はありません" });
-      }
+      res.json({ message: "数量を更新しました", subscription: updatedSubscription });
     } catch (error) {
       console.error('[Stripe] 数量更新エラー:', error);
       res.status(500).json({ message: "数量の更新中にエラーが発生しました" });
