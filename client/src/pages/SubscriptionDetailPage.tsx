@@ -687,7 +687,7 @@ function StoreEditModal({
   );
 }
 
-function SubscriptionDetailPage() {
+export default function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -812,14 +812,14 @@ function SubscriptionDetailPage() {
     }
   };
 
-  const handleUpdateQuantities = async (newQuantity: number) => {
+  const handleUpdateQuantities = async () => {
     setIsUpdating(true);
     try {
       const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          targetQuantity: newQuantity
+          targetQuantity: Object.values(updatedQuantities).reduce((a, b) => a + b, 0)
         }),
         credentials: 'include',
       });
@@ -834,6 +834,8 @@ function SubscriptionDetailPage() {
       });
 
       setShowQuantityModal(false);
+      setShowConfirmDialog(false);
+      setUpdatedQuantities({});
     } catch (error) {
       console.error('数量更新エラー:', error);
       toast({
@@ -1019,7 +1021,7 @@ function SubscriptionDetailPage() {
                 {subscription.items.map((item) => (
                   <div key={item.subscription_item_id} className="bg-primary/5 rounded-lg p-4">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1">
+                      <div className="space-y1">
                         <p className="font-medium">{item.product.name}</p>
                         {item.product.description && (
                           <p className="text-sm text-muted-foreground">
@@ -1143,16 +1145,27 @@ function SubscriptionDetailPage() {
           </Card>
         </motion.div>
 
-        {showQuantityModal && (
+        {showQuantityModal && subscription && (
           <UpdateQuantityModal
             isOpen={showQuantityModal}
             onClose={() => setShowQuantityModal(false)}
             currentQuantity={currentTotalQuantity}
-            onConfirm={handleUpdateQuantities}
+            onConfirm={(quantity) => {
+              const newQuantities = { ...updatedQuantities };
+              subscription.items.forEach(item => {
+                newQuantities[item.subscription_item_id] = item.quantity;
+                if (item.product.name.includes('レボナイザー')) {
+                  newQuantities[item.subscription_item_id] = quantity;
+                }
+              });
+              setUpdatedQuantities(newQuantities);
+              setShowQuantityModal(false);
+              setShowConfirmDialog(true);
+            }}
           />
         )}
 
-        {showConfirmDialog && (
+        {showConfirmDialog && subscription && (
           <ConfirmUpdateDialog
             isOpen={showConfirmDialog}
             onClose={() => setShowConfirmDialog(false)}
@@ -1166,5 +1179,3 @@ function SubscriptionDetailPage() {
     </AppLayout>
   );
 }
-
-export default SubscriptionDetailPage;
