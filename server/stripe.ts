@@ -162,7 +162,7 @@ export function setupStripeRoutes(app: Express) {
     }
 
     const customerId = req.params.id;
-    const { metadata, address, phone } = req.body;
+    const { metadata, address, shipping, phone } = req.body;
 
     try {
       // ユーザーの認証確認
@@ -180,16 +180,18 @@ export function setupStripeRoutes(app: Express) {
         ...metadata,
       };
 
-      // 顧客情報を更新（メタデータ、住所、電話番号）
+      // 顧客情報を更新（メタデータ、住所、電話番号、配送先）
       const customer = await stripe.customers.update(customerId, {
         metadata: updatedMetadata,
         address,
+        shipping,
         phone,
       });
 
       console.log('[Stripe] Updated customer:', {
         metadata: customer.metadata,
         address: customer.address,
+        shipping: customer.shipping,
         phone: customer.phone,
       });
 
@@ -201,6 +203,7 @@ export function setupStripeRoutes(app: Express) {
           email: customer.email,
           metadata: customer.metadata,
           address: customer.address,
+          shipping: customer.shipping,
           phone: customer.phone,
         },
       });

@@ -35,15 +35,20 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// フォームのスキーマ定義を更新
+// フォームのスキーマ定義を更新（必須バリデーションを削除）
 const storeFormSchema = z.object({
-  name: z.string().min(1, "店舗名を入力してください"),
-  postalCode: z.string().min(1, "郵便番号を入力してください"),
-  state: z.string().min(1, "都道府県を入力してください"),
-  city: z.string().min(1, "市区町村を入力してください"),
-  line1: z.string().min(1, "住所1を入力してください"),
+  name: z.string(),
+  postalCode: z.string(),
+  state: z.string(),
+  city: z.string(),
+  line1: z.string(),
   line2: z.string(),
-  phoneNumber: z.string().min(1, "電話番号を入力してください"),
+  phoneNumber: z.string(),
+  shippingPostalCode: z.string(),
+  shippingState: z.string(),
+  shippingCity: z.string(),
+  shippingLine1: z.string(),
+  shippingLine2: z.string(),
 });
 
 type StoreFormValues = z.infer<typeof storeFormSchema>;
@@ -64,10 +69,20 @@ type StripeCustomerData = {
       postal_code: string | null;
       country: string | null;
     } | null;
+    shipping: {
+      address: {
+        line1: string | null;
+        line2: string | null;
+        city: string | null;
+        state: string | null;
+        postal_code: string | null;
+        country: string | null;
+      };
+      name: string | null;
+      phone: string | null;
+    } | null;
     metadata: {
       サロン名?: string;
-      住所?: string;
-      電話番号?: string;
       [key: string]: string | undefined;
     };
   };
@@ -379,7 +394,14 @@ function ConfirmUpdateDialog({
   );
 }
 
-function formatAddress(address: StripeCustomerData['customer']['address'] | null): string {
+function formatAddress(address: {
+  line1: string | null;
+  line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+} | null): string {
   if (!address) return '未設定';
 
   const parts = [
@@ -476,6 +498,11 @@ function SubscriptionDetailPage() {
       line1: customer?.address?.line1 || '',
       line2: customer?.address?.line2 || '',
       phoneNumber: customer?.phone || '',
+      shippingPostalCode: customer?.shipping?.address?.postal_code || '',
+      shippingState: customer?.shipping?.address?.state || '',
+      shippingCity: customer?.shipping?.address?.city || '',
+      shippingLine1: customer?.shipping?.address?.line1 || '',
+      shippingLine2: customer?.shipping?.address?.line2 || '',
     },
   });
 
@@ -489,6 +516,11 @@ function SubscriptionDetailPage() {
         line1: customer?.address?.line1 || '',
         line2: customer?.address?.line2 || '',
         phoneNumber: customer.phone || '',
+        shippingPostalCode: customer?.shipping?.address?.postal_code || '',
+        shippingState: customer?.shipping?.address?.state || '',
+        shippingCity: customer?.shipping?.address?.city || '',
+        shippingLine1: customer?.shipping?.address?.line1 || '',
+        shippingLine2: customer?.shipping?.address?.line2 || '',
       });
     }
   }, [customer, form]);
@@ -507,6 +539,15 @@ function SubscriptionDetailPage() {
             city: values.city,
             line1: values.line1,
             line2: values.line2,
+          },
+          shipping: {
+            address: {
+              postal_code: values.shippingPostalCode,
+              state: values.shippingState,
+              city: values.shippingCity,
+              line1: values.shippingLine1,
+              line2: values.shippingLine2,
+            }
           },
           phone: values.phoneNumber,
           metadata: {
@@ -736,28 +777,58 @@ function SubscriptionDetailPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="postalCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>郵便番号</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="郵便番号を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 請求先住所フォーム */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">請求先住所</h3>
                     <FormField
                       control={form.control}
-                      name="state"
+                      name="postalCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>都道府県</FormLabel>
+                          <FormLabel>郵便番号</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="都道府県を入力" />
+                            <Input {...field} placeholder="郵便番号を入力" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>都道府県</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="都道府県を入力" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>市区町村</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="市区町村を入力" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="line1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>住所1（番地など）</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="住所1を入力" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -765,44 +836,90 @@ function SubscriptionDetailPage() {
                     />
                     <FormField
                       control={form.control}
-                      name="city"
+                      name="line2"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>市区町村</FormLabel>
+                          <FormLabel>住所2（建物名など）</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="市区町村を入力" />
+                            <Input {...field} placeholder="住所2を入力" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="line1"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>住所1（番地など）</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="住所1を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="line2"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>住所2（建物名など）</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="住所2を入力（任意）" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
+                  {/* 配送先住所フォーム */}
+                  <div className="space-y-4 mt-8">
+                    <h3 className="text-lg font-medium">配送先住所</h3>
+                    <FormField
+                      control={form.control}
+                      name="shippingPostalCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>郵便番号</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="郵便番号を入力" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="shippingState"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>都道府県</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="都道府県を入力" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="shippingCity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>市区町村</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="市区町村を入力" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="shippingLine1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>住所1（番地など）</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="住所1を入力" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="shippingLine2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>住所2（建物名など）</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="住所2を入力" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="phoneNumber"
@@ -837,16 +954,26 @@ function SubscriptionDetailPage() {
                   <div className="text-lg">{customer?.metadata?.サロン名 || '未設定'}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">郵便番号</div>
-                  <div className="text-lg">{customer?.address?.postal_code || '未設定'}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">住所</div>
-                  <div className="text-lg">{formatAddress(customer?.address)}</div>
-                </div>
-                <div>
                   <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
                   <div className="text-lg">{customer?.phone || '未設定'}</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-2">請求先住所</div>
+                  <div className="text-lg">
+                    {customer?.address?.postal_code && (
+                      <div className="text-sm text-muted-foreground">〒{customer.address.postal_code}</div>
+                    )}
+                    {formatAddress(customer?.address)}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-2">配送先住所</div>
+                  <div className="text-lg">
+                    {customer?.shipping?.address?.postal_code && (
+                      <div className="text-sm text-muted-foreground">〒{customer.shipping.address.postal_code}</div>
+                    )}
+                    {formatAddress(customer?.shipping?.address)}
+                  </div>
                 </div>
               </div>
             )}
@@ -879,7 +1006,7 @@ function SubscriptionDetailPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">契約情報</h3>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4md:grid-cols-2">
                 <div>
                   <p className="text-sm text-muted-foreground">契約者名</p>
                   <p className="text-lg">{customer.metadata?.サロン名 || customer.name || '未設定'}</p>
@@ -990,11 +1117,11 @@ function SubscriptionDetailPage() {
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="text-smfont-medium text-muted-foreground">支払い方法</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
               <div className="flex items-start gap-3">
                 <CardIcon className="h-5 w-5 text-muted-foreground mt-1" />
                 <div>
-                  {subscription.default_payment_method?.card ? (
+                  {subscription.default_payment_method ? (
                     <>
                       <p className="text-lg font-medium">
                         {formatCardBrand(subscription.default_payment_method.card.brand)}
@@ -1005,7 +1132,7 @@ function SubscriptionDetailPage() {
                       </p>
                     </>
                   ) : (
-                    <p className="text-lg">支払い方法が設定されていません</p>
+                    <p className="text-muted-foreground">支払い方法が設定されていません</p>
                   )}
                 </div>
               </div>
