@@ -74,3 +74,43 @@ ${resetLink}
     `.trim()
   };
 }
+
+export function generateVerificationEmail(email: string, token: string) {
+  const baseUrl = process.env.REPL_ID 
+    ? `https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev`
+    : "http://localhost:5000";
+
+  const verificationLink = `${baseUrl}/verify-email?token=${token}`;
+
+  return {
+    subject: "メールアドレスの確認",
+    text: `
+RevolOneへのご登録ありがとうございます。
+
+以下のリンクをクリックしてメールアドレスの確認を完了してください：
+${verificationLink}
+
+このリンクは24時間後に無効となります。
+
+※このメールに心当たりがない場合は、このメールを破棄してください。
+    `.trim(),
+    html: `
+<!DOCTYPE html>
+<html>
+<body>
+  <p>RevolOneへのご登録ありがとうございます。</p>
+  <p>以下のリンクをクリックしてメールアドレスの確認を完了してください：</p>
+  <p>
+    <a href="${verificationLink}" style="display: inline-block; padding: 10px 20px; background-color: #8b1c1c; color: white; text-decoration: none; border-radius: 4px;">
+      メールアドレスを確認
+    </a>
+  </p>
+  <p>このリンクは24時間後に無効となります。</p>
+  <p style="color: #666; font-size: 0.9em;">
+    ※このメールに心当たりがない場合は、このメールを破棄してください。
+  </p>
+</body>
+</html>
+    `.trim()
+  };
+}

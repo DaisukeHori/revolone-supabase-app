@@ -10,6 +10,10 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  // Email verification fields
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  emailVerificationToken: text("email_verification_token"),
+  emailVerificationTokenExpires: timestamp("email_verification_token_expires"),
   // MFA fields
   mfaEnabled: boolean("mfa_enabled"),
   mfaType: text("mfa_type"),
@@ -57,6 +61,9 @@ export const insertUserSchema = createInsertSchema(users, {
   mfaSecret: true,
   phoneNumber: true,
   backupCodes: true,
+  emailVerified: true,
+  emailVerificationToken: true,
+  emailVerificationTokenExpires: true,
 });
 
 export const insertStoreSchema = createInsertSchema(stores, {
