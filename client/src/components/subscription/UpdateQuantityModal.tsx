@@ -35,7 +35,7 @@ type Props = {
 export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props) {
   const [step, setStep] = useState(1);
 
-  // レボナイザーの合計台数
+  // レボナイザーの合計台数（現在の契約台数を初期値として計算）
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState<number>(
     calculateTotalQuantityFromItems(filterRevonizerItems(items))
   );
@@ -82,7 +82,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
       // 確認画面で確定ボタンが押された場合
       const quantities = { ...otherQuantities };
 
-      // レボナイザー商品の数量を自動計算
+      // レボナイザー商品の数量を自動計算して設定
       const calculatedQuantities = calculateRevonizerQuantities(totalRevonizerQuantity);
       Object.entries(calculatedQuantities).forEach(([productId, quantity]) => {
         quantities[productId] = quantity;
@@ -121,6 +121,9 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
             <div className="grid grid-cols-4 items-center gap-4">
               <div className="col-span-2">
                 <h3 className="font-medium">レボナイザー（合計台数）</h3>
+                <p className="text-sm text-muted-foreground">
+                  現在の契約台数: {calculateTotalQuantityFromItems(filterRevonizerItems(items))}台
+                </p>
               </div>
               <div className="col-span-2">
                 <QuantityInput
@@ -133,7 +136,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
           )}
 
           {step === 2 && (
-            // Step 2: その他の商品の数量設定
+            // Step 2: その他の商品の数量設定（レボナイザー以外）
             items.map(item => {
               if (!isRevonizerProduct(item.subscription_item_id)) {
                 return (
@@ -166,12 +169,12 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
                 <div className="space-y-1 text-sm">
                   <p>合計: {totalRevonizerQuantity}台</p>
                   <div className="pl-4 space-y-1 text-muted-foreground">
-                    <p>・基本ライセンス（1台目）: 1台</p>
+                    <p>・{REVONIZER_PRODUCTS.FIRST_UNIT.name}: 1台</p>
                     {totalRevonizerQuantity > 1 && (
-                      <p>・2-4台目: {Math.min(totalRevonizerQuantity - 1, 3)}台</p>
+                      <p>・{REVONIZER_PRODUCTS.SECOND_TO_FOURTH.name}: {Math.min(totalRevonizerQuantity - 1, 3)}台</p>
                     )}
                     {totalRevonizerQuantity > 4 && (
-                      <p>・5台目以降: {totalRevonizerQuantity - 4}台</p>
+                      <p>・{REVONIZER_PRODUCTS.FIFTH_AND_MORE.name}: {totalRevonizerQuantity - 4}台</p>
                     )}
                   </div>
                 </div>

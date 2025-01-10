@@ -25,10 +25,14 @@ export const REVONIZER_PRODUCTS = {
 
 // レボナイザー商品かどうかを判定する関数
 export function isRevonizerProduct(id: string): boolean {
-  const revonizerIds = Object.values(REVONIZER_PRODUCTS).flatMap(product => [
-    product.productId,
-    product.priceId
-  ]);
+  const revonizerIds = [
+    REVONIZER_PRODUCTS.FIRST_UNIT.productId,
+    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
+    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId,
+    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId,
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
+  ];
   return revonizerIds.includes(id);
 }
 
@@ -45,15 +49,15 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<stri
     [REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId]: 0,
   };
 
-  // 1台目の処理
+  // 1台目は必ずFIRST_UNITを使用
   quantities[REVONIZER_PRODUCTS.FIRST_UNIT.productId] = 1;
 
   if (totalQuantity > 1) {
-    // 2-4台目の処理
+    // 2-4台目はSECOND_TO_FOURTHを使用
     const secondToFourthCount = Math.min(totalQuantity - 1, 3);
     quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId] = secondToFourthCount;
 
-    // 5台目以降の処理
+    // 5台目以降はFIFTH_AND_MOREを使用
     if (totalQuantity > 4) {
       quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId] = totalQuantity - 4;
     }
@@ -62,35 +66,36 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<stri
   return quantities;
 }
 
-// 商品名から合計台数を計算する関数（既存のサブスクリプションアイテムから計算）
+// 既存のサブスクリプションアイテムから合計台数を計算する関数
 export function calculateTotalQuantityFromItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): number {
   let total = 0;
 
-  // FIRST_UNITの数量を加算（通常は1）
+  // 各レボナイザー商品の数量を合算
   const firstUnit = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.FIRST_UNIT.productId
+    item.subscription_item_id === REVONIZER_PRODUCTS.FIRST_UNIT.productId ||
+    item.subscription_item_id === REVONIZER_PRODUCTS.FIRST_UNIT.priceId
   );
   if (firstUnit) total += firstUnit.quantity;
 
-  // SECOND_TO_FOURTHの数量を加算
   const secondToFourth = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId
+    item.subscription_item_id === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId ||
+    item.subscription_item_id === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId
   );
   if (secondToFourth) total += secondToFourth.quantity;
 
-  // FIFTH_AND_MOREの数量を加算
   const fifthAndMore = items.find(item => 
-    item.subscription_item_id === REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId
+    item.subscription_item_id === REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId ||
+    item.subscription_item_id === REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
   );
   if (fifthAndMore) total += fifthAndMore.quantity;
 
   return total;
 }
 
-// 既存のサブスクリプションアイテムから、レボナイザー関連の商品のみを抽出する
+// レボナイザー商品のみを抽出する関数
 export function filterRevonizerItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
