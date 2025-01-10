@@ -34,15 +34,7 @@ const crypto = {
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {
-      requiresMfa?: boolean;
-    }
-  }
-
-  namespace Express.Session {
-    interface SessionData {
-      mfaPendingUserId?: number;
-    }
+    interface User extends SelectUser {}
   }
 }
 
@@ -64,7 +56,7 @@ export const changePasswordSchema = z.object({
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "auth-secret",
+    secret: process.env.REPL_ID || "wabi-sabi-auth",
     resave: false,
     saveUninitialized: false,
     cookie: {},
@@ -85,43 +77,35 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(
-      {
-        usernameField: "email",
-        passwordField: "password",
-      },
-      async (email, password, done) => {
-        try {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1);
+    new LocalStrategy({
+      usernameField: 'email',
+      passwordField: 'password'
+    }, async (email, password, done) => {
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
 
-          if (!user) {
-            return done(null, false, {
-              message: "メールアドレスまたはパスワードが正しくありません",
-            });
-          }
-
-          const isMatch = await crypto.compare(password, user.password);
-          if (!isMatch) {
-            return done(null, false, {
-              message: "メールアドレスまたはパスワードが正しくありません",
-            });
-          }
-
-          // 2段階認証が有効な場合は、要認証フラグを立てる
-          if (user.mfaEnabled) {
-            return done(null, { ...user, requiresMFA: true });
-          }
-
-          return done(null, user);
-        } catch (err) {
-          return done(err);
+        if (!user) {
+          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
         }
+        const isMatch = await crypto.compare(password, user.password);
+        if (!isMatch) {
+          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
+        }
+
+        // 2段階認証が有効な場合は、要認証フラグを立てる
+        if (user.mfaEnabled) {
+          return done(null, { ...user, requiresMFA: true });
+        }
+
+        return done(null, user);
+      } catch (err) {
+        return done(err);
       }
-    )
+    })
   );
 
   passport.serializeUser((user, done) => {
@@ -209,7 +193,7 @@ export function setupAuth(app: Express) {
 
             if (twilioClient) {
               await twilioClient.messages.create({
-                body: `【RevolOne】認証コード：${verificationCode}\n\nこのコードを使用してログインを完了してください。有効期限は10分です。\n\nこのコードに関するご不明な点がございましたら、カスタマーサポートまでお問い合わせください。\n\nセキュリティを確保するため、このコードを他者と共有しないでください。`,
+                body: `【RevolOne】認証コード：${verificationCode}\n\nこちらの認証コードを入力してログインを完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
                 to: user.phoneNumber,
                 from: process.env.TWILIO_PHONE_NUMBER
               });

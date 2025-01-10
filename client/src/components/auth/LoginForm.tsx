@@ -61,9 +61,8 @@ export function LoginForm({ onComplete }: LoginFormProps) {
         return;
       }
 
-      // ユーザー情報のキャッシュを更新し、完了後にコールバックを実行
+      // ユーザー情報のキャッシュを更新
       await queryClient.invalidateQueries({ queryKey: ['user'] });
-      await queryClient.refetchQueries({ queryKey: ['user'] });
       onComplete();
     } catch (error) {
       setError("予期せぬエラーが発生しました");
