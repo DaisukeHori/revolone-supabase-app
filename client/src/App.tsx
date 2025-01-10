@@ -6,6 +6,7 @@ import ProfilePage from "./pages/ProfilePage";
 import HomePage from "./pages/HomePage";
 import SettingsPage from "./pages/SettingsPage";
 import SubscriptionDetailPage from "./pages/SubscriptionDetailPage";
+import StoreDetailPage from "./pages/StoreDetailPage";
 import BillingSettingsPage from "./pages/BillingSettingsPage";
 import PaymentHistoryPage from "./pages/PaymentHistoryPage";
 import SecuritySettingsPage from "./pages/SecuritySettingsPage";
@@ -47,6 +48,7 @@ function App() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/settings/security" component={SecuritySettingsPage} />
+      <Route path="/store/:id" component={StoreDetailPage} />
       <Route path="/subscription/:id" component={SubscriptionDetailPage} />
       <Route path="/billing" component={BillingSettingsPage} />
       <Route path="/payment-history" component={PaymentHistoryPage} />

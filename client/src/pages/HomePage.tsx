@@ -117,9 +117,7 @@ export default function HomePage() {
                     whileHover={{ scale: 1.01 }}
                     transition={{ type: "spring", stiffness: 300 }}
                     onClick={() => {
-                      if (customerData.subscriptions[0]) {
-                        setLocation(`/subscription/${customerData.subscriptions[0].id}`);
-                      }
+                      setLocation(`/store/${customerData.customer.id}`);
                     }}
                   >
                     <div className="flex items-start justify-between">
@@ -142,7 +140,7 @@ export default function HomePage() {
                         <div className="space-y-2">
                           <p className="text-sm text-muted-foreground">契約中のサービス</p>
                           <div className="flex flex-wrap gap-2">
-                            {customerData.subscriptions.flatMap(subscription => 
+                            {customerData.subscriptions.flatMap(subscription =>
                               subscription.items.map(item => (
                                 <div
                                   key={item.subscription_item_id}
