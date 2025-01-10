@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 
 // フォームのスキーマ定義を更新（必須バリデーションを削除）
 const storeFormSchema = z.object({
@@ -142,16 +143,13 @@ function QuantityInput({
   const [quantity, setQuantity] = useState(initialQuantity);
 
   useEffect(() => {
-    console.log(`[QuantityInput ${itemId}] initialQuantity:`, initialQuantity, 'current quantity:', quantity);
     if (initialQuantity !== quantity) {
-      console.log(`[QuantityInput ${itemId}] Updating quantity to:`, initialQuantity);
       setQuantity(initialQuantity);
     }
-  }, [initialQuantity, quantity, itemId]);
+  }, [initialQuantity, quantity]);
 
   const handleChange = (value: number) => {
     const newQuantity = Math.max(min, Math.min(max, value));
-    console.log(`[QuantityInput ${itemId}] handleChange:`, newQuantity);
     setQuantity(newQuantity);
     onChange(newQuantity);
   };
@@ -185,114 +183,6 @@ function QuantityInput({
         +
       </Button>
     </div>
-  );
-}
-
-function UpdateQuantityModal({
-  isOpen,
-  onClose,
-  items,
-  onConfirm
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  items: StripeSubscription['items'];
-  onConfirm: (quantities: Record<string, number>) => void;
-}) {
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    console.log('[UpdateQuantityModal] Modal opened or items changed. Items:', JSON.stringify(items, null, 2));
-    const initialQuantities: Record<string, number> = {};
-    items.forEach((item) => {
-      const itemId = item.subscription_item_id;
-      console.log(`[UpdateQuantityModal] Processing item:`, {
-        id: itemId,
-        name: item.product.name,
-        quantity: item.quantity
-      });
-      initialQuantities[itemId] = item.quantity;
-    });
-    console.log('[UpdateQuantityModal] Setting quantities:', initialQuantities);
-    setQuantities(initialQuantities);
-  }, [items, isOpen]);
-
-  const handleQuantityChange = (itemId: string, quantity: number) => {
-    console.log(`[UpdateQuantityModal] Changing quantity for item ${itemId} to:`, quantity);
-    setQuantities(prev => {
-      const next = {
-        ...prev,
-        [itemId]: quantity
-      };
-      console.log('[UpdateQuantityModal] Updated quantities:', next);
-      return next;
-    });
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>プランの数量を変更</DialogTitle>
-          <DialogDescription>
-            各プランの数量を設定してください。
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-6 pb-2">
-          {items.map((item) => {
-            const itemId = item.subscription_item_id;
-            console.log(`[UpdateQuantityModal] Rendering item:`, {
-              id: itemId,
-              name: item.product.name,
-              currentQuantity: quantities[itemId],
-              originalQuantity: item.quantity
-            });
-
-            return (
-              <div key={itemId} className="p-4 bg-primary/5 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-lg">{item.product.name}</h4>
-                    {item.product.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {item.product.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CreditCard className="h-4 w-4" />
-                      <span>
-                        {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
-                      </span>
-                    </div>
-                  </div>
-                  <QuantityInput
-                    key={`${itemId}-${quantities[itemId] || item.quantity}`}
-                    itemId={itemId}
-                    initialQuantity={quantities[itemId] || item.quantity}
-                    onChange={(quantity) => handleQuantityChange(itemId, quantity)}
-                  />
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button
-              variant="outline"
-              onClick={onClose}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => onConfirm(quantities)}
-              disabled={Object.keys(quantities).length === 0}
-            >
-              変更内容を確認
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -392,6 +282,391 @@ function ConfirmUpdateDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SubscriptionDetailPage() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const subscriptionId = window.location.pathname.split("/").pop();
+  const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditingStore, setIsEditingStore] = useState(false);
+
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
+    queryKey: ['/api/stripe/customer'],
+    staleTime: 0,
+  });
+
+  const customerData = stripeData?.find(data =>
+    data.subscriptions.some(sub => sub.id === subscriptionId)
+  );
+
+  const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+  const customer = customerData?.customer;
+
+  const handleUpdateQuantities = async () => {
+    if (!subscription || Object.keys(updatedQuantities).length === 0) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
+            id,
+            quantity
+          }))
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "プランの数量を更新しました",
+      });
+
+      setUpdatedQuantities({});
+      setShowConfirmDialog(false);
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const toggleAutoRenewalMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        description: "自動更新設定を変更しました",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        description: "設定の変更に失敗しました",
+      });
+    }
+  });
+
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/cancel`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        description: "サブスクリプションをキャンセルしました",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        description: "キャンセルに失敗しました",
+      });
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error || !stripeData) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            サブスクリプション情報の取得に失敗しました
+          </AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
+
+  if (!subscription || !customerData) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            指定されたサブスクリプションが見つかりません
+          </AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
+
+  const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
+
+  const handleAutoRenewalToggle = async () => {
+    try {
+      await toggleAutoRenewalMutation.mutateAsync(subscription.id);
+    } catch (error) {
+      console.error('自動更新設定の変更に失敗:', error);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
+      try {
+        await cancelSubscriptionMutation.mutateAsync(subscription.id);
+      } catch (error) {
+        console.error('サブスクリプションのキャンセルに失敗:', error);
+      }
+    }
+  };
+
+
+  const container = {
+    hidden: { opacity: 0, y: 50 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  return (
+    <AppLayout>
+      <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation('/')}
+            className="hover:bg-primary/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold">サブスクリプション詳細</h1>
+        </div>
+
+        {/* メインのサブスクリプション情報 */}
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <Package className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-2xl">契約内容</CardTitle>
+                {customer?.metadata?.サロン名 && (
+                  <CardDescription>
+                    {customer.metadata.サロン名}
+                  </CardDescription>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* サブスクリプションステータス */}
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className={getStatusBadgeColor(subscription.status)}
+                >
+                  {formatStatus(subscription.status)}
+                </Badge>
+                {subscription.cancel_at_period_end && (
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                    次回更新時に終了
+                  </Badge>
+                )}
+              </div>
+
+              {/* サブスクリプションアイテム一覧 */}
+              <div className="space-y-4">
+                {subscription.items.map((item) => (
+                  <div key={item.subscription_item_id} className="p-4 bg-primary/5 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h3 className="font-medium text-lg">
+                          {item.product.name}
+                        </h3>
+                        {item.product.description && (
+                          <p className="text-sm text-muted-foreground">
+                            {item.product.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CreditCard className="h-4 w-4" />
+                          <span>
+                            {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-lg">
+                          {item.quantity}個
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 支払い情報 */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    <span>
+                      {subscription.default_payment_method ? (
+                        `${formatCardBrand(subscription.default_payment_method.card.brand)}
+                        **** ${subscription.default_payment_method.card.last4} (
+                        ${subscription.default_payment_method.card.exp_month}/
+                        ${subscription.default_payment_method.card.exp_year})`
+                      ) : (
+                        '支払い方法が設定されていません'
+                      )}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
+                    className="gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    変更
+                  </Button>
+                </div>
+              </div>
+
+              {/* 更新日情報 */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">次回更新日</h3>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
+                  </span>
+                </div>
+                {isTrialing && subscription.trial_end && (
+                  <p className="text-sm text-muted-foreground">
+                    トライアル期間: {new Date(subscription.trial_end * 1000).toLocaleDateString("ja-JP")}まで
+                  </p>
+                )}
+              </div>
+
+              {/* アクション */}
+              <div className="flex flex-wrap gap-2 pt-4">
+                {subscription.status === 'active' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => setShowQuantityModal(true)}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      数量を変更
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleAutoRenewalToggle}
+                    >
+                      {subscription.cancel_at_period_end ? (
+                        <>
+                          <CheckCircle className="h-4 w-4" />
+                          自動更新を再開
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="h-4 w-4" />
+                          自動更新を停止
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={handleCancelSubscription}
+                    >
+                      キャンセル
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* モーダル */}
+        {subscription && (
+          <UpdateQuantityModal
+            isOpen={showQuantityModal}
+            onClose={() => setShowQuantityModal(false)}
+            subscriptionId={subscription.id}
+            items={subscription.items}
+            onSuccess={() => {
+              setShowQuantityModal(false);
+              refetch();
+            }}
+          />
+        )}
+
+        {/* 確認ダイアログ */}
+        {subscription && (
+          <ConfirmUpdateDialog
+            isOpen={showConfirmDialog}
+            onClose={() => setShowConfirmDialog(false)}
+            items={subscription.items}
+            updatedQuantities={updatedQuantities}
+            onConfirm={handleUpdateQuantities}
+            isUpdating={isUpdating}
+          />
+        )}
+      </motion.div>
+    </AppLayout>
   );
 }
 
@@ -715,492 +990,6 @@ function StoreEditModal({
         </Form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SubscriptionDetailPage() {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const subscriptionId = window.location.pathname.split("/").pop();
-  const [showQuantityModal, setShowQuantityModal] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isEditingStore, setIsEditingStore] = useState(false);
-
-  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
-    queryKey: ['/api/stripe/customer'],
-    staleTime: 0, // 常に最新のデータを取得
-  });
-
-  console.log('Stripe Data:', stripeData); // デバッグログ
-
-  const customerData = stripeData?.find(data =>
-    data.subscriptions.some(sub => sub.id === subscriptionId)
-  );
-
-  console.log('Customer Data:', customerData); // デバッグログ
-
-  const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
-  const customer = customerData?.customer;
-
-  console.log('Customer:', customer); // デバッグログ
-
-  const form = useForm<StoreFormValues>({
-    resolver: zodResolver(storeFormSchema),
-    defaultValues: {
-      name: customer?.metadata?.サロン名 || '',
-      postalCode: customer?.address?.postal_code || '',
-      state: customer?.address?.state || '',
-      city: customer?.address?.city || '',
-      line1: customer?.address?.line1 || '',
-      line2: customer?.address?.line2 || '',
-      phoneNumber: customer?.phone || '',
-      shippingPostalCode: customer?.shipping?.address?.postal_code || '',
-      shippingState: customer?.shipping?.address?.state || '',
-      shippingCity: customer?.shipping?.address?.city || '',
-      shippingLine1: customer?.shipping?.address?.line1 || '',
-      shippingLine2: customer?.shipping?.address?.line2 || '',
-    },
-  });
-
-  useEffect(() => {
-    if (customer) {
-      form.reset({
-        name: customer.metadata?.サロン名 || '',
-        postalCode: customer?.address?.postal_code || '',
-        state: customer?.address?.state || '',
-        city: customer?.address?.city || '',
-        line1: customer?.address?.line1 || '',
-        line2: customer?.address?.line2 || '',
-        phoneNumber: customer.phone || '',
-        shippingPostalCode: customer?.shipping?.address?.postal_code || '',
-        shippingState: customer?.shipping?.address?.state || '',
-        shippingCity: customer?.shipping?.address?.city || '',
-        shippingLine1: customer?.shipping?.address?.line1 || '',
-        shippingLine2: customer?.shipping?.address?.line2 || '',
-      });
-    }
-  }, [customer, form]);
-
-  const handleUpdateStore = async (values: StoreFormValues) => {
-    if (!customer) return;
-
-    try {
-      const response = await fetch(`/api/stripe/customer/${customer.id}/metadata`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address: {
-            postal_code: values.postalCode,
-            state: values.state,
-            city: values.city,
-            line1: values.line1,
-            line2: values.line2,
-            country: 'JP'
-          },
-          shipping: {
-            address: {
-              postal_code: values.shippingPostalCode,
-              state: values.shippingState,
-              city: values.shippingCity,
-              line1: values.shippingLine1,
-              line2: values.shippingLine2,
-              country: 'JP'
-            },
-            name: customer.name,
-            phone: values.phoneNumber
-          },
-          phone: values.phoneNumber,
-          metadata: {
-            サロン名: values.name,
-          }
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('店舗情報更新エラー:', errorText);
-        throw new Error(errorText);
-      }
-
-      const data = await response.json();
-      console.log('Updated customer data:', data);
-
-      await refetch();
-      toast({
-        description: "店舗情報を更新しました",
-      });
-      setIsEditingStore(false);
-    } catch (error) {
-      console.error('店舗情報更新エラー:', error);
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "店舗情報の更新中にエラーが発生しました",
-      });
-    }
-  };
-
-  const handleUpdateQuantities = async () => {
-    if (Object.keys(updatedQuantities).length === 0) {
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/update-quantities`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: Object.entries(updatedQuantities).map(([id, quantity]) => ({
-            id,
-            quantity
-          }))
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      await refetch();
-      toast({
-        description: "プランの数量を更新しました",
-      });
-
-      setUpdatedQuantities({});
-      setShowConfirmDialog(false);
-    } catch (error) {
-      console.error('数量更新エラー:', error);
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const toggleAutoRenewalMutation = useMutation({
-    mutationFn: async (subscriptionId: string) => {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      refetch();
-      toast({
-        description: "自動更新設定を変更しました",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        description: "設定の変更に失敗しました",
-      });
-    }
-  });
-
-  const cancelSubscriptionMutation = useMutation({
-    mutationFn: async (subscriptionId: string) => {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/cancel`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      refetch();
-      toast({
-        description: "サブスクリプションをキャンセルしました",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        description: "キャンセルに失敗しました",
-      });
-    }
-  });
-
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (error || !stripeData) {
-    return (
-      <AppLayout>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            サブスクリプション情報の取得に失敗しました
-          </AlertDescription>
-        </Alert>
-      </AppLayout>
-    );
-  }
-
-  if (!subscription || !customerData) {
-    return (
-      <AppLayout>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            指定されたサブスクリプションが見つかりません
-          </AlertDescription>
-        </Alert>
-      </AppLayout>
-    );
-  }
-
-  const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
-
-  const handleAutoRenewalToggle = async () => {
-    try {
-      await toggleAutoRenewalMutation.mutateAsync(subscription.id);
-    } catch (error) {
-      console.error('自動更新設定の変更に失敗:', error);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
-      try {
-        await cancelSubscriptionMutation.mutateAsync(subscription.id);
-      } catch (error) {
-        console.error('サブスクリプションのキャンセルに失敗:', error);
-      }
-    }
-  };
-
-
-  const item = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  return (
-    <AppLayout>
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/store/" + customer?.id)}
-            className="hover:bg-primary/10"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-semibold">サブスクリプション詳細</h1>
-        </div>
-
-        {/* メインのサブスクリプション情報 */}
-        <motion.div initial="hidden" animate="visible" variants={item}>
-          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <Package className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl">
-                    契約内容
-                  </CardTitle>
-                  {customer?.metadata?.サロン名 && (
-                    <CardDescription>
-                      {customer.metadata.サロン名}
-                    </CardDescription>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* サブスクリプションステータス */}
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant="secondary"
-                  className={getStatusBadgeColor(subscription.status)}
-                >
-                  {formatStatus(subscription.status)}
-                </Badge>
-                {subscription.cancel_at_period_end && (
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                    次回更新時に終了
-                  </Badge>
-                )}
-              </div>
-
-              {/* サブスクリプションアイテム一覧 */}
-              <div className="space-y-4">
-                {subscription.items.map((item) => (
-                  <div key={item.subscription_item_id} className="bg-primary/5 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <p className="font-medium">{item.product.name}</p>
-                        {item.product.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {item.product.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CreditCard className="h-4 w-4" />
-                          <span>
-                            {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          数量: {item.quantity}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 支払い情報 */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">支払い方法</h3>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    <span>
-                      {subscription.default_payment_method ? (
-                        `${formatCardBrand(subscription.default_payment_method.card.brand)}
-                        **** ${subscription.default_payment_method.card.last4} (
-                        ${subscription.default_payment_method.card.exp_month}/
-                        ${subscription.default_payment_method.card.exp_year})`
-                      ) : (
-                        '支払い方法が設定されていません'
-                      )}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
-                    className="gap-2"
-                  >
-                    <Settings className="h-4 w-4" />
-                    変更
-                  </Button>
-                </div>
-              </div>
-
-              {/* 更新日情報 */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">次回更新日</h3>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
-                  </span>
-                </div>
-                {isTrialing && subscription.trial_end && (
-                  <p className="text-sm text-muted-foreground">
-                    トライアル期間: {new Date(subscription.trial_end * 1000).toLocaleDateString("ja-JP")}まで
-                  </p>
-                )}
-              </div>
-
-              {/* アクション */}
-              <div className="flex flex-wrap gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setShowQuantityModal(true)}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  数量を変更
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setLocation("/payment-history")}
-                >
-                  <History className="h-4 w-4" />
-                  支払い履歴
-                </Button>
-
-                {subscription.status !== 'canceled' && (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={handleAutoRenewalToggle}
-                    >
-                      {subscription.cancel_at_period_end ? (
-                        <>
-                          <CheckCircle className="h-4 w-4" />
-                          自動更新を有効化
-                        </>
-                      ) : (
-                        <>
-                          <Ban className="h-4 w-4" />
-                          自動更新を無効化
-                        </>
-                      )}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="gap-2 text-red-600 hover:text-red-700"
-                      onClick={handleCancelSubscription}
-                    >
-                      <Ban className="h-4 w-4" />
-                      今すぐキャンセル
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {showQuantityModal && (
-          <UpdateQuantityModal
-            isOpen={showQuantityModal}
-            onClose={() => setShowQuantityModal(false)}
-            items={subscription.items}
-            onConfirm={(quantities) => {
-              setUpdatedQuantities(quantities);
-              setShowQuantityModal(false);
-              setShowConfirmDialog(true);
-            }}
-          />
-        )}
-
-        {showConfirmDialog && (
-          <ConfirmUpdateDialog
-            isOpen={showConfirmDialog}
-            onClose={() => setShowConfirmDialog(false)}
-            items={subscription.items}
-            updatedQuantities={updatedQuantities}
-            onConfirm={handleUpdateQuantities}
-            isUpdating={isUpdating}
-          />
-        )}
-      </div>
-    </AppLayout>
   );
 }
 
