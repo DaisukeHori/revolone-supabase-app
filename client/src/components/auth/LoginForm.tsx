@@ -61,9 +61,15 @@ export function LoginForm({ onComplete }: LoginFormProps) {
         return;
       }
 
-      // ユーザー情報のキャッシュを更新
+      // 2段階認証が不要な場合の処理
       await queryClient.invalidateQueries({ queryKey: ['user'] });
-      onComplete();
+
+      // 確実にステート更新と画面遷移を行うため、マイクロタスクキューに入れる
+      Promise.resolve().then(() => {
+        setIsSubmitting(false);
+        onComplete();
+      });
+
     } catch (error) {
       setError("予期せぬエラーが発生しました");
       console.error(error);
@@ -111,6 +117,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
                   type="email"
                   placeholder="example@email.com"
                   className="bg-background/80 border-primary/20 focus:border-primary/40"
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
@@ -130,6 +137,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
                   type="password"
                   placeholder="********"
                   className="bg-background/80 border-primary/20 focus:border-primary/40"
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
