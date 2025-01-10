@@ -15,7 +15,7 @@ type StripePaymentHistory = {
   status: string;
   created: number;
   invoice_pdf: string | null;
-  receipt_pdf: string | null;
+  hosted_invoice_url: string | null;
 };
 
 type StripeCustomerData = {
@@ -175,7 +175,7 @@ export default function PaymentHistoryPage() {
                               </a>
                             </Button>
                           )}
-                          {payment.receipt_pdf && (
+                          {payment.hosted_invoice_url && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -183,7 +183,7 @@ export default function PaymentHistoryPage() {
                               asChild
                             >
                               <a
-                                href={payment.receipt_pdf}
+                                href={payment.hosted_invoice_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >

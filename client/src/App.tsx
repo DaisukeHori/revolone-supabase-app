@@ -50,6 +50,7 @@ function App() {
       <Route path="/settings/security" component={SecuritySettingsPage} />
       <Route path="/store/:id" component={StoreDetailPage} />
       <Route path="/subscription/:id" component={SubscriptionDetailPage} />
+      <Route path="/billing/subscription/:id" component={BillingSettingsPage} />
       <Route path="/billing" component={BillingSettingsPage} />
       <Route path="/payment-history" component={PaymentHistoryPage} />
       <Route path="/" component={HomePage} />

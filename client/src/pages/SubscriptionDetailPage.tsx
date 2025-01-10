@@ -1096,7 +1096,7 @@ function SubscriptionDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setLocation(`/billing/${subscription.id}`)}
+                    onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
                     className="gap-2"
                   >
                     <Settings className="h-4 w-4" />
