@@ -458,6 +458,263 @@ function getStatusBadgeColor(status: string) {
   }
 }
 
+function StoreEditModal({
+  isOpen,
+  onClose,
+  customer,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  customer: StripeCustomerData['customer'];
+  onSubmit: (values: StoreFormValues) => Promise<void>;
+}) {
+  const form = useForm<StoreFormValues>({
+    resolver: zodResolver(storeFormSchema),
+    defaultValues: {
+      name: customer?.metadata?.サロン名 || '',
+      postalCode: customer?.address?.postal_code || '',
+      state: customer?.address?.state || '',
+      city: customer?.address?.city || '',
+      line1: customer?.address?.line1 || '',
+      line2: customer?.address?.line2 || '',
+      phoneNumber: customer?.phone || '',
+      shippingPostalCode: customer?.shipping?.address?.postal_code || '',
+      shippingState: customer?.shipping?.address?.state || '',
+      shippingCity: customer?.shipping?.address?.city || '',
+      shippingLine1: customer?.shipping?.address?.line1 || '',
+      shippingLine2: customer?.shipping?.address?.line2 || '',
+    },
+  });
+
+  useEffect(() => {
+    if (customer) {
+      form.reset({
+        name: customer.metadata?.サロン名 || '',
+        postalCode: customer?.address?.postal_code || '',
+        state: customer?.address?.state || '',
+        city: customer?.address?.city || '',
+        line1: customer?.address?.line1 || '',
+        line2: customer?.address?.line2 || '',
+        phoneNumber: customer.phone || '',
+        shippingPostalCode: customer?.shipping?.address?.postal_code || '',
+        shippingState: customer?.shipping?.address?.state || '',
+        shippingCity: customer?.shipping?.address?.city || '',
+        shippingLine1: customer?.shipping?.address?.line1 || '',
+        shippingLine2: customer?.shipping?.address?.line2 || '',
+      });
+    }
+  }, [customer, form]);
+
+  const handleSubmit = async (values: StoreFormValues) => {
+    try {
+      await onSubmit(values);
+      onClose();
+    } catch (error) {
+      // エラーハンドリングはonSubmit側で行われる
+      console.error('店舗情報更新エラー:', error);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>店舗情報の編集</DialogTitle>
+          <DialogDescription>
+            店舗情報、請求先住所、配送先住所を編集できます。
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>店舗名</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="店舗名を入力" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* 請求先住所フォーム */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">請求先住所</h3>
+              <FormField
+                control={form.control}
+                name="postalCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>郵便番号</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="郵便番号を入力" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>都道府県</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="都道府県を入力" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>市区町村</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="市区町村を入力" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="line1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>住所1（番地など）</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="住所1を入力" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="line2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>住所2（建物名など）</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="住所2を入力" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* 配送先住所フォーム */}
+            <div className="space-y-4 mt-8">
+              <h3 className="text-lg font-medium">配送先住所</h3>
+              <FormField
+                control={form.control}
+                name="shippingPostalCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>郵便番号</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="郵便番号を入力" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="shippingState"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>都道府県</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="都道府県を入力" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="shippingCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>市区町村</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="市区町村を入力" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="shippingLine1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>住所1（番地など）</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="住所1を入力" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="shippingLine2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>住所2（建物名など）</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="住所2を入力" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>電話番号</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="電話番号を入力" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+              >
+                キャンセル
+              </Button>
+              <Button type="submit">
+                保存
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SubscriptionDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -761,7 +1018,7 @@ function SubscriptionDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsEditingStore(!isEditingStore)}
+                onClick={() => setIsEditingStore(true)}
                 className="hover:bg-primary/10"
               >
                 <Pencil className="h-4 w-4" />
@@ -769,222 +1026,34 @@ function SubscriptionDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isEditingStore ? (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleUpdateStore)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>店舗名</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="店舗名を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  {/* 請求先住所フォーム */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">請求先住所</h3>
-                    <FormField
-                      control={form.control}
-                      name="postalCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>郵便番号</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="郵便番号を入力" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="state"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>都道府県</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="都道府県を入力" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="city"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>市区町村</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="市区町村を入力" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="line1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>住所1（番地など）</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="住所1を入力" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="line2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>住所2（建物名など）</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="住所2を入力" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* 配送先住所フォーム */}
-                  <div className="space-y-4 mt-8">
-                    <h3 className="text-lg font-medium">配送先住所</h3>
-                    <FormField
-                      control={form.control}
-                      name="shippingPostalCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>郵便番号</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="郵便番号を入力" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="shippingState"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>都道府県</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="都道府県を入力" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="shippingCity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>市区町村</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="市区町村を入力" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="shippingLine1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>住所1（番地など）</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="住所1を入力" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="shippingLine2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>住所2（建物名など）</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="住所2を入力" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>電話番号</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="電話番号を入力" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsEditingStore(false)}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button type="submit">
-                      保存
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">店舗名</div>
-                  <div className="text-lg">{customer?.metadata?.サロン名 || '未設定'}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
-                  <div className="text-lg">{customer?.phone || '未設定'}</div>
-                </div>
-                <div className="col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-2">請求先住所</div>
-                  <div className="text-lg">
-                    {customer?.address?.postal_code && (
-                      <div className="text-sm text-muted-foreground">〒{customer.address.postal_code}</div>
-                    )}
-                    {formatAddress(customer?.address)}
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-2">配送先住所</div>
-                  <div className="text-lg">
-                    {customer?.shipping?.address?.postal_code && (
-                      <div className="text-sm text-muted-foreground">〒{customer.shipping.address.postal_code}</div>
-                    )}
-                    {formatAddress(customer?.shipping?.address)}
-                  </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">店舗名</div>
+                <div className="text-lg">{customer?.metadata?.サロン名 || '未設定'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">電話番号</div>
+                <div className="text-lg">{customer?.phone || '未設定'}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-sm font-medium text-muted-foreground mb-2">請求先住所</div>
+                <div className="text-lg">
+                  {customer?.address?.postal_code && (
+                    <div className="text-sm text-muted-foreground">〒{customer.address.postal_code}</div>
+                  )}
+                  {formatAddress(customer?.address)}
                 </div>
               </div>
-            )}
+              <div className="col-span-2">
+                <div className="text-sm font-medium text-muted-foreground mb-2">配送先住所</div>
+                <div className="text-lg">
+                  {customer?.shipping?.address?.postal_code && (
+                    <div className="text-sm text-muted-foreground">〒{customer.shipping.address.postal_code}</div>
+                  )}
+                  {formatAddress(customer?.shipping?.address)}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
