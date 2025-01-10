@@ -1,0 +1,341 @@
+以下のポイントを押さえると、Stripeの「請求書（Invoice）」だけでなく「領収書（Receipt）」のリンクも表示できるようになります。
+
+---
+
+## 1. サーバー側で`receipt_url`を取得する
+
+Stripeの公式ドキュメントにもあるとおり、領収書のURL(`receipt_url`)は**請求書（Invoice）**のオブジェクトではなく**支払い（Charge）**のオブジェクトに存在します。したがって、
+
+1. `stripe.Invoice.retrieve("in_xxxx")` で請求書オブジェクトを取得  
+2. `invoice.charge` プロパティから支払いID(`ch_xxxx`)を取得  
+3. `stripe.Charge.retrieve("ch_xxxx")` で支払いオブジェクトを取得  
+4. `charge.receipt_url` を使って領収書のURLを取得
+
+という流れになります。
+
+サーバー側でNode.jsを使う場合の一例を示します（Pythonでも同様の流れです）:
+
+```js
+// 例: Node.js (Express)の場合
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2022-11-15",
+});
+
+app.get("/api/stripe/customer", async (req, res) => {
+  try {
+    // たとえば invoiceId がわかっているケース
+    const invoiceId = "in_xxxx";
+    
+    // 請求書を取得
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+
+    // 請求書に紐づくChargeを取得
+    let receiptUrl = null;
+    if (invoice.charge) {
+      const charge = await stripe.charges.retrieve(invoice.charge as string);
+      receiptUrl = charge.receipt_url;
+    }
+
+    // ここでは例として、顧客情報と支払い履歴を返す想定
+    // 実際にはあなたのサービスに合わせて組み立ててください
+    const responseData = [
+      {
+        customer: {
+          id: "cus_xxxx",
+          name: "山田 太郎",
+          email: "example@example.com",
+          metadata: {
+            サロン名: "サロンABC"
+          }
+        },
+        payment_history: [
+          {
+            id: invoice.id,                      // Invoice ID
+            amount: invoice.amount_due,           // 請求金額
+            currency: invoice.currency,           // 通貨
+            status: invoice.status,               // ステータス
+            created: invoice.created,             // 作成日時(UNIX)
+            invoice_pdf: invoice.invoice_pdf,     // 請求書PDF
+            hosted_invoice_url: invoice.hosted_invoice_url, // Stripeがホストする請求書URL
+            receipt_url: receiptUrl,              // チャージから取得した領収書URL
+          },
+        ],
+      },
+    ];
+
+    res.status(200).json(responseData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to retrieve Stripe data." });
+  }
+});
+```
+
+上記例のようにサーバー側で `receipt_url` を取得し、フロントエンドに返却してください。
+
+---
+
+## 2. フロントエンドで`receipt_url`を表示する
+
+ご質問のReactコードには、すでに`StripePaymentHistory`型に`receipt_url`が含まれています。実際にはコードに含まれているにも関わらず、UIには「請求書(invoice_pdf / hosted_invoice_url)」だけが表示されていて、「領収書(receipt_url)」が表示されていません。
+
+そこで、同じようにボタンを用意して `receipt_url` を表示する処理を追加すればOKです。以下、**全文**を示します（既存部分も省略せずすべて含めています）。
+
+```tsx
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { Receipt, ArrowLeft, ExternalLink, FileText } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+
+type StripePaymentHistory = {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created: number;
+  invoice_pdf: string | null;
+  receipt_url: string | null;        // ← ここが領収書URL
+  hosted_invoice_url: string | null;
+};
+
+type StripeCustomerData = {
+  customer: {
+    id: string;
+    name: string | null;
+    email: string;
+    metadata: Record<string, string>;
+  };
+  payment_history: StripePaymentHistory[];
+};
+
+const animations = {
+  container: {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  },
+  item: {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  }
+};
+
+function getStatusBadgeColor(status: string) {
+  switch (status.toLowerCase()) {
+    case 'paid':
+    case 'succeeded':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'failed':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'canceled':
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+}
+
+function formatStatus(status: string) {
+  switch (status.toLowerCase()) {
+    case 'paid':
+    case 'succeeded':
+      return '支払い完了';
+    case 'pending':
+      return '処理中';
+    case 'failed':
+      return '失敗';
+    case 'canceled':
+      return 'キャンセル';
+    default:
+      return status;
+  }
+}
+
+export default function PaymentHistoryPage() {
+  const [, setLocation] = useLocation();
+  const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData[]>({
+    queryKey: ['/api/stripe/customer'],
+  });
+
+  if (error) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertDescription>
+            支払い履歴の取得に失敗しました
+          </AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
+
+  const customerData = stripeData?.[0];
+
+  return (
+    <AppLayout>
+      <motion.div
+        variants={animations.container}
+        initial="hidden"
+        animate="show"
+        className="space-y-8"
+      >
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.history.back()}
+            className="hover:bg-primary/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold">支払い履歴</h1>
+        </div>
+
+        <motion.div variants={animations.item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <Receipt className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">支払い履歴</CardTitle>
+                  {customerData?.customer.metadata?.サロン名 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {customerData.customer.metadata.サロン名}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {customerData?.payment_history?.length > 0 ? (
+                <div className="space-y-4">
+                  {customerData.payment_history.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="flex justify-between items-center py-4 border-b border-primary/10 last:border-0"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          {payment.amount.toLocaleString()}{" "}
+                          {payment.currency.toUpperCase()}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(payment.created * 1000).toLocaleDateString(
+                            "ja-JP",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusBadgeColor(payment.status)}>
+                          {formatStatus(payment.status)}
+                        </Badge>
+                        <div className="flex gap-2">
+                          {/* 請求書へのリンク */}
+                          {payment.invoice_pdf && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              asChild
+                            >
+                              <a
+                                href={payment.invoice_pdf}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FileText className="h-4 w-4" />
+                                請求書
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          )}
+
+                          {/* Stripeがホストする請求書URL */}
+                          {payment.hosted_invoice_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              asChild
+                            >
+                              <a
+                                href={payment.hosted_invoice_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Receipt className="h-4 w-4" />
+                                領収書(Invoiceページ)
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          )}
+
+                          {/* ここで領収書(receipt_url)を表示するボタンを追加 */}
+                          {payment.receipt_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              asChild
+                            >
+                              <a
+                                href={payment.receipt_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Receipt className="h-4 w-4" />
+                                Stripe領収書
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-8">
+                  支払い履歴はありません
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+    </AppLayout>
+  );
+}
+```
+
+上記のように `payment.receipt_url` があれば「Stripe領収書」ボタンを追加し、リンクをクリックすると実際の領収書ページが開くようにします。  
+
+---
+
+## 3. 注意点
+- `receipt_url` は**PDFリンクではなくウェブページ**です。公式にはPDFを直接ダウンロードする手段は提供されておらず、将来的に`/pdf`を付ける裏技は使えなくなる可能性があります。  
+- これらのリンクは一定期間後に期限が切れることがあり、恒久的に保存する用途には向きません。  
+- Stripeで領収書にあたる「Receipt」と請求書にあたる「Invoice」は厳密に別物なので、Invoiceオブジェクトで取得できるPDFリンクは「請求書PDF」、Chargeから取得するURLは「領収書ページ」です。
+
+---
+
+以上の手順・コードを実装すれば、「請求書(invoice_pdf)」だけでなく「領収書(receipt_url)」のリンクも画面上に表示できるようになります。参考にしてみてください。

@@ -34,10 +34,31 @@ export async function getCustomersByEmail(email: string) {
     });
 
     // 支払い履歴の取得
-    const paymentHistory = await stripe.invoices.list({
+    const invoices = await stripe.invoices.list({
       customer: customer.id,
       limit: 100,
+      expand: ['data.charge'], // chargeオブジェクトを展開して取得
     });
+
+    // 支払い履歴を整形
+    const formattedPaymentHistory = await Promise.all(invoices.data.map(async (invoice) => {
+      // chargeオブジェクトから領収書URLを取得
+      let receipt_url = null;
+      if (invoice.charge && typeof invoice.charge !== 'string') {
+        receipt_url = invoice.charge.receipt_url;
+      }
+
+      return {
+        id: invoice.id,
+        amount: invoice.amount_paid,
+        currency: invoice.currency,
+        status: invoice.status,
+        created: invoice.created,
+        invoice_pdf: invoice.invoice_pdf,
+        receipt_url: receipt_url,
+        hosted_invoice_url: invoice.hosted_invoice_url,
+      };
+    }));
 
     // サブスクリプションデータを整形
     const formattedSubscriptions = await Promise.all(subscriptions.data.map(async subscription => {
@@ -92,43 +113,6 @@ export async function getCustomersByEmail(email: string) {
       };
     }));
 
-    // 支払い履歴を整形
-    const formattedPaymentHistory = paymentHistory.data.map(invoice => ({
-      id: invoice.id,
-      amount: invoice.amount_paid,
-      currency: invoice.currency,
-      status: invoice.status,
-      created: invoice.created,
-      invoice_pdf: invoice.invoice_pdf,
-    }));
-
-    // 顧客のメタデータをログ出力して確認
-    console.log(`[Stripe] Customer metadata for ${customer.id}:`, customer.metadata);
-
-    // 住所情報を整形
-    const address = customer.address ? {
-      line1: customer.address.line1,
-      line2: customer.address.line2,
-      city: customer.address.city,
-      state: customer.address.state,
-      postal_code: customer.address.postal_code,
-      country: customer.address.country,
-    } : null;
-
-    // 配送先情報を整形
-    const shipping = customer.shipping ? {
-      address: {
-        line1: customer.shipping.address.line1,
-        line2: customer.shipping.address.line2,
-        city: customer.shipping.address.city,
-        state: customer.shipping.address.state,
-        postal_code: customer.shipping.address.postal_code,
-        country: customer.shipping.address.country,
-      },
-      name: customer.shipping.name,
-      phone: customer.shipping.phone,
-    } : null;
-
     return {
       customer: {
         id: customer.id,
@@ -136,8 +120,26 @@ export async function getCustomersByEmail(email: string) {
         email: customer.email,
         created: customer.created,
         phone: customer.phone,
-        address,
-        shipping,
+        address: customer.address ? {
+          line1: customer.address.line1,
+          line2: customer.address.line2,
+          city: customer.address.city,
+          state: customer.address.state,
+          postal_code: customer.address.postal_code,
+          country: customer.address.country,
+        } : null,
+        shipping: customer.shipping ? {
+          address: {
+            line1: customer.shipping.address?.line1 || null,
+            line2: customer.shipping.address?.line2 || null,
+            city: customer.shipping.address?.city || null,
+            state: customer.shipping.address?.state || null,
+            postal_code: customer.shipping.address?.postal_code || null,
+            country: customer.shipping.address?.country || null,
+          },
+          name: customer.shipping.name,
+          phone: customer.shipping.phone,
+        } : null,
         metadata: customer.metadata || {},
       },
       subscriptions: formattedSubscriptions,
@@ -145,10 +147,10 @@ export async function getCustomersByEmail(email: string) {
     };
   }));
 
-  console.log(`[Stripe] Formatted response:`, JSON.stringify(customersData, null, 2));
   return customersData;
 }
 
+// 他のエンドポイントハンドラーは変更なし
 export function setupStripeRoutes(app: Express) {
   app.get("/api/stripe/customer", async (req, res) => {
     if (!req.isAuthenticated()) {
