@@ -29,6 +29,7 @@ export function AuthForm() {
   const [error, setError] = useState<string | null>(null);
   const { register } = useUser();
   const [, setLocation] = useLocation();
+  const [registrationComplete, setRegistrationComplete] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(insertUserSchema),
@@ -52,8 +53,8 @@ export function AuthForm() {
           setError(result.message);
           return;
         }
-        // 登録成功後は自動的にログインページに遷移
-        setIsLogin(true);
+        // 登録完了メッセージを表示
+        setRegistrationComplete(true);
         form.reset();
         return;
       }
@@ -62,6 +63,31 @@ export function AuthForm() {
       console.error(error);
     }
   };
+
+  // 登録完了後の表示
+  if (registrationComplete) {
+    return (
+      <div className="space-y-4">
+        <Alert className="bg-green-50 border-green-200">
+          <AlertDescription className="text-green-800">
+            登録が完了しました。メールアドレスの確認をお願いします。
+            <br />
+            確認メールに記載されたリンクをクリックして、メールアドレスの確認を完了してください。
+          </AlertDescription>
+        </Alert>
+        <Button
+          type="button"
+          className="w-full"
+          onClick={() => {
+            setRegistrationComplete(false);
+            setIsLogin(true);
+          }}
+        >
+          ログイン画面へ
+        </Button>
+      </div>
+    );
+  }
 
   if (isLogin) {
     return (

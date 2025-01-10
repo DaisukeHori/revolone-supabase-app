@@ -1,5 +1,5 @@
 import passport from "passport";
-import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
+import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import type { SessionData } from 'express-session';
@@ -13,6 +13,14 @@ import { z } from "zod";
 import { sendMail, generatePasswordResetEmail, generateVerificationEmail } from "./mail";
 import speakeasy from "speakeasy";
 import twilio from "twilio";
+
+// Passportの型定義を拡張
+declare module 'passport-local' {
+  interface IVerifyOptions {
+    message?: string;
+    needsEmailVerification?: boolean;
+  }
+}
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -105,6 +113,14 @@ export function setupAuth(app: Express) {
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
           return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
+        }
+
+        // メール認証が済んでいない場合はログイン不可
+        if (!user.emailVerified) {
+          return done(null, false, {
+            message: "メールアドレスの確認が必要です",
+            needsEmailVerification: true
+          });
         }
 
         // 2段階認証が有効な場合は、要認証フラグを立てる
@@ -256,9 +272,68 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // 認証メールの再送信
+  app.post("/api/resend-verification", async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "メールアドレスが必要です" });
+    }
+
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ message: "ユーザーが見つかりません" });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "既にメール認証が完了しています" });
+      }
+
+      // 新しい認証トークンを生成
+      const verificationToken = randomBytes(32).toString("hex");
+      const verificationTokenExpiry = new Date(Date.now() + 86400000); // 24時間後
+
+      await db
+        .update(users)
+        .set({
+          emailVerificationToken: verificationToken,
+          emailVerificationTokenExpires: verificationTokenExpiry,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
+      // 認証メールを再送信
+      const { subject, text, html } = generateVerificationEmail(email, verificationToken);
+      const result = await sendMail({
+        to: email,
+        subject,
+        text,
+        html
+      });
+
+      if (!result.success) {
+        console.error("認証メール再送信エラー:", result.error);
+        return res.status(500).json({
+          message: "認証メールの送信に失敗しました"
+        });
+      }
+
+      res.json({ message: "認証メールを再送信しました" });
+    } catch (error) {
+      console.error("認証メール再送信エラー:", error);
+      res.status(500).json({ message: "認証メールの再送信中にエラーが発生しました" });
+    }
+  });
+
   // ログイン時にメール認証済みかチェックを追加
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: IVerifyOptions) => {
+    passport.authenticate("local", async (err: any, user: Express.User & { requiresMFA?: boolean }, info: { message?: string; needsEmailVerification?: boolean }) => {
       if (err) {
         return next(err);
       }
@@ -333,65 +408,7 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // 認証メールの再送信
-  app.post("/api/resend-verification", async (req, res) => {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "メールアドレスが必要です" });
-    }
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-
-      if (!user) {
-        return res.status(404).json({ message: "ユーザーが見つかりません" });
-      }
-
-      if (user.emailVerified) {
-        return res.status(400).json({ message: "既にメール認証が完了しています" });
-      }
-
-      // 新しい認証トークンを生成
-      const verificationToken = randomBytes(32).toString("hex");
-      const verificationTokenExpiry = new Date(Date.now() + 86400000); // 24時間後
-
-      await db
-        .update(users)
-        .set({
-          emailVerificationToken: verificationToken,
-          emailVerificationTokenExpires: verificationTokenExpiry,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, user.id));
-
-      // 認証メールを再送信
-      const { subject, text, html } = generateVerificationEmail(email, verificationToken);
-      const result = await sendMail({
-        to: email,
-        subject,
-        text,
-        html
-      });
-
-      if (!result.success) {
-        console.error("認証メール再送信エラー:", result.error);
-        return res.status(500).json({
-          message: "認証メールの送信に失敗しました"
-        });
-      }
-
-      res.json({ message: "認証メールを再送信しました" });
-    } catch (error) {
-      console.error("認証メール再送信エラー:", error);
-      res.status(500).json({ message: "認証メールの再送信中にエラーが発生しました" });
-    }
-  });
-
+  // その他のエンドポイントは変更なし
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
