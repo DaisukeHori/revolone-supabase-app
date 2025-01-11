@@ -61,29 +61,36 @@ export async function isRevonizerProduct(subscriptionItemId: string): Promise<bo
   return isRevonizer;
 }
 
+// レボナイザー商品のpriceIdを特定する関数
+export async function getRevonizerProductType(subscriptionItemId: string): Promise<'FIRST_UNIT' | 'SECOND_TO_FOURTH' | 'FIFTH_AND_MORE' | null> {
+  const priceId = await getPriceId(subscriptionItemId);
+  if (!priceId) return null;
+
+  if (priceId === REVONIZER_PRODUCTS.FIRST_UNIT.priceId) return 'FIRST_UNIT';
+  if (priceId === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId) return 'SECOND_TO_FOURTH';
+  if (priceId === REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId) return 'FIFTH_AND_MORE';
+
+  return null;
+}
+
 // 合計台数から各商品の必要数量を計算する関数
 export function calculateRevonizerQuantities(totalQuantity: number): Record<string, number> {
-  // 初期化：すべての商品の数量を0に設定
+  // 基本ライセンスは必ず1台
   const quantities: Record<string, number> = {
-    [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 0,
+    [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 1,
     [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]: 0,
     [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
   };
 
-  // 1台以上の場合のみ数量を設定
-  if (totalQuantity > 0) {
-    // 基本ライセンス（1台目）
-    quantities[REVONIZER_PRODUCTS.FIRST_UNIT.priceId] = 1;
+  // 追加ライセンスの数量を計算（2台目以降）
+  if (totalQuantity > 1) {
+    // 2-4台目の数量を計算
+    const secondToFourthCount = Math.min(totalQuantity - 1, 3);
+    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
 
-    if (totalQuantity > 1) {
-      // 2-4台目の数量を計算
-      const secondToFourthCount = Math.min(totalQuantity - 1, 3);
-      quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
-
-      // 5台目以降の数量を計算
-      if (totalQuantity > 4) {
-        quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = totalQuantity - 4;
-      }
+    // 5台目以降の数量を計算
+    if (totalQuantity > 4) {
+      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = totalQuantity - 4;
     }
   }
 

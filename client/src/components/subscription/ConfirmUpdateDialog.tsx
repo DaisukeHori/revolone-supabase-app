@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import {
   REVONIZER_PRODUCTS,
   calculateRevonizerQuantities,
+  getRevonizerProductType,
 } from "@/lib/revonizerCalculation";
 
 type SubscriptionItem = {
@@ -41,8 +42,8 @@ export function ConfirmUpdateDialog({
   onConfirm,
   isUpdating,
 }: Props) {
-  // 合計台数を計算
-  const totalRevonizerQuantity = Math.max(...Object.values(updatedQuantities));
+  // 合計台数を計算（基本ライセンスは常に1台）
+  const totalRevonizerQuantity = Math.max(1, Math.max(...Object.values(updatedQuantities)));
 
   // レボナイザー商品の内訳を計算
   const revonizerBreakdown = calculateRevonizerQuantities(totalRevonizerQuantity);
@@ -54,8 +55,12 @@ export function ConfirmUpdateDialog({
   };
 
   // 削除される商品（数量が0になる商品）を特定
-  const removedItems = items.filter(item => {
+  // ただし、基本ライセンスは削除対象から除外
+  const removedItems = items.filter(async item => {
     const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+    const productType = await getRevonizerProductType(item.subscription_item_id);
+    // 基本ライセンスは削除対象から除外
+    if (productType === 'FIRST_UNIT') return false;
     return item.quantity > 0 && newQuantity === 0;
   });
 
@@ -76,7 +81,7 @@ export function ConfirmUpdateDialog({
             <div className="space-y-1 text-sm">
               <p>合計: {totalRevonizerQuantity}台</p>
               <div className="pl-4 space-y-1 text-muted-foreground">
-                <p>・基本ライセンス（1台目）: {revonizerBreakdown[REVONIZER_PRODUCTS.FIRST_UNIT.priceId]}台</p>
+                <p>・基本ライセンス（1台目）: 1台</p>
                 {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] > 0 && (
                   <p>・2-4台目: {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]}台</p>
                 )}
@@ -91,7 +96,6 @@ export function ConfirmUpdateDialog({
           {items.map(item => {
             const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
             const quantityDiff = newQuantity - item.quantity;
-            const isRemoved = item.quantity > 0 && newQuantity === 0;
 
             return (
               <div key={item.subscription_item_id} className="space-y-1">
@@ -104,17 +108,12 @@ export function ConfirmUpdateDialog({
                       {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
                     </p>
                   )}
-                  {isRemoved && (
-                    <p className="text-red-600 font-medium">
-                      ※この商品は削除されます
-                    </p>
-                  )}
                 </div>
               </div>
             );
           })}
 
-          {/* 警告メッセージ */}
+          {/* 警告メッセージ（基本ライセンス以外の削除対象商品がある場合のみ表示） */}
           {removedItems.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
               <p className="text-yellow-800 font-medium">注意</p>
