@@ -16,7 +16,6 @@ import {
   filterRevonizerItems,
   getRevonizerProductType,
 } from "@/lib/revonizerCalculation";
-import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 
 type SubscriptionItem = {
   subscription_item_id: string;
@@ -48,6 +47,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
     async function initializeQuantities() {
       setIsLoading(true);
       try {
+        // レボナイザー商品の取得と合計台数の計算
         const revonizerItems = await filterRevonizerItems(items);
         const total = await calculateTotalQuantityFromItems(revonizerItems);
         setCurrentTotalQuantity(total);
@@ -58,14 +58,10 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
         const initialOtherQuantities: Record<string, number> = {};
 
         for (const item of items) {
-          try {
-            const isRevonizer = await isRevonizerProduct(item.subscription_item_id);
-            if (!isRevonizer) {
-              nonRevonizer.push(item);
-              initialOtherQuantities[item.subscription_item_id] = item.quantity;
-            }
-          } catch (error) {
-            console.error('Error processing item:', error);
+          const isRevonizer = await isRevonizerProduct(item.subscription_item_id);
+          if (!isRevonizer) {
+            nonRevonizer.push(item);
+            initialOtherQuantities[item.subscription_item_id] = item.quantity;
           }
         }
 
@@ -93,6 +89,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   };
 
   const handleRevonizerQuantityChange = (value: number) => {
+    // 最小1台を保証
     setTotalRevonizerQuantity(Math.max(1, value));
   };
 
@@ -109,13 +106,14 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   };
 
   const handleConfirm = () => {
-    // レボナイザー商品の数量を自動計算して設定
-    const calculatedQuantities = calculateRevonizerQuantities(totalRevonizerQuantity);
-    const quantities: Record<string, number> = { ...calculatedQuantities };
+    const quantities: Record<string, number> = {};
 
     // その他の商品の数量を設定
-    Object.assign(quantities, otherQuantities);
+    Object.entries(otherQuantities).forEach(([itemId, quantity]) => {
+      quantities[itemId] = quantity;
+    });
 
+    // レボナイザー商品の数量は確認画面で計算
     onConfirm(quantities);
   };
 

@@ -23,19 +23,30 @@ export async function isRevonizerProduct(subscriptionItemId: string): Promise<bo
   const priceId = await getPriceId(subscriptionItemId);
   if (!priceId) return false;
 
-  const revonizerPriceIds = [
+  console.log('Registered Revonizer priceIds:', [
     REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
     REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
-    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
-  ];
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
+  ]);
+  console.log('Is Revonizer product:', [
+    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
+    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
+  ].includes(priceId));
 
-  return revonizerPriceIds.includes(priceId);
+  return [
+    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
+    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
+    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
+  ].includes(priceId);
 }
 
 // レボナイザー商品のpriceIdを特定する関数
 export async function getRevonizerProductType(subscriptionItemId: string): Promise<'FIRST_UNIT' | 'SECOND_TO_FOURTH' | 'FIFTH_AND_MORE' | null> {
   const priceId = await getPriceId(subscriptionItemId);
   if (!priceId) return null;
+
+  console.log('Retrieved priceId:', priceId);
 
   if (priceId === REVONIZER_PRODUCTS.FIRST_UNIT.priceId) return 'FIRST_UNIT';
   if (priceId === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId) return 'SECOND_TO_FOURTH';
@@ -44,10 +55,9 @@ export async function getRevonizerProductType(subscriptionItemId: string): Promi
   return null;
 }
 
-// 合計台数から各商品の必要数量を計算する関数
+// 台数に応じた各商品の必要数量を計算する関数
 export function calculateRevonizerQuantities(totalQuantity: number): Record<string, number> {
-  // 入力値の検証（最小1台）
-  const validatedQuantity = Math.max(1, totalQuantity);
+  console.log('Calculating quantities for total:', totalQuantity);
 
   // 基本ライセンスは常に1台
   const quantities: Record<string, number> = {
@@ -56,18 +66,18 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<stri
     [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
   };
 
-  // 2台目以降の追加ライセンスの数量を計算
-  if (validatedQuantity > 1) {
+  if (totalQuantity > 1) {
     // 2-4台目の数量を計算（最大3台）
-    const secondToFourthCount = Math.min(validatedQuantity - 1, 3);
+    const secondToFourthCount = Math.min(totalQuantity - 1, 3);
     quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
 
     // 5台目以降の数量を計算
-    if (validatedQuantity > 4) {
-      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = validatedQuantity - 4;
+    if (totalQuantity > 4) {
+      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = totalQuantity - 4;
     }
   }
 
+  console.log('Calculated quantities:', quantities);
   return quantities;
 }
 
@@ -76,30 +86,23 @@ export async function calculateTotalQuantityFromItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): Promise<number> {
+  console.log('Calculating total quantity for items:', items);
+
   let total = 0;
 
-  // 各アイテムが非同期で判定される必要があるため、Promise.allを使用
-  const itemResults = await Promise.all(
-    items.map(async (item) => ({
-      isRevonizer: await isRevonizerProduct(item.subscription_item_id),
-      quantity: item.quantity,
-      type: await getRevonizerProductType(item.subscription_item_id)
-    }))
-  );
-
-  // レボナイザー商品の数量を合計（基本ライセンスは常に1台）
-  itemResults.forEach(({ isRevonizer, quantity, type }) => {
-    if (isRevonizer) {
-      if (type === 'FIRST_UNIT') {
-        total += 1; // 基本ライセンスは常に1台
-      } else {
-        total += quantity;
-      }
+  for (const item of items) {
+    const type = await getRevonizerProductType(item.subscription_item_id);
+    if (type === 'FIRST_UNIT') {
+      total += 1; // 基本ライセンスは常に1台
+    } else if (type === 'SECOND_TO_FOURTH') {
+      total += item.quantity;
+    } else if (type === 'FIFTH_AND_MORE') {
+      total += item.quantity;
     }
-  });
+  }
 
-  // 最小台数は1台
-  return Math.max(1, total);
+  console.log('Total quantity calculated:', total);
+  return Math.max(1, total); // 最小1台を保証
 }
 
 // レボナイザー商品のみを抽出する関数
@@ -107,14 +110,17 @@ export async function filterRevonizerItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): Promise<typeof items> {
-  const itemsWithRevonizerFlag = await Promise.all(
-    items.map(async item => ({
-      item,
-      isRevonizer: await isRevonizerProduct(item.subscription_item_id)
-    }))
-  );
+  console.log('Filtering Revonizer items:', items);
 
-  return itemsWithRevonizerFlag
-    .filter(({ isRevonizer }) => isRevonizer)
-    .map(({ item }) => item);
+  const filteredItems = [];
+  for (const item of items) {
+    const isRevonizer = await isRevonizerProduct(item.subscription_item_id);
+    if (isRevonizer) {
+      console.log('Found Revonizer item:', item);
+      filteredItems.push(item);
+    }
+  }
+
+  console.log('Filtered items:', filteredItems);
+  return filteredItems;
 }

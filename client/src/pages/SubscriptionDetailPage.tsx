@@ -247,15 +247,50 @@ export default function SubscriptionDetailPage() {
 
     setIsUpdating(true);
     try {
+      console.log('Updating quantities:', quantities);
+
+      // subscription_item_idとpriceIdのマッピングを作成
+      const subscriptionItemPriceMap: Record<string, string> = {};
+      for (const item of subscription.items) {
+        try {
+          const response = await fetch(`/api/stripe/subscription-item/${item.subscription_item_id}/price`);
+          const { priceId } = await response.json();
+          if (priceId) {
+            subscriptionItemPriceMap[priceId] = item.subscription_item_id;
+          }
+        } catch (error) {
+          console.error('Error fetching price ID:', error);
+        }
+      }
+
+      console.log('Subscription item price map:', subscriptionItemPriceMap);
+
       // レボナイザー商品の数量を自動計算
       const revonizerQuantities = calculateRevonizerQuantities(
-        Math.max(...Object.values(quantities))
+        Math.max(...Object.values(quantities), 1) // 最小1台を保証
       );
 
-      const updates = subscription.items.map(item => ({
-        subscription_item_id: item.subscription_item_id,
-        quantity: revonizerQuantities[item.subscription_item_id] || quantities[item.subscription_item_id] || 0,
-      }));
+      console.log('Calculated Revonizer quantities:', revonizerQuantities);
+
+      // 更新用のアイテムリストを作成
+      const updates = subscription.items.map(item => {
+        let quantity = quantities[item.subscription_item_id] || 0;
+
+        // レボナイザー商品の場合は自動計算した数量を使用
+        for (const [priceId, subscriptionItemId] of Object.entries(subscriptionItemPriceMap)) {
+          if (item.subscription_item_id === subscriptionItemId && revonizerQuantities[priceId]) {
+            quantity = revonizerQuantities[priceId];
+            break;
+          }
+        }
+
+        return {
+          subscription_item_id: item.subscription_item_id,
+          quantity: quantity,
+        };
+      });
+
+      console.log('Final updates to send:', updates);
 
       const response = await fetch(`/api/stripe/subscription/${subscription.id}/quantities`, {
         method: 'POST',
@@ -272,6 +307,7 @@ export default function SubscriptionDetailPage() {
       toast({
         description: "サブスクリプションの数量を更新しました",
       });
+      setShowQuantityModal(false);
       setShowConfirmDialog(false);
     } catch (error) {
       console.error('数量更新エラー:', error);

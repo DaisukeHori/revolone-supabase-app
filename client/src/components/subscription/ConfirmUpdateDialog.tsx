@@ -7,8 +7,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { getRevonizerProductType } from "@/lib/revonizerCalculation";
 import { useState, useEffect } from "react";
+import { getRevonizerProductType, calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
+import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 
 type SubscriptionItem = {
   subscription_item_id: string;
@@ -26,7 +27,9 @@ type ItemWithUpdatedQuantity = {
   item: SubscriptionItem;
   newQuantity: number;
   quantityDiff: number;
-  isFirstUnit: boolean;
+  isRevonizerProduct: boolean;
+  productType: 'FIRST_UNIT' | 'SECOND_TO_FOURTH' | 'FIFTH_AND_MORE' | null;
+  priceId: string | null;
 };
 
 type Props = {
@@ -46,72 +49,90 @@ export function ConfirmUpdateDialog({
   onConfirm,
   isUpdating,
 }: Props) {
-  const [removedItems, setRemovedItems] = useState<SubscriptionItem[]>([]);
   const [itemsWithQuantities, setItemsWithQuantities] = useState<ItemWithUpdatedQuantity[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
   const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState(1);
 
-  // 商品情報の初期化
   useEffect(() => {
+    let isMounted = true;
+
     async function initialize() {
       if (!items.length) return;
 
-      setIsInitializing(true);
       try {
-        const removed: SubscriptionItem[] = [];
+        // 合計台数を計算（最小1台）
+        const validTotalQuantity = Math.max(1, Math.max(...Object.values(updatedQuantities)));
+        if (isMounted) {
+          setTotalRevonizerQuantity(validTotalQuantity);
+        }
+
+        // レボナイザー商品の数量を計算
+        const revonizerQuantities = calculateRevonizerQuantities(validTotalQuantity);
         const itemsData: ItemWithUpdatedQuantity[] = [];
 
         for (const item of items) {
-          try {
-            const productType = await getRevonizerProductType(item.subscription_item_id);
-            const isFirstUnit = productType === 'FIRST_UNIT';
+          const productType = await getRevonizerProductType(item.subscription_item_id);
+          let newQuantity = item.quantity;
+          let priceId = null;
 
-            // 基本ライセンスは常に1、その他は更新された数量か0
-            const newQuantity = isFirstUnit 
-              ? 1  // 基本ライセンスは常に1
-              : (updatedQuantities[item.subscription_item_id] || 0);
+          if (productType) {
+            try {
+              const response = await fetch(`/api/stripe/subscription-item/${item.subscription_item_id}/price`);
+              const data = await response.json();
+              priceId = data.priceId;
 
-            const quantityDiff = newQuantity - item.quantity;
+              if (priceId && revonizerQuantities[priceId] !== undefined) {
+                newQuantity = revonizerQuantities[priceId];
+              }
+            } catch (error) {
+              console.error('Error fetching price ID:', error);
+            }
+          } else {
+            newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+          }
 
+          if (isMounted) {
             itemsData.push({
               item,
               newQuantity,
-              quantityDiff,
-              isFirstUnit,
+              quantityDiff: newQuantity - item.quantity,
+              isRevonizerProduct: productType !== null,
+              productType,
+              priceId,
             });
-
-            // 基本ライセンス以外で数量が0になる商品を削除対象に追加
-            if (!isFirstUnit && item.quantity > 0 && newQuantity === 0) {
-              removed.push(item);
-            }
-          } catch (error) {
-            console.error('Error processing item:', item, error);
           }
         }
 
-        setItemsWithQuantities(itemsData);
-        setRemovedItems(removed);
+        if (isMounted) {
+          setItemsWithQuantities(itemsData);
+          setIsInitializing(false);
+        }
       } catch (error) {
         console.error('Error initializing items:', error);
-      } finally {
-        setIsInitializing(false);
+        if (isMounted) {
+          setIsInitializing(false);
+        }
       }
     }
 
+    setIsInitializing(true);
     initialize();
-  }, [items, updatedQuantities]);
 
-  // 合計台数を計算（最小1台）
-  useEffect(() => {
-    const maxQuantity = Math.max(1, Math.max(...Object.values(updatedQuantities)));
-    setTotalRevonizerQuantity(maxQuantity);
-  }, [updatedQuantities]);
+    return () => {
+      isMounted = false;
+    };
+  }, [items, updatedQuantities]);
 
   // 商品ごとの価格を計算
   const calculatePrice = (item: SubscriptionItem, quantity: number) => {
     if (!item.amount) return "価格未定";
     return `${(item.amount * quantity).toLocaleString()} ${item.currency.toUpperCase()}`;
   };
+
+  // 削除対象の商品を抽出（基本ライセンス以外で数量が0になるもの）
+  const removedItems = itemsWithQuantities.filter(
+    ({ newQuantity, productType }) => newQuantity === 0 && productType !== 'FIRST_UNIT'
+  );
 
   if (isInitializing) {
     return (
@@ -151,13 +172,13 @@ export function ConfirmUpdateDialog({
           </div>
 
           {/* 各商品の変更内容 */}
-          {itemsWithQuantities.map(({ item, newQuantity, quantityDiff, isFirstUnit }) => (
+          {itemsWithQuantities.map(({ item, newQuantity, quantityDiff, productType }) => (
             <div key={item.subscription_item_id} className="space-y-1">
               <h3 className="font-medium">{item.product.name}</h3>
               <div className="space-y-1 text-sm pl-4 text-muted-foreground">
                 <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
                 <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
-                {quantityDiff !== 0 && !isFirstUnit && (
+                {quantityDiff !== 0 && productType !== 'FIRST_UNIT' && (
                   <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
                     {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
                   </p>
@@ -174,7 +195,7 @@ export function ConfirmUpdateDialog({
                 以下の商品の数量が0になるため、サブスクリプションから削除されます：
               </p>
               <ul className="list-disc list-inside text-sm text-yellow-700 mt-2">
-                {removedItems.map(item => (
+                {removedItems.map(({ item }) => (
                   <li key={item.subscription_item_id}>{item.product.name}</li>
                 ))}
               </ul>
