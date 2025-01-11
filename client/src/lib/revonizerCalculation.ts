@@ -1,4 +1,4 @@
-import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
+import { REVONIZER_PRODUCTS, type RevonizerPriceId } from "@/lib/revonizerProducts";
 
 // subscription_item_idに対応するpriceIdをキャッシュするMap
 const priceIdCache = new Map<string, Promise<string | null>>();
@@ -23,30 +23,19 @@ export async function isRevonizerProduct(subscriptionItemId: string): Promise<bo
   const priceId = await getPriceId(subscriptionItemId);
   if (!priceId) return false;
 
-  console.log('Registered Revonizer priceIds:', [
+  const revonizerPriceIds: RevonizerPriceId[] = [
     REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
     REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
     REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
-  ]);
-  console.log('Is Revonizer product:', [
-    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
-    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
-    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
-  ].includes(priceId));
+  ];
 
-  return [
-    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
-    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
-    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
-  ].includes(priceId);
+  return revonizerPriceIds.includes(priceId as RevonizerPriceId);
 }
 
 // レボナイザー商品のpriceIdを特定する関数
 export async function getRevonizerProductType(subscriptionItemId: string): Promise<'FIRST_UNIT' | 'SECOND_TO_FOURTH' | 'FIFTH_AND_MORE' | null> {
   const priceId = await getPriceId(subscriptionItemId);
   if (!priceId) return null;
-
-  console.log('Retrieved priceId:', priceId);
 
   if (priceId === REVONIZER_PRODUCTS.FIRST_UNIT.priceId) return 'FIRST_UNIT';
   if (priceId === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId) return 'SECOND_TO_FOURTH';
@@ -56,11 +45,9 @@ export async function getRevonizerProductType(subscriptionItemId: string): Promi
 }
 
 // 台数に応じた各商品の必要数量を計算する関数
-export function calculateRevonizerQuantities(totalQuantity: number): Record<string, number> {
-  console.log('Calculating quantities for total:', totalQuantity);
-
+export function calculateRevonizerQuantities(totalQuantity: number): Record<RevonizerPriceId, number> {
   // 基本ライセンスは常に1台
-  const quantities: Record<string, number> = {
+  const quantities: Record<RevonizerPriceId, number> = {
     [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 1,
     [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]: 0,
     [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
@@ -77,7 +64,6 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<stri
     }
   }
 
-  console.log('Calculated quantities:', quantities);
   return quantities;
 }
 
@@ -86,22 +72,20 @@ export async function calculateTotalQuantityFromItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): Promise<number> {
-  console.log('Calculating total quantity for items:', items);
-
   let total = 0;
 
   for (const item of items) {
-    const type = await getRevonizerProductType(item.subscription_item_id);
-    if (type === 'FIRST_UNIT') {
+    const productType = await getRevonizerProductType(item.subscription_item_id);
+
+    if (productType === 'FIRST_UNIT') {
       total += 1; // 基本ライセンスは常に1台
-    } else if (type === 'SECOND_TO_FOURTH') {
+    } else if (productType === 'SECOND_TO_FOURTH') {
       total += item.quantity;
-    } else if (type === 'FIFTH_AND_MORE') {
+    } else if (productType === 'FIFTH_AND_MORE') {
       total += item.quantity;
     }
   }
 
-  console.log('Total quantity calculated:', total);
   return Math.max(1, total); // 最小1台を保証
 }
 
@@ -110,17 +94,13 @@ export async function filterRevonizerItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): Promise<typeof items> {
-  console.log('Filtering Revonizer items:', items);
-
   const filteredItems = [];
   for (const item of items) {
     const isRevonizer = await isRevonizerProduct(item.subscription_item_id);
     if (isRevonizer) {
-      console.log('Found Revonizer item:', item);
       filteredItems.push(item);
     }
   }
 
-  console.log('Filtered items:', filteredItems);
   return filteredItems;
 }

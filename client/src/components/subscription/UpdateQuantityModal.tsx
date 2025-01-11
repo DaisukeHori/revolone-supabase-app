@@ -11,10 +11,8 @@ import { QuantityInput } from "@/components/ui/QuantityInput";
 import { Loader2 } from "lucide-react";
 import {
   isRevonizerProduct,
-  calculateRevonizerQuantities,
   calculateTotalQuantityFromItems,
   filterRevonizerItems,
-  getRevonizerProductType,
 } from "@/lib/revonizerCalculation";
 
 type SubscriptionItem = {
@@ -42,18 +40,21 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   const [nonRevonizerItems, setNonRevonizerItems] = useState<SubscriptionItem[]>([]);
   const [hasNonRevonizerItems, setHasNonRevonizerItems] = useState(false);
 
-  // 初期化処理
+  // モーダルが開かれたときの初期化処理
   useEffect(() => {
     async function initializeQuantities() {
       setIsLoading(true);
       try {
         // レボナイザー商品の取得と合計台数の計算
         const revonizerItems = await filterRevonizerItems(items);
+        console.log('Revonizer items:', revonizerItems);
         const total = await calculateTotalQuantityFromItems(revonizerItems);
+        console.log('Current total quantity:', total);
+
         setCurrentTotalQuantity(total);
         setTotalRevonizerQuantity(total);
 
-        // 非レボナイザー商品を特定
+        // その他の商品を特定
         const nonRevonizer: SubscriptionItem[] = [];
         const initialOtherQuantities: Record<string, number> = {};
 
@@ -89,7 +90,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   };
 
   const handleRevonizerQuantityChange = (value: number) => {
-    // 最小1台を保証
+    console.log('Changing total quantity to:', value);
     setTotalRevonizerQuantity(Math.max(1, value));
   };
 
@@ -106,14 +107,14 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   };
 
   const handleConfirm = () => {
-    const quantities: Record<string, number> = {};
+    const quantities: Record<string, number> = {
+      ...otherQuantities,
+    };
 
-    // その他の商品の数量を設定
-    Object.entries(otherQuantities).forEach(([itemId, quantity]) => {
-      quantities[itemId] = quantity;
-    });
+    // 合計台数を設定（レボナイザー商品の数量は確認画面で計算）
+    console.log('Confirming with total quantity:', totalRevonizerQuantity);
+    quantities['total'] = totalRevonizerQuantity;
 
-    // レボナイザー商品の数量は確認画面で計算
     onConfirm(quantities);
   };
 
@@ -198,7 +199,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
             キャンセル
           </Button>
           <Button onClick={handleNext}>
-            {step === 2 ? "確認" : "次へ"}
+            {step === 1 && hasNonRevonizerItems ? "次へ" : "確認"}
           </Button>
         </div>
       </DialogContent>

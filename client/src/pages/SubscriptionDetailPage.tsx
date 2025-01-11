@@ -248,6 +248,8 @@ export default function SubscriptionDetailPage() {
     setIsUpdating(true);
     try {
       console.log('Updating quantities:', quantities);
+      const totalQuantity = quantities['total'] || 1;
+      delete quantities['total'];
 
       // subscription_item_idとpriceIdのマッピングを作成
       const subscriptionItemPriceMap: Record<string, string> = {};
@@ -256,7 +258,7 @@ export default function SubscriptionDetailPage() {
           const response = await fetch(`/api/stripe/subscription-item/${item.subscription_item_id}/price`);
           const { priceId } = await response.json();
           if (priceId) {
-            subscriptionItemPriceMap[priceId] = item.subscription_item_id;
+            subscriptionItemPriceMap[item.subscription_item_id] = priceId;
           }
         } catch (error) {
           console.error('Error fetching price ID:', error);
@@ -266,22 +268,17 @@ export default function SubscriptionDetailPage() {
       console.log('Subscription item price map:', subscriptionItemPriceMap);
 
       // レボナイザー商品の数量を自動計算
-      const revonizerQuantities = calculateRevonizerQuantities(
-        Math.max(...Object.values(quantities), 1) // 最小1台を保証
-      );
-
+      const revonizerQuantities = calculateRevonizerQuantities(totalQuantity);
       console.log('Calculated Revonizer quantities:', revonizerQuantities);
 
       // 更新用のアイテムリストを作成
       const updates = subscription.items.map(item => {
+        const priceId = subscriptionItemPriceMap[item.subscription_item_id];
         let quantity = quantities[item.subscription_item_id] || 0;
 
         // レボナイザー商品の場合は自動計算した数量を使用
-        for (const [priceId, subscriptionItemId] of Object.entries(subscriptionItemPriceMap)) {
-          if (item.subscription_item_id === subscriptionItemId && revonizerQuantities[priceId]) {
-            quantity = revonizerQuantities[priceId];
-            break;
-          }
+        if (priceId && revonizerQuantities[priceId] !== undefined) {
+          quantity = revonizerQuantities[priceId];
         }
 
         return {
