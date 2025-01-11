@@ -1,4 +1,4 @@
-import { REVONIZER_PRODUCTS } from "./revonizerProducts";
+import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 
 // subscription_item_idに対応するpriceIdをキャッシュするMap
 const priceIdCache = new Map<string, Promise<string | null>>();
