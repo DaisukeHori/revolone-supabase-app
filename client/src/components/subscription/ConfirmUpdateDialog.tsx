@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import {
   REVONIZER_PRODUCTS,
-  isRevonizerProduct,
   calculateRevonizerQuantities,
-  filterRevonizerItems,
 } from "@/lib/revonizerCalculation";
 
 type SubscriptionItem = {
@@ -43,11 +41,8 @@ export function ConfirmUpdateDialog({
   onConfirm,
   isUpdating,
 }: Props) {
-  // レボナイザー商品の合計台数を計算
-  const revonizerItems = filterRevonizerItems(items);
-  const totalRevonizerQuantity = revonizerItems.length > 0
-    ? updatedQuantities[revonizerItems[0].subscription_item_id]
-    : 0;
+  // 合計台数を計算
+  const totalRevonizerQuantity = Math.max(...Object.values(updatedQuantities));
 
   // レボナイザー商品の内訳を計算
   const revonizerBreakdown = calculateRevonizerQuantities(totalRevonizerQuantity);
@@ -57,6 +52,12 @@ export function ConfirmUpdateDialog({
     if (!item.amount) return "価格未定";
     return `${(item.amount * quantity).toLocaleString()} ${item.currency.toUpperCase()}`;
   };
+
+  // 削除される商品（数量が0になる商品）を特定
+  const removedItems = items.filter(item => {
+    const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+    return item.quantity > 0 && newQuantity === 0;
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -70,47 +71,63 @@ export function ConfirmUpdateDialog({
 
         <div className="space-y-4 py-4">
           {/* レボナイザー商品の変更内容 */}
-          {revonizerItems.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="font-medium">レボナイザー利用ライセンス</h3>
-              <div className="space-y-1 text-sm">
-                <p>合計: {totalRevonizerQuantity}台</p>
-                <div className="pl-4 space-y-1 text-muted-foreground">
-                  <p>・基本ライセンス（1台目）: {revonizerBreakdown[REVONIZER_PRODUCTS.FIRST_UNIT.productId]}台</p>
-                  {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId] > 0 && (
-                    <p>・2-4台目: {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.productId]}台</p>
-                  )}
-                  {revonizerBreakdown[REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId] > 0 && (
-                    <p>・5台目以降: {revonizerBreakdown[REVONIZER_PRODUCTS.FIFTH_AND_MORE.productId]}台</p>
-                  )}
-                </div>
+          <div className="space-y-2">
+            <h3 className="font-medium">レボナイザー利用ライセンス</h3>
+            <div className="space-y-1 text-sm">
+              <p>合計: {totalRevonizerQuantity}台</p>
+              <div className="pl-4 space-y-1 text-muted-foreground">
+                <p>・基本ライセンス（1台目）: {revonizerBreakdown[REVONIZER_PRODUCTS.FIRST_UNIT.priceId]}台</p>
+                {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] > 0 && (
+                  <p>・2-4台目: {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]}台</p>
+                )}
+                {revonizerBreakdown[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] > 0 && (
+                  <p>・5台目以降: {revonizerBreakdown[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]}台</p>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* その他の商品の変更内容 */}
           {items.map(item => {
-            if (!isRevonizerProduct(item.subscription_item_id)) {
-              const newQuantity = updatedQuantities[item.subscription_item_id];
-              const quantityDiff = newQuantity - item.quantity;
+            const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+            const quantityDiff = newQuantity - item.quantity;
+            const isRemoved = item.quantity > 0 && newQuantity === 0;
 
-              return (
-                <div key={item.subscription_item_id} className="space-y-1">
-                  <h3 className="font-medium">{item.product.name}</h3>
-                  <div className="space-y-1 text-sm pl-4 text-muted-foreground">
-                    <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
-                    <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
-                    {quantityDiff !== 0 && (
-                      <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
-                        {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
-                      </p>
-                    )}
-                  </div>
+            return (
+              <div key={item.subscription_item_id} className="space-y-1">
+                <h3 className="font-medium">{item.product.name}</h3>
+                <div className="space-y-1 text-sm pl-4 text-muted-foreground">
+                  <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
+                  <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
+                  {quantityDiff !== 0 && (
+                    <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
+                      {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
+                    </p>
+                  )}
+                  {isRemoved && (
+                    <p className="text-red-600 font-medium">
+                      ※この商品は削除されます
+                    </p>
+                  )}
                 </div>
-              );
-            }
-            return null;
+              </div>
+            );
           })}
+
+          {/* 警告メッセージ */}
+          {removedItems.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+              <p className="text-yellow-800 font-medium">注意</p>
+              <p className="text-sm text-yellow-700 mt-1">
+                以下の商品の数量が0になるため、サブスクリプションから削除されます：
+              </p>
+              <ul className="list-disc list-inside text-sm text-yellow-700 mt-2">
+                {removedItems.map(item => (
+                  <li key={item.subscription_item_id}>{item.product.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3">
