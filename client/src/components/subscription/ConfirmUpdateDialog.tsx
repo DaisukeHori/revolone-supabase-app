@@ -12,6 +12,7 @@ import {
   calculateRevonizerQuantities,
   getRevonizerProductType,
 } from "@/lib/revonizerCalculation";
+import { useState, useEffect } from "react";
 
 type SubscriptionItem = {
   subscription_item_id: string;
@@ -42,6 +43,41 @@ export function ConfirmUpdateDialog({
   onConfirm,
   isUpdating,
 }: Props) {
+  const [removedItems, setRemovedItems] = useState<SubscriptionItem[]>([]);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // 削除対象の商品を特定
+  useEffect(() => {
+    async function initializeRemovedItems() {
+      setIsInitializing(true);
+      try {
+        const removed: SubscriptionItem[] = [];
+
+        for (const item of items) {
+          const productType = await getRevonizerProductType(item.subscription_item_id);
+          const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+
+          // 基本ライセンスは削除対象から除外
+          if (productType === 'FIRST_UNIT') {
+            continue;
+          }
+
+          if (item.quantity > 0 && newQuantity === 0) {
+            removed.push(item);
+          }
+        }
+
+        setRemovedItems(removed);
+      } catch (error) {
+        console.error('Error initializing removed items:', error);
+      } finally {
+        setIsInitializing(false);
+      }
+    }
+
+    initializeRemovedItems();
+  }, [items, updatedQuantities]);
+
   // 合計台数を計算（基本ライセンスは常に1台）
   const totalRevonizerQuantity = Math.max(1, Math.max(...Object.values(updatedQuantities)));
 
@@ -54,15 +90,23 @@ export function ConfirmUpdateDialog({
     return `${(item.amount * quantity).toLocaleString()} ${item.currency.toUpperCase()}`;
   };
 
-  // 削除される商品（数量が0になる商品）を特定
-  // ただし、基本ライセンスは削除対象から除外
-  const removedItems = items.filter(async item => {
-    const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
-    const productType = await getRevonizerProductType(item.subscription_item_id);
-    // 基本ライセンスは削除対象から除外
-    if (productType === 'FIRST_UNIT') return false;
-    return item.quantity > 0 && newQuantity === 0;
-  });
+  if (isInitializing) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>変更内容の確認</DialogTitle>
+            <DialogDescription>
+              内容を確認しています...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -80,21 +124,16 @@ export function ConfirmUpdateDialog({
             <h3 className="font-medium">レボナイザー利用ライセンス</h3>
             <div className="space-y-1 text-sm">
               <p>合計: {totalRevonizerQuantity}台</p>
-              <div className="pl-4 space-y-1 text-muted-foreground">
-                <p>・基本ライセンス（1台目）: 1台</p>
-                {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] > 0 && (
-                  <p>・2-4台目: {revonizerBreakdown[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]}台</p>
-                )}
-                {revonizerBreakdown[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] > 0 && (
-                  <p>・5台目以降: {revonizerBreakdown[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]}台</p>
-                )}
-              </div>
+              {/* 基本ライセンスは常に1台なので表示を簡素化 */}
             </div>
           </div>
 
-          {/* その他の商品の変更内容 */}
-          {items.map(item => {
-            const newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+          {/* 各商品の変更内容 */}
+          {items.map(async (item) => {
+            const productType = await getRevonizerProductType(item.subscription_item_id);
+            const newQuantity = productType === 'FIRST_UNIT' 
+              ? 1  // 基本ライセンスは常に1
+              : (updatedQuantities[item.subscription_item_id] || 0);
             const quantityDiff = newQuantity - item.quantity;
 
             return (
@@ -113,7 +152,7 @@ export function ConfirmUpdateDialog({
             );
           })}
 
-          {/* 警告メッセージ（基本ライセンス以外の削除対象商品がある場合のみ表示） */}
+          {/* 警告メッセージ（削除対象の商品がある場合のみ表示） */}
           {removedItems.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
               <p className="text-yellow-800 font-medium">注意</p>
