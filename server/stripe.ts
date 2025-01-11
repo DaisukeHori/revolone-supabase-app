@@ -7,6 +7,21 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// subscription_item_idからpriceIdを取得する関数を追加
+async function getPriceIdFromSubscriptionItem(subscriptionItemId: string): Promise<string | null> {
+  try {
+    const subscriptionItem = await stripe.subscriptionItems.retrieve(subscriptionItemId);
+    if (typeof subscriptionItem.price === 'string') {
+      return subscriptionItem.price;
+    }
+    return subscriptionItem.price.id;
+  } catch (error) {
+    console.error('[Stripe] Error getting priceId:', error);
+    return null;
+  }
+}
+
+// 既存のコードは変更なし
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
   const customers = await stripe.customers.list({
@@ -150,8 +165,29 @@ export async function getCustomersByEmail(email: string) {
   return customersData;
 }
 
-// 他のエンドポイントハンドラーは変更なし
 export function setupStripeRoutes(app: Express) {
+  // 新しいエンドポイントを追加
+  app.get("/api/stripe/subscription-item/:id/price", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    try {
+      const subscriptionItemId = req.params.id;
+      const priceId = await getPriceIdFromSubscriptionItem(subscriptionItemId);
+
+      if (!priceId) {
+        return res.status(404).json({ message: "Price IDが見つかりませんでした" });
+      }
+
+      res.json({ priceId });
+    } catch (error) {
+      console.error('[Stripe] APIエラー:', error);
+      res.status(500).json({ message: "Price IDの取得中にエラーが発生しました" });
+    }
+  });
+
+  // 既存のエンドポイント定義は変更なし
   app.get("/api/stripe/customer", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
