@@ -101,8 +101,8 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
     } else if (step === 2) {
       setStep(3);
     } else {
-      // 確認画面で確定ボタンが押された場合
-      const quantities = { ...otherQuantities };
+      // 確認画面で確定ボタンが押された場合の処理
+      const quantities: Record<string, number> = { ...otherQuantities };
 
       // レボナイザー商品の数量を自動計算して設定
       const calculatedQuantities = calculateRevonizerQuantities(totalRevonizerQuantity);
@@ -117,7 +117,13 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>数量設定の準備中</DialogTitle>
+            <DialogDescription>
+              商品情報を読み込んでいます...
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -128,7 +134,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {step === 1 
