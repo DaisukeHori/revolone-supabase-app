@@ -247,15 +247,15 @@ export default function SubscriptionDetailPage() {
 
     setIsUpdating(true);
     try {
-      // レボナイザー商品の数量を自動計算
-      const revonizerQuantities = calculateRevonizerQuantities(
-        Math.max(...Object.values(quantities))
-      );
-
-      const updates = subscription.items.map(item => ({
-        subscription_item_id: item.subscription_item_id,
-        quantity: revonizerQuantities[item.subscription_item_id] || quantities[item.subscription_item_id] || 0,
-      }));
+      // subscription_item_idをキーとした更新データを準備
+      const updates = subscription.items.map(item => {
+        let quantity = quantities[item.subscription_item_id] || 0;
+        // 最低数量を1に設定（0の場合は削除対象）
+        return {
+          subscription_item_id: item.subscription_item_id,
+          quantity,
+        };
+      });
 
       const response = await fetch(`/api/stripe/subscription/${subscription.id}/quantities`, {
         method: 'POST',

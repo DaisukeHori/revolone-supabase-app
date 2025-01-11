@@ -7,21 +7,38 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// subscription_item_idからpriceIdを取得する関数を追加
+// レボナイザー商品の定義
+const REVONIZER_PRODUCTS = {
+  FIRST_UNIT: {
+    priceId: 'price_1NwwacAPdno01lSPWH92pzrl',
+  },
+  SECOND_TO_FOURTH: {
+    priceId: 'price_1OCCkvAPdno01lSP44FyPiZ3',
+  },
+  FIFTH_AND_MORE: {
+    priceId: 'price_1OED1uAPdno01lSP3UESyV7C',
+  },
+} as const;
+
+// subscription_item_idからpriceIdを取得する関数
 async function getPriceIdFromSubscriptionItem(subscriptionItemId: string): Promise<string | null> {
   try {
     const subscriptionItem = await stripe.subscriptionItems.retrieve(subscriptionItemId);
-    if (typeof subscriptionItem.price === 'string') {
-      return subscriptionItem.price;
-    }
-    return subscriptionItem.price.id;
+    return typeof subscriptionItem.price === 'string' ? subscriptionItem.price : subscriptionItem.price.id;
   } catch (error) {
     console.error('[Stripe] Error getting priceId:', error);
     return null;
   }
 }
 
-// 既存のコードは変更なし
+// priceIdからRevonizerの商品タイプを判定する関数
+function getRevonizerProductTypeByPriceId(priceId: string): 'FIRST_UNIT' | 'SECOND_TO_FOURTH' | 'FIFTH_AND_MORE' | null {
+  if (priceId === REVONIZER_PRODUCTS.FIRST_UNIT.priceId) return 'FIRST_UNIT';
+  if (priceId === REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId) return 'SECOND_TO_FOURTH';
+  if (priceId === REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId) return 'FIFTH_AND_MORE';
+  return null;
+}
+
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
   const customers = await stripe.customers.list({
@@ -411,34 +428,61 @@ export function setupStripeRoutes(app: Express) {
   });
 
   // プランアイテムの数量を更新
-  app.post("/api/stripe/subscription/:id/update-quantities", async (req, res) => {
+  app.post("/api/stripe/subscription/:id/quantities", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
 
     const subscriptionId = req.params.id;
-    const { items } = req.body as { items: { id: string; quantity: number }[] };
+    const { items } = req.body as { items: { subscription_item_id: string; quantity: number }[] };
 
     try {
-      const customersData = await getCustomersByEmail(req.user.email);
+      console.log('[Stripe] Updating subscription quantities:', {
+        subscriptionId,
+        items,
+      });
 
+      // ユーザーの認証確認
+      const customersData = await getCustomersByEmail(req.user.email);
       if (!customersData?.some(data =>
         data.subscriptions.some(sub => sub.id === subscriptionId)
       )) {
         return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
       }
 
-      // サブスクリプションの詳細を取得
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-        expand: ['items.data.price.product'],
-      });
+      // 各アイテムのpriceIdを取得して処理
+      const itemsWithPriceId = await Promise.all(items.map(async (item) => {
+        const priceId = await getPriceIdFromSubscriptionItem(item.subscription_item_id);
+        const productType = priceId ? getRevonizerProductTypeByPriceId(priceId) : null;
+        return {
+          ...item,
+          priceId,
+          productType,
+        };
+      }));
 
-      // 各アイテムの数量を更新
-      await Promise.all(items.map(async (item) => {
-        console.log('Updating subscription item:', item);
-        await stripe.subscriptionItems.update(item.id, {
-          quantity: item.quantity,
-        });
+      console.log('[Stripe] Items with priceId:', itemsWithPriceId);
+
+      // 基本ライセンス（FIRST_UNIT）は常に数量1を維持
+      const updatedItems = itemsWithPriceId.map(item => ({
+        id: item.subscription_item_id,
+        quantity: item.productType === 'FIRST_UNIT' ? 1 : item.quantity,
+      }));
+
+      console.log('[Stripe] Updating items:', updatedItems);
+
+      // 各アイテムの数量を個別に更新
+      await Promise.all(updatedItems.map(async (item) => {
+        try {
+          await stripe.subscriptionItems.update(item.id, {
+            quantity: item.quantity,
+            proration_behavior: 'always_invoice',
+          });
+          console.log('[Stripe] Successfully updated item:', item);
+        } catch (error) {
+          console.error('[Stripe] Error updating item:', item, error);
+          throw error;
+        }
       }));
 
       // 更新後のサブスクリプションを返す

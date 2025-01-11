@@ -16,7 +16,6 @@ import {
   filterRevonizerItems,
   getRevonizerProductType,
 } from "@/lib/revonizerCalculation";
-import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 
 type SubscriptionItem = {
   subscription_item_id: string;
@@ -200,7 +199,7 @@ export function UpdateQuantityModal({ isOpen, onClose, items, onConfirm }: Props
             キャンセル
           </Button>
           <Button onClick={handleNext}>
-            {step === 2 ? "確認" : "次へ"}
+            {step === 2 ? "確認" : (hasNonRevonizerItems ? "次へ" : "確認")}
           </Button>
         </div>
       </DialogContent>

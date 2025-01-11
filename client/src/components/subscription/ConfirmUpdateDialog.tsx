@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { getRevonizerProductType } from "@/lib/revonizerCalculation";
 import { useState, useEffect } from "react";
+import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 
 type SubscriptionItem = {
   subscription_item_id: string;
@@ -49,7 +50,6 @@ export function ConfirmUpdateDialog({
   const [removedItems, setRemovedItems] = useState<SubscriptionItem[]>([]);
   const [itemsWithQuantities, setItemsWithQuantities] = useState<ItemWithUpdatedQuantity[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [totalRevonizerQuantity, setTotalRevonizerQuantity] = useState(1);
 
   // 商品情報の初期化
   useEffect(() => {
@@ -67,9 +67,12 @@ export function ConfirmUpdateDialog({
             const isFirstUnit = productType === 'FIRST_UNIT';
 
             // 基本ライセンスは常に1、その他は更新された数量か0
-            const newQuantity = isFirstUnit 
-              ? 1  // 基本ライセンスは常に1
-              : (updatedQuantities[item.subscription_item_id] || 0);
+            let newQuantity;
+            if (isFirstUnit) {
+              newQuantity = 1; // 基本ライセンスは常に1
+            } else {
+              newQuantity = updatedQuantities[item.subscription_item_id] || 0;
+            }
 
             const quantityDiff = newQuantity - item.quantity;
 
@@ -101,12 +104,6 @@ export function ConfirmUpdateDialog({
     initialize();
   }, [items, updatedQuantities]);
 
-  // 合計台数を計算（最小1台）
-  useEffect(() => {
-    const maxQuantity = Math.max(1, Math.max(...Object.values(updatedQuantities)));
-    setTotalRevonizerQuantity(maxQuantity);
-  }, [updatedQuantities]);
-
   // 商品ごとの価格を計算
   const calculatePrice = (item: SubscriptionItem, quantity: number) => {
     if (!item.amount) return "価格未定";
@@ -131,6 +128,11 @@ export function ConfirmUpdateDialog({
     );
   }
 
+  // 合計台数を計算（最小1台）
+  const totalQuantity = Math.max(1, Math.max(
+    ...itemsWithQuantities.map(({ newQuantity }) => newQuantity)
+  ));
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[525px]">
@@ -146,7 +148,7 @@ export function ConfirmUpdateDialog({
           <div className="space-y-2">
             <h3 className="font-medium">レボナイザー利用ライセンス</h3>
             <div className="space-y-1 text-sm">
-              <p>合計: {totalRevonizerQuantity}台</p>
+              <p>合計: {totalQuantity}台</p>
             </div>
           </div>
 
