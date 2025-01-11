@@ -25,12 +25,21 @@ export const REVONIZER_PRODUCTS = {
 
 // レボナイザー商品かどうかを判定する関数
 export function isRevonizerProduct(id: string): boolean {
+  // デバッグ用：判定対象のIDをログ出力
+  console.log('Checking if product is Revonizer:', id);
+
   const priceIds = [
     REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
     REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
     REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
   ];
-  return priceIds.includes(id);
+
+  // デバッグ用：登録されているpriceIdsをログ出力
+  console.log('Registered Revonizer priceIds:', priceIds);
+
+  const isRevonizer = priceIds.includes(id);
+  console.log('Is Revonizer product:', isRevonizer);
+  return isRevonizer;
 }
 
 // 合計台数から各商品の必要数量を計算する関数
@@ -68,15 +77,20 @@ export function calculateTotalQuantityFromItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): number {
+  // デバッグ用：受け取ったアイテムの内容をログ出力
+  console.log('Calculating total quantity for items:', JSON.stringify(items, null, 2));
+
   let total = 0;
 
   // 各レボナイザー商品の数量を合算
   items.forEach(item => {
     if (isRevonizerProduct(item.subscription_item_id)) {
+      console.log('Found Revonizer item:', item);
       total += item.quantity;
     }
   });
 
+  console.log('Total quantity calculated:', total);
   return total;
 }
 
@@ -85,5 +99,13 @@ export function filterRevonizerItems(items: Array<{
   subscription_item_id: string;
   quantity: number;
 }>): typeof items {
-  return items.filter(item => isRevonizerProduct(item.subscription_item_id));
+  // デバッグ用：フィルタリング前のアイテムをログ出力
+  console.log('Filtering Revonizer items from:', JSON.stringify(items, null, 2));
+
+  const filtered = items.filter(item => isRevonizerProduct(item.subscription_item_id));
+
+  // デバッグ用：フィルタリング後のアイテムをログ出力
+  console.log('Filtered Revonizer items:', JSON.stringify(filtered, null, 2));
+
+  return filtered;
 }
