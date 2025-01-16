@@ -104,31 +104,49 @@ export function ConfirmUpdateDialog({
           }
         }
 
-        // 5台目以降の商品が存在しない場合は新規作成
-        const hasFifthAndMore = itemsData.some(item => item.productType === 'FIFTH_AND_MORE');
-        if (!hasFifthAndMore && validTotalQuantity > 4) {
-          const fifthAndMoreQuantity = validTotalQuantity - 4;
-          const dummyItem: SubscriptionItem = {
-            subscription_item_id: REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
-            amount: 8800, // 仮の金額
-            currency: 'jpy',
-            interval: 'month',
-            quantity: 0,
-            product: {
-              name: REVONIZER_PRODUCTS.FIFTH_AND_MORE.name,
-              description: null,
-            },
-          };
+        // 存在しないレボナイザー商品を追加
+        const existingPriceIds = new Set(itemsData.map(item => item.priceId));
 
-          itemsData.push({
-            item: dummyItem,
-            newQuantity: fifthAndMoreQuantity,
-            quantityDiff: fifthAndMoreQuantity,
-            isRevonizerProduct: true,
-            productType: 'FIFTH_AND_MORE',
-            priceId: REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
-          });
+        // 必要な商品を追加（存在しない場合）
+        for (const [priceId, quantity] of Object.entries(revonizerQuantities)) {
+          if (quantity > 0 && !existingPriceIds.has(priceId)) {
+            const productConfig = Object.values(REVONIZER_PRODUCTS).find(p => p.priceId === priceId);
+            if (productConfig) {
+              const dummyItem: SubscriptionItem = {
+                subscription_item_id: priceId,
+                amount: 8800, // デフォルト価格
+                currency: 'jpy',
+                interval: 'month',
+                quantity: 0,
+                product: {
+                  name: productConfig.name,
+                  description: null,
+                },
+              };
+
+              itemsData.push({
+                item: dummyItem,
+                newQuantity: quantity,
+                quantityDiff: quantity,
+                isRevonizerProduct: true,
+                productType: productConfig === REVONIZER_PRODUCTS.FIRST_UNIT 
+                  ? 'FIRST_UNIT' 
+                  : productConfig === REVONIZER_PRODUCTS.SECOND_TO_FOURTH
+                  ? 'SECOND_TO_FOURTH'
+                  : 'FIFTH_AND_MORE',
+                priceId,
+              });
+            }
+          }
         }
+
+        // 商品を適切な順序でソート
+        const sortOrder = ['FIRST_UNIT', 'SECOND_TO_FOURTH', 'FIFTH_AND_MORE'];
+        itemsData.sort((a, b) => {
+          if (!a.productType) return 1;
+          if (!b.productType) return -1;
+          return sortOrder.indexOf(a.productType) - sortOrder.indexOf(b.productType);
+        });
 
         if (isMounted) {
           setItemsWithQuantities(itemsData);
@@ -198,10 +216,6 @@ export function ConfirmUpdateDialog({
               <div className="pl-4 text-muted-foreground">
                 {itemsWithQuantities
                   .filter(({ isRevonizerProduct }) => isRevonizerProduct)
-                  .sort((a, b) => {
-                    const order = ['FIRST_UNIT', 'SECOND_TO_FOURTH', 'FIFTH_AND_MORE'];
-                    return order.indexOf(a.productType!) - order.indexOf(b.productType!);
-                  })
                   .map(({ item, newQuantity, quantityDiff }) => (
                     <div key={item.subscription_item_id} className="space-y-1 mt-2">
                       <p className="font-medium">{item.product.name}</p>

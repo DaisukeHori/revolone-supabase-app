@@ -25,11 +25,7 @@ export async function isRevonizerProduct(subscriptionItemId: string): Promise<bo
   const priceId = await getPriceId(subscriptionItemId);
   if (!priceId) return false;
 
-  return [
-    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
-    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
-    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId
-  ].includes(priceId as RevonizerPriceId);
+  return Object.values(REVONIZER_PRODUCTS).some(product => product.priceId === priceId);
 }
 
 // レボナイザー商品のタイプを特定する関数
@@ -63,8 +59,8 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<Revo
   // 2台目以上の処理
   if (validQuantity > 1) {
     // 2-4台目の処理
-    const secondToFourthCount = Math.min(validQuantity - 1, 3);
-    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
+    const secondToFourthQuantity = Math.min(validQuantity - 1, 3);
+    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthQuantity;
 
     // 5台目以降の処理（4台を超える場合のみ）
     if (validQuantity > 4) {
@@ -117,7 +113,6 @@ export async function calculateTotalQuantityFromItems(items: Array<{
   return Math.max(1, total); // 最小1台を保証
 }
 
-// レボナイザー商品の定義
 export const REVONIZER_PRODUCTS = {
   FIRST_UNIT: {
     productId: 'prod_OkRTix5Mimwc9p',
