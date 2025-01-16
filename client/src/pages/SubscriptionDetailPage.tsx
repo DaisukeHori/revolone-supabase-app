@@ -15,12 +15,23 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
-/* 前半部分は変更なし - 型定義など */
+// ... (Existing type definitions remain unchanged) ...
 
 export default function SubscriptionDetailPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const subscriptionId = window.location.pathname.split("/").pop();
   const [showQuantityModal, setShowQuantityModal] = useState(false);
@@ -28,6 +39,7 @@ export default function SubscriptionDetailPage() {
   const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const { data: stripeData, isLoading, error, refetch } = useQuery({
     queryKey: ['stripe-customer'],
@@ -135,12 +147,34 @@ export default function SubscriptionDetailPage() {
   };
 
   const handleCancelSubscription = async () => {
-    if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
-      try {
-        // await cancelSubscriptionMutation.mutateAsync(subscription.id);
-      } catch (error) {
-        console.error('サブスクリプションのキャンセルに失敗:', error);
+    if (!subscription) return;
+
+    try {
+      setIsCanceling(true);
+      const response = await fetch(`/api/stripe/subscription/${subscription.id}/cancel`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
       }
+
+      await refetch();
+      toast({
+        description: "サブスクリプションをキャンセルしました",
+      });
+
+      // 店舗詳細ページに戻る
+      setLocation(`/store/${customer.id}`);
+    } catch (error) {
+      console.error('サブスクリプションのキャンセルエラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "キャンセル処理中にエラーが発生しました",
+      });
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -321,7 +355,7 @@ export default function SubscriptionDetailPage() {
                     variant="outline"
                     className="gap-2"
                     onClick={() => setShowQuantityModal(true)}
-                    disabled={isUpdating}
+                    disabled={isUpdating || isCanceling}
                   >
                     <RefreshCw className="h-4 w-4" />
                     数量を変更
@@ -332,21 +366,45 @@ export default function SubscriptionDetailPage() {
                       <Switch
                         checked={!subscription.cancel_at_period_end}
                         onCheckedChange={handleAutoRenewalToggle}
-                        disabled={isUpdating}
+                        disabled={isUpdating || isCanceling}
                       />
                       <span className="text-sm flex items-center gap-2">
                         自動更新
                         {isUpdating && <Loader2 className="h-3 w-3 animate-spin" />}
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive/90"
-                      onClick={handleCancelSubscription}
-                      disabled={isUpdating}
-                    >
-                      サブスクリプションを解約
-                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive/90"
+                          disabled={isUpdating || isCanceling}
+                        >
+                          {isCanceling ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          サブスクリプションを解約
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>サブスクリプションの解約</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            本当にサブスクリプションを解約しますか？この操作は取り消すことができません。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleCancelSubscription}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            解約する
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>
