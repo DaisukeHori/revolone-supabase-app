@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Receipt, ArrowLeft, ExternalLink, FileText } from "lucide-react";
+import { Receipt, ArrowLeft, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,10 +78,22 @@ function formatStatus(status: string) {
 }
 
 export default function PaymentHistoryPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const customerId = location.split("/").pop();
+
   const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
   });
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (error) {
     return (
@@ -95,7 +107,19 @@ export default function PaymentHistoryPage() {
     );
   }
 
-  const customerData = stripeData?.[0];
+  const customerData = stripeData?.find(data => data.customer.id === customerId);
+
+  if (!customerData) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertDescription>
+            指定された店舗の情報が見つかりません
+          </AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -109,7 +133,7 @@ export default function PaymentHistoryPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.history.back()}
+            onClick={() => setLocation(`/store/${customerData.customer.id}`)}
             className="hover:bg-primary/10"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -126,7 +150,7 @@ export default function PaymentHistoryPage() {
                 </div>
                 <div>
                   <CardTitle className="text-2xl">支払い履歴</CardTitle>
-                  {customerData?.customer.metadata?.サロン名 && (
+                  {customerData.customer.metadata?.サロン名 && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {customerData.customer.metadata.サロン名}
                     </p>
@@ -135,7 +159,7 @@ export default function PaymentHistoryPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {customerData?.payment_history?.length > 0 ? (
+              {customerData.payment_history?.length > 0 ? (
                 <div className="space-y-4">
                   {customerData.payment_history.map((payment) => (
                     <div key={payment.id} className="flex justify-between items-center py-4 border-b border-primary/10 last:border-0">
