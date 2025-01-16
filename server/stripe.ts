@@ -259,14 +259,17 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
-  // プランアイテムの数量を更新
   app.post("/api/stripe/subscription/:id/quantities", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
 
     const subscriptionId = req.params.id;
-    const { items } = req.body as { items: { subscription_item_id: string; quantity: number }[] };
+    const { items } = req.body as { items: Array<{
+      subscription_item_id?: string;
+      price?: string;
+      quantity: number;
+    }> };
 
     console.log('[Stripe] Updating quantities for subscription:', subscriptionId);
     console.log('[Stripe] Update items:', items);
@@ -293,18 +296,34 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
 
       // 各アイテムの数量を更新
       const updateResults = await Promise.all(items.map(async (item) => {
-        console.log('[Stripe] Updating item:', item);
+        console.log('[Stripe] Processing item:', item);
         try {
-          const updated = await stripe.subscriptionItems.update(item.subscription_item_id, {
-            quantity: item.quantity,
-          });
-          console.log('[Stripe] Successfully updated item:', {
-            id: updated.id,
-            quantity: updated.quantity,
-          });
-          return updated;
+          if (item.subscription_item_id) {
+            // 既存のアイテムを更新
+            const updated = await stripe.subscriptionItems.update(item.subscription_item_id, {
+              quantity: item.quantity,
+            });
+            console.log('[Stripe] Successfully updated item:', {
+              id: updated.id,
+              quantity: updated.quantity,
+            });
+            return updated;
+          } else if (item.price) {
+            // 新規アイテムを追加
+            const added = await stripe.subscriptionItems.create({
+              subscription: subscriptionId,
+              price: item.price,
+              quantity: item.quantity,
+            });
+            console.log('[Stripe] Successfully added new item:', {
+              id: added.id,
+              price: added.price.id,
+              quantity: added.quantity,
+            });
+            return added;
+          }
         } catch (error) {
-          console.error('[Stripe] Error updating item:', error);
+          console.error('[Stripe] Error updating/adding item:', error);
           throw error;
         }
       }));

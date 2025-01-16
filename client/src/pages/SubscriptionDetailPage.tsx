@@ -21,6 +21,13 @@ import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { useState } from 'react';
 import { z } from "zod";
 
+// Assuming REVONIZER_PRODUCTS is defined elsewhere and accessible here.  Example:
+const REVONIZER_PRODUCTS = {
+  FIFTH_AND_MORE: { priceId: 'price_1...', name: '5台目以降' } // Replace 'price_1...' with actual price ID
+  // Add other revonizer products here if needed.
+};
+
+
 // フォームのスキーマ定義
 const storeFormSchema = z.object({
   name: z.string(),
@@ -251,6 +258,10 @@ export default function SubscriptionDetailPage() {
       const totalQuantity = quantities['total'] || 1;
       delete quantities['total'];
 
+      // レボナイザー商品の数量を自動計算
+      const revonizerQuantities = calculateRevonizerQuantities(totalQuantity);
+      console.log('Calculated Revonizer quantities:', revonizerQuantities);
+
       // subscription_item_idとpriceIdのマッピングを作成
       const subscriptionItemPriceMap: Record<string, string> = {};
       for (const item of subscription.items) {
@@ -267,25 +278,36 @@ export default function SubscriptionDetailPage() {
 
       console.log('Subscription item price map:', subscriptionItemPriceMap);
 
-      // レボナイザー商品の数量を自動計算
-      const revonizerQuantities = calculateRevonizerQuantities(totalQuantity);
-      console.log('Calculated Revonizer quantities:', revonizerQuantities);
-
       // 更新用のアイテムリストを作成
-      const updates = subscription.items.map(item => {
+      const updates = [];
+
+      // 既存のアイテムを更新
+      for (const item of subscription.items) {
         const priceId = subscriptionItemPriceMap[item.subscription_item_id];
         let quantity = quantities[item.subscription_item_id] || 0;
 
         // レボナイザー商品の場合は自動計算した数量を使用
-        if (priceId && revonizerQuantities[priceId] !== undefined) {
-          quantity = revonizerQuantities[priceId];
+        if (priceId && revonizerQuantities[priceId as keyof typeof revonizerQuantities] !== undefined) {
+          quantity = revonizerQuantities[priceId as keyof typeof revonizerQuantities];
         }
 
-        return {
+        updates.push({
           subscription_item_id: item.subscription_item_id,
           quantity: quantity,
-        };
-      });
+        });
+      }
+
+      // 5台目以降の商品が必要で、まだ存在しない場合は新規作成
+      const hasFifthAndMore = subscription.items.some(item =>
+        Object.values(subscriptionItemPriceMap).includes(REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId)
+      );
+
+      if (!hasFifthAndMore && totalQuantity > 4) {
+        updates.push({
+          price: REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
+          quantity: revonizerQuantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId],
+        });
+      }
 
       console.log('Final updates to send:', updates);
 
