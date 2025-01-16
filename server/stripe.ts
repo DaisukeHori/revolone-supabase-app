@@ -7,6 +7,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// setupStripeRoutesの型定義を修正
 type SetupOptions = {
   debug?: boolean;
 };
@@ -14,7 +15,7 @@ type SetupOptions = {
 export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
   const debug = options.debug ?? false;
 
-  // Fix type issues in the existing endpoints
+  // 新規サブスクリプション作成エンドポイントを追加
   app.post("/api/stripe/customer/:id/subscription", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -29,6 +30,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     };
 
     try {
+      // ユーザーの認証確認
       const customersData = await getCustomersByEmail(req.user.email);
       if (!customersData?.some(data => data.customer.id === customerId)) {
         return res.status(403).json({ message: "この顧客情報にアクセスする権限がありません" });
@@ -37,21 +39,17 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
       console.log('[Stripe] Creating subscription for customer:', customerId);
       console.log('[Stripe] Items:', items);
 
-      // Get existing payment methods
+      // 既存の支払い方法を取得
       const paymentMethods = await stripe.paymentMethods.list({
         customer: customerId,
         type: 'card',
       });
 
-      // Get customer and check for default payment method
-      const customerResponse = await stripe.customers.retrieve(customerId);
-      let defaultPaymentMethod: string | undefined;
+      // デフォルトの支払い方法を取得
+      const customer = await stripe.customers.retrieve(customerId);
+      const defaultPaymentMethod = typeof customer === 'object' && customer.invoice_settings?.default_payment_method;
 
-      if (customerResponse && 'invoice_settings' in customerResponse && customerResponse.invoice_settings) {
-        defaultPaymentMethod = customerResponse.invoice_settings.default_payment_method as string | undefined;
-      }
-
-      // Create subscription
+      // サブスクリプションを作成
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: items.map(item => ({
@@ -64,23 +62,12 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
           save_default_payment_method: 'on_subscription',
         },
         expand: ['latest_invoice.payment_intent'],
-        default_payment_method: defaultPaymentMethod,
+        default_payment_method: defaultPaymentMethod || undefined,
       });
-
-      // Extract client secret from the subscription's latest invoice
-      let clientSecret: string | undefined;
-      if (
-        subscription.latest_invoice &&
-        typeof subscription.latest_invoice !== 'string' &&
-        subscription.latest_invoice.payment_intent &&
-        typeof subscription.latest_invoice.payment_intent !== 'string'
-      ) {
-        clientSecret = subscription.latest_invoice.payment_intent.client_secret;
-      }
 
       res.json({
         subscriptionId: subscription.id,
-        clientSecret,
+        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
         paymentMethods: paymentMethods.data,
         defaultPaymentMethod,
       });
@@ -90,22 +77,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
-  // Function to safely handle product data
-  const getProductDetails = (product: Stripe.Product | Stripe.DeletedProduct | null) => {
-    if (!product || product.deleted) {
-      return {
-        name: 'Deleted Product',
-        description: null,
-      };
-    }
-
-    return {
-      name: 'name' in product ? product.name : 'Unknown Product',
-      description: 'description' in product ? product.description : null,
-    };
-  };
-
-  // Rest of the endpoints remain unchanged
+  // 新しいエンドポイントを追加
   app.get("/api/stripe/subscription-item/:id/price", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -127,6 +99,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
   });
 
 
+  // 既存のエンドポイント定義は変更なし
   app.get("/api/stripe/customer", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -147,6 +120,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
+  // 顧客メタデータの更新エンドポイントを修正
   app.post("/api/stripe/customer/:id/metadata", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -156,6 +130,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     const { metadata, address, shipping, phone } = req.body;
 
     try {
+      // ユーザーの認証確認
       const customersData = await getCustomersByEmail(req.user.email);
       if (!customersData?.some(data => data.customer.id === customerId)) {
         return res.status(403).json({ message: "この顧客情報にアクセスする権限がありません" });
@@ -169,6 +144,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
         phone
       });
 
+      // 顧客情報を更新（メタデータ、住所、電話番号、配送先）
       const customer = await stripe.customers.update(customerId, {
         metadata,
         address: {
@@ -230,10 +206,12 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
       }
 
       if (subscription.cancel_at_period_end) {
+        // 自動更新を再開
         await stripe.subscriptions.update(subscriptionId, {
           cancel_at_period_end: false,
         });
       } else {
+        // 次回更新時にキャンセル
         await stripe.subscriptions.update(subscriptionId, {
           cancel_at_period_end: true,
         });
@@ -262,6 +240,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
         return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
       }
 
+      // サブスクリプションを即時キャンセル
       await stripe.subscriptions.cancel(subscriptionId);
 
       res.json({ message: "サブスクリプションをキャンセルしました" });
@@ -271,23 +250,27 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
+  // 支払い方法変更用のSetup Intentを作成
   app.post("/api/stripe/setup-intent", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
 
     try {
+      // ユーザーのStripe顧客情報を取得
       const customersData = await getCustomersByEmail(req.user.email);
       if (!customersData || customersData.length === 0) {
         return res.status(404).json({ message: "Stripeの顧客情報が見つかりません" });
       }
 
+      // 最初の顧客IDを使用
       const customerId = customersData[0].customer.id;
 
+      // Setup Intentを作成
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
         payment_method_types: ['card'],
-        usage: 'off_session',
+        usage: 'off_session', // 将来の支払いに使用可能
       });
 
       res.json({
@@ -300,6 +283,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
+  // 支払い方法をデフォルトに設定
   app.post("/api/stripe/set-default-payment-method", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -315,12 +299,14 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
 
       const customerId = customersData[0].customer.id;
 
+      // 顧客のデフォルト支払い方法を更新
       await stripe.customers.update(customerId, {
         invoice_settings: {
           default_payment_method: paymentMethodId,
         },
       });
 
+      // 該当顧客の全てのサブスクリプションの支払い方法も更新
       for (const customerData of customersData) {
         for (const subscription of customerData.subscriptions) {
           await stripe.subscriptions.update(subscription.id, {
@@ -360,6 +346,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
         return res.status(403).json({ message: "このサブスクリプションにアクセスする権限がありません" });
       }
 
+      // サブスクリプションの詳細を取得
       const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
         expand: ['items.data.price.product'],
       });
@@ -370,10 +357,12 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
         price: item.price.id,
       })));
 
+      // 各アイテムの数量を更新
       const updateResults = await Promise.all(items.map(async (item) => {
         console.log('[Stripe] Processing item:', item);
         try {
           if (item.subscription_item_id) {
+            // 既存のアイテムを更新
             const updated = await stripe.subscriptionItems.update(item.subscription_item_id, {
               quantity: item.quantity,
             });
@@ -383,6 +372,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
             });
             return updated;
           } else if (item.price) {
+            // 新規アイテムを追加
             const added = await stripe.subscriptionItems.create({
               subscription: subscriptionId,
               price: item.price,
@@ -403,6 +393,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
 
       console.log('[Stripe] All items updated:', updateResults);
 
+      // 更新後のサブスクリプションを返す
       const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
         expand: ['items.data.price.product'],
       });
@@ -420,6 +411,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
+  // サブスクリプションアイテムの削除エンドポイントを追加
   app.delete("/api/stripe/subscription-item/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
@@ -428,6 +420,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     const subscriptionItemId = req.params.id;
 
     try {
+      // アクセス権限の確認
       const item = await stripe.subscriptionItems.retrieve(subscriptionItemId);
       const subscription = await stripe.subscriptions.retrieve(item.subscription as string);
       const customersData = await getCustomersByEmail(req.user.email);
@@ -438,6 +431,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
         return res.status(403).json({ message: "このサブスクリプションアイテムにアクセスする権限がありません" });
       }
 
+      // サブスクリプションアイテムを削除
       await stripe.subscriptionItems.del(subscriptionItemId);
       console.log('[Stripe] Successfully deleted subscription item:', subscriptionItemId);
 
@@ -447,8 +441,10 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
       res.status(500).json({ message: "サブスクリプションアイテムの削除中にエラーが発生しました" });
     }
   });
+
 }
 
+// subscription_item_idからpriceIdを取得する関数を追加
 async function getPriceIdFromSubscriptionItem(subscriptionItemId: string): Promise<string | null> {
   try {
     const subscriptionItem = await stripe.subscriptionItems.retrieve(subscriptionItemId);
@@ -462,6 +458,7 @@ async function getPriceIdFromSubscriptionItem(subscriptionItemId: string): Promi
   }
 }
 
+// 既存のコードは変更なし
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
   const customers = await stripe.customers.list({
@@ -477,125 +474,129 @@ export async function getCustomersByEmail(email: string) {
 
   console.log(`[Stripe] Found ${customers.data.length} customers`);
 
+  // 全ての顧客情報とそれぞれのサブスクリプション情報を取得
   const customersData = await Promise.all(customers.data.map(async (customer) => {
-    try {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.id,
-        limit: 100,
-        expand: ['data.default_payment_method'],
-      });
+    console.log(`[Stripe] Processing customer: ${customer.id}`);
 
-      const invoices = await stripe.invoices.list({
-        customer: customer.id,
-        limit: 100,
-        expand: ['data.charge'],
-      });
+    // サブスクリプション情報の取得
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customer.id,
+      limit: 100,
+      expand: ['data.default_payment_method'],
+    });
 
-      const formattedPaymentHistory = invoices.data.map((invoice) => {
-        let receipt_url = null;
-        if (invoice.charge && typeof invoice.charge !== 'string') {
-          receipt_url = invoice.charge.receipt_url;
-        }
+    // 支払い履歴の取得
+    const invoices = await stripe.invoices.list({
+      customer: customer.id,
+      limit: 100,
+      expand: ['data.charge'], // chargeオブジェクトを展開して取得
+    });
+
+    // 支払い履歴を整形
+    const formattedPaymentHistory = await Promise.all(invoices.data.map(async (invoice) => {
+      // chargeオブジェクトから領収書URLを取得
+      let receipt_url = null;
+      if (invoice.charge && typeof invoice.charge !== 'string') {
+        receipt_url = invoice.charge.receipt_url;
+      }
+
+      return {
+        id: invoice.id,
+        amount: invoice.amount_paid,
+        currency: invoice.currency,
+        status: invoice.status,
+        created: invoice.created,
+        invoice_pdf: invoice.invoice_pdf,
+        receipt_url: receipt_url,
+        hosted_invoice_url: invoice.hosted_invoice_url,
+      };
+    }));
+
+    // サブスクリプションデータを整形
+    const formattedSubscriptions = await Promise.all(subscriptions.data.map(async subscription => {
+      const items = subscription.items.data;
+
+      // 各アイテムの詳細情報を取得
+      const itemDetails = await Promise.all(items.map(async item => {
+        const price = await stripe.prices.retrieve(item.price.id, {
+          expand: ['product'],
+        });
+
+        const product = typeof price.product === 'object' ? price.product : null;
 
         return {
-          id: invoice.id,
-          amount: invoice.amount_paid,
-          currency: invoice.currency,
-          status: invoice.status,
-          created: invoice.created,
-          invoice_pdf: invoice.invoice_pdf,
-          receipt_url,
-          hosted_invoice_url: invoice.hosted_invoice_url,
-        };
-      });
-
-      const formattedSubscriptions = await Promise.all(subscriptions.data.map(async subscription => {
-        const items = subscription.items.data;
-
-        const itemDetails = await Promise.all(items.map(async item => {
-          const price = await stripe.prices.retrieve(item.price.id, {
-            expand: ['product'],
-          });
-
-          const productDetails = getProductDetails(
-            typeof price.product === 'string' 
-              ? null 
-              : price.product
-          );
-
-          return {
-            subscription_item_id: item.id,
-            amount: price.unit_amount,
-            currency: price.currency,
-            interval: price.recurring?.interval || 'month',
-            quantity: item.quantity,
-            product: productDetails,
-          };
-        }));
-
-        let paymentMethod = null;
-        if (subscription.default_payment_method && typeof subscription.default_payment_method !== 'string') {
-          const card = subscription.default_payment_method.card;
-          if (card) {
-            paymentMethod = {
-              card: {
-                brand: card.brand,
-                last4: card.last4,
-                exp_month: card.exp_month,
-                exp_year: card.exp_year,
-              }
-            };
+          subscription_item_id: item.id,
+          amount: price.unit_amount,
+          currency: price.currency,
+          interval: price.recurring?.interval || 'month',
+          quantity: item.quantity,
+          product: {
+            name: product?.name ?? 'Product',
+            description: product?.description ?? null,
           }
-        }
-
-        return {
-          id: subscription.id,
-          status: subscription.status,
-          current_period_end: subscription.current_period_end,
-          trial_end: subscription.trial_end,
-          trial_start: subscription.trial_start,
-          cancel_at_period_end: subscription.cancel_at_period_end,
-          default_payment_method: paymentMethod,
-          items: itemDetails,
         };
       }));
 
+      // 支払い方法の情報を取得
+      let paymentMethod = null;
+      if (subscription.default_payment_method && typeof subscription.default_payment_method === 'object') {
+        const card = subscription.default_payment_method.card;
+        if (card) {
+          paymentMethod = {
+            card: {
+              brand: card.brand,
+              last4: card.last4,
+              exp_month: card.exp_month,
+              exp_year: card.exp_year,
+            }
+          };
+        }
+      }
+
       return {
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          created: customer.created,
-          phone: customer.phone,
-          address: customer.address ? {
-            line1: customer.address.line1,
-            line2: customer.address.line2,
-            city: customer.address.city,
-            state: customer.address.state,
-            postal_code: customer.address.postal_code,
-            country: customer.address.country,
-          } : null,
-          shipping: customer.shipping ? {
-            address: {
-              line1: customer.shipping.address?.line1 || null,
-              line2: customer.shipping.address?.line2 || null,
-              city: customer.shipping.address?.city || null,
-              state: customer.shipping.address?.state || null,
-              postal_code: customer.shipping.address?.postal_code || null,
-              country: customer.shipping.address?.country || null,
-            },
-            name: customer.shipping.name,
-            phone: customer.shipping.phone,
-          } : null,
-          metadata: customer.metadata || {},
-        },
-        subscriptions: formattedSubscriptions,
-        payment_history: formattedPaymentHistory,
+        id: subscription.id,
+        status: subscription.status,
+        current_period_end: subscription.current_period_end,
+        trial_end: subscription.trial_end,
+        trial_start: subscription.trial_start,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        default_payment_method: paymentMethod,
+        items: itemDetails,
       };
-    } catch (error) {
-      console.error(`[Stripe] Error processing customer ${customer.id}:`, error);
-      throw error;
-    }
+    }));
+
+    return {
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        created: customer.created,
+        phone: customer.phone,
+        address: customer.address ? {
+          line1: customer.address.line1,
+          line2: customer.address.line2,
+          city: customer.address.city,
+          state: customer.address.state,
+          postal_code: customer.address.postal_code,
+          country: customer.address.country,
+        } : null,
+        shipping: customer.shipping ? {
+          address: {
+            line1: customer.shipping.address?.line1 || null,
+            line2: customer.shipping.address?.line2 || null,
+            city: customer.shipping.address?.city || null,
+            state: customer.shipping.address?.state || null,
+            postal_code: customer.shipping.address?.postal_code || null,
+            country: customer.shipping.address?.country || null,
+          },
+          name: customer.shipping.name,
+          phone: customer.shipping.phone,
+        } : null,
+        metadata: customer.metadata || {},
+      },
+      subscriptions: formattedSubscriptions,
+      payment_history: formattedPaymentHistory,
+    };
   }));
 
   return customersData;
