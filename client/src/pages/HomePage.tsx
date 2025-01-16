@@ -53,8 +53,17 @@ const item = {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
-  const { data: stripeData, isLoading, error } = useQuery<StripeCustomerData>({
-    queryKey: ['/api/stripe/customer'],
+  const { data: stripeData, isLoading, error } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch customer data');
+      }
+      return response.json() as Promise<StripeCustomerData>;
+    }
   });
 
   return (
