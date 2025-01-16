@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
 import { StoreEditModal } from "@/components/store/StoreEditModal";
+import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 
 const container = {
   hidden: { opacity: 0 },
@@ -164,6 +165,7 @@ export default function StoreDetailPage() {
   const { toast } = useToast();
   const customerId = window.location.pathname.split("/").pop();
   const [isEditingStore, setIsEditingStore] = useState(false);
+  const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
@@ -345,19 +347,29 @@ export default function StoreDetailPage() {
         </motion.div>
 
         {/* サブスクリプション一覧 */}
-        {customerData.subscriptions.length > 0 && (
-          <motion.div variants={item}>
-            <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-              <CardHeader>
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 p-3 rounded-lg">
                     <Package className="h-6 w-6 text-primary" />
                   </div>
                   <CardTitle className="text-2xl">契約中のサービス</CardTitle>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {customerData.subscriptions.map((subscription) => (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreatingSubscription(true)}
+                  className="gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  新しいサブスクリプションに加入
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {customerData?.subscriptions.length > 0 ? (
+                customerData.subscriptions.map((subscription) => (
                   <div
                     key={subscription.id}
                     className="bg-primary/5 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-primary/10 transition-colors"
@@ -411,10 +423,23 @@ export default function StoreDetailPage() {
                       </div>
                     )}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </motion.div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">
+                  現在契約中のサブスクリプションはありません。新しいサブスクリプションに加入するには上のボタンをクリックしてください。
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {isCreatingSubscription && customer && (
+          <CreateSubscriptionModal
+            isOpen={isCreatingSubscription}
+            onClose={() => setIsCreatingSubscription(false)}
+            customerId={customer.id}
+            onSuccess={refetch}
+          />
         )}
 
         {isEditingStore && customer && (

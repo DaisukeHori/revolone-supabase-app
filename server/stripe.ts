@@ -15,6 +15,55 @@ type SetupOptions = {
 export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
   const debug = options.debug ?? false;
 
+  // 新規サブスクリプション作成エンドポイントを追加
+  app.post("/api/stripe/customer/:id/subscription", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const customerId = req.params.id;
+    const { items } = req.body as {
+      items: Array<{
+        price: string;
+        quantity: number;
+      }>;
+    };
+
+    try {
+      // ユーザーの認証確認
+      const customersData = await getCustomersByEmail(req.user.email);
+      if (!customersData?.some(data => data.customer.id === customerId)) {
+        return res.status(403).json({ message: "この顧客情報にアクセスする権限がありません" });
+      }
+
+      console.log('[Stripe] Creating subscription for customer:', customerId);
+      console.log('[Stripe] Items:', items);
+
+      // サブスクリプションを作成
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: items.map(item => ({
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        payment_behavior: 'default_incomplete',
+        payment_settings: {
+          payment_method_types: ['card'],
+          save_default_payment_method: 'on_subscription',
+        },
+        expand: ['latest_invoice.payment_intent'],
+      });
+
+      res.json({
+        subscriptionId: subscription.id,
+        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+      });
+    } catch (error) {
+      console.error('[Stripe] サブスクリプション作成エラー:', error);
+      res.status(500).json({ message: "サブスクリプションの作成中にエラーが発生しました" });
+    }
+  });
+
   // 新しいエンドポイントを追加
   app.get("/api/stripe/subscription-item/:id/price", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -35,6 +84,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
       res.status(500).json({ message: "Price IDの取得中にエラーが発生しました" });
     }
   });
+
 
   // 既存のエンドポイント定義は変更なし
   app.get("/api/stripe/customer", async (req, res) => {
