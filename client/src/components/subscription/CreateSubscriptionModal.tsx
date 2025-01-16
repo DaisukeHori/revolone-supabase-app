@@ -29,11 +29,15 @@ function CreateSubscriptionModalContent({
   onClose,
   customerId,
   onSuccess,
-}: CreateSubscriptionModalProps) {
+  clientSecret,
+  setClientSecret,
+}: CreateSubscriptionModalProps & {
+  clientSecret: string | null;
+  setClientSecret: (secret: string | null) => void;
+}) {
   const [quantity, setQuantity] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const stripe = useStripe();
   const elements = useElements();
 
@@ -91,11 +95,11 @@ function CreateSubscriptionModalContent({
 
     if (error) {
       setError(error.message || "支払い処理中にエラーが発生しました");
+      setIsSubmitting(false);
     } else {
       await onSuccess();
       onClose();
     }
-    setIsSubmitting(false);
   };
 
   // 現在の設定での商品内訳を計算
@@ -201,7 +205,11 @@ export function CreateSubscriptionModal(props: CreateSubscriptionModalProps) {
         theme: 'stripe',
       },
     } : undefined}>
-      <CreateSubscriptionModalContent {...props} />
+      <CreateSubscriptionModalContent 
+        {...props} 
+        clientSecret={clientSecret}
+        setClientSecret={setClientSecret}
+      />
     </Elements>
   );
 }
