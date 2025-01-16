@@ -38,19 +38,32 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    log("アプリケーションを起動中...");
     const server = registerRoutes(app);
 
+    // エラーハンドリングミドルウェアを設定
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error('Error:', err);
+      console.error('エラー詳細:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        code: err.code,
+        statusCode: err.statusCode,
+      });
+
       const status = err.status || err.statusCode || 500;
       const message = err.message || "予期せぬエラーが発生しました";
 
-      res.status(status).json({ message });
+      if (!res.headersSent) {
+        res.status(status).json({ message });
+      }
     });
 
     if (app.get("env") === "development") {
+      log("開発モードでViteを設定中...");
       await setupVite(app, server);
     } else {
+      log("本番モードで静的ファイルを設定中...");
       serveStatic(app);
     }
 
