@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import {
   CreditCard, Calendar, Package, ArrowLeft,
-  RefreshCw, Loader2, Settings, History
+  RefreshCw, Loader2, Settings
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -426,26 +426,15 @@ export default function SubscriptionDetailPage() {
                       )}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
-                      className="gap-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      変更
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocation("/payment-history")}
-                      className="gap-2"
-                    >
-                      <History className="h-4 w-4" />
-                      購入履歴
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLocation(`/billing/subscription/${subscription.id}`)}
+                    className="gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    変更
+                  </Button>
                 </div>
               </div>
 

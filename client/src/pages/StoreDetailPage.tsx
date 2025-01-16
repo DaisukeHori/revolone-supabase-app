@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Store, CreditCard, Calendar, Package, ArrowLeft, Clock,
+  Store, CreditCard, Calendar, Package, ArrowLeft,
   Receipt, History, Settings, RefreshCw, Building2,
   CheckCircle, Ban, ExternalLink, Loader2, Pencil
 } from "lucide-react";
@@ -16,21 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
 import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
-
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-};
 
 type StripeCustomerData = {
   customer: {
@@ -159,6 +144,21 @@ function formatAddress(address: {
 
   return parts.join(' ') || '未設定';
 }
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 export default function StoreDetailPage() {
   const [, setLocation] = useLocation();
@@ -309,6 +309,15 @@ export default function StoreDetailPage() {
                 >
                   <Pencil className="h-4 w-4" />
                   編集
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLocation(`/payment-history/${customer.id}`)}
+                  className="gap-2"
+                >
+                  <History className="h-4 w-4" />
+                  購入履歴
                 </Button>
               </div>
             </CardHeader>
