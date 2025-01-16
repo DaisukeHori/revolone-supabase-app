@@ -41,9 +41,10 @@ export async function getRevonizerProductType(subscriptionItemId: string): Promi
 
 // 台数に応じた各商品の必要数量を計算する関数
 export function calculateRevonizerQuantities(totalQuantity: number): Record<RevonizerPriceId, number> {
+  console.log('Calculating quantities for total:', totalQuantity);
+
   // 入力値の検証（最小1台）
   const validQuantity = Math.max(1, totalQuantity);
-  console.log('Calculating quantities for total:', validQuantity);
 
   // 初期化：すべての商品の数量を0に設定
   const quantities: Record<RevonizerPriceId, number> = {
@@ -55,17 +56,13 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<Revo
   // 基本ライセンス（1台目）は常に1台
   quantities[REVONIZER_PRODUCTS.FIRST_UNIT.priceId] = 1;
 
-  // 2台以上の場合の処理
+  // 2台目以上の処理
   if (validQuantity > 1) {
     // 2-4台目の処理
-    // 2台目から4台目までは、最大3台まで
-    const additionalUnitsUpToFour = Math.min(validQuantity - 1, 3);
-    if (additionalUnitsUpToFour > 0) {
-      quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = additionalUnitsUpToFour;
-    }
+    const secondToFourthQuantity = Math.min(validQuantity - 1, 3);
+    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthQuantity;
 
-    // 5台目以降の処理
-    // 4台を超える分を5台目以降として計算
+    // 5台目以降の処理（4台を超える場合のみ）
     if (validQuantity > 4) {
       quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = validQuantity - 4;
     }
@@ -101,13 +98,13 @@ export async function calculateTotalQuantityFromItems(items: Array<{
     if (productType) {
       switch (productType) {
         case 'FIRST_UNIT':
-          total += item.quantity; // 基本ライセンスの台数を加算
+          total += 1; // 基本ライセンスは常に1台
           break;
         case 'SECOND_TO_FOURTH':
-          total += item.quantity; // 2-4台目の台数を加算
+          total += item.quantity;
           break;
         case 'FIFTH_AND_MORE':
-          total += item.quantity; // 5台目以降の台数を加算
+          total += item.quantity;
           break;
       }
     }
