@@ -10,6 +10,7 @@ import StoreDetailPage from "./pages/StoreDetailPage";
 import BillingSettingsPage from "./pages/BillingSettingsPage";
 import PaymentHistoryPage from "./pages/PaymentHistoryPage";
 import SecuritySettingsPage from "./pages/SecuritySettingsPage";
+import DeviceManagementPage from "./pages/DeviceManagement";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 import { useTheme } from "./hooks/use-theme";
@@ -52,6 +53,7 @@ function App() {
       <Route path="/subscription/:id" component={SubscriptionDetailPage} />
       <Route path="/billing/subscription/:id" component={BillingSettingsPage} />
       <Route path="/payment-history/:customerId" component={PaymentHistoryPage} />
+      <Route path="/devices" component={DeviceManagementPage} />
       <Route path="/" component={HomePage} />
       <Route path="*" component={HomePage} />
     </Switch>
