@@ -177,9 +177,17 @@ export default function SubscriptionDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
 
-  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
-    queryKey: ['/api/stripe/customer'],
-    staleTime: 0,
+  const { data: stripeData, isLoading, error, refetch } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch customer data');
+      }
+      return response.json() as Promise<StripeCustomerData[]>;
+    }
   });
 
   const customerData = stripeData?.find(data =>
@@ -357,6 +365,52 @@ export default function SubscriptionDetailPage() {
     }
   };
 
+  const handleAutoRenewalToggle = async () => {
+    if (!subscription) return;
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch(`/api/stripe/subscription/${subscription.id}/auto-renewal`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: subscription.cancel_at_period_end
+          ? "自動更新を有効にしました"
+          : "次回更新時に契約は終了します",
+      });
+    } catch (error) {
+      console.error('自動更新設定の変更エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "自動更新設定の変更中にエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
+      try {
+        // await cancelSubscriptionMutation.mutateAsync(subscription.id);
+      } catch (error) {
+        console.error('サブスクリプションのキャンセルに失敗:', error);
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -393,28 +447,6 @@ export default function SubscriptionDetailPage() {
 
   const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
 
-  const handleAutoRenewalToggle = async () => {
-    try {
-      // await toggleAutoRenewalMutation.mutateAsync(subscription.id);
-    } catch (error) {
-      console.error('自動更新設定の変更に失敗:', error);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (window.confirm('本当にサブスクリプションをキャンセルしますか？')) {
-      try {
-        // await cancelSubscriptionMutation.mutateAsync(subscription.id);
-      } catch (error) {
-        console.error('サブスクリプションのキャンセルに失敗:', error);
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0 }
-  };
 
   return (
     <AppLayout>
