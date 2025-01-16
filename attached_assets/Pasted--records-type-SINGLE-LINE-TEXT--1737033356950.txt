@@ -1,0 +1,125 @@
+{
+    "records": [
+        {
+            "属性": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": ""
+            },
+            "レコード番号": {
+                "type": "RECORD_NUMBER",
+                "value": "172"
+            },
+            "更新者": {
+                "type": "MODIFIER",
+                "value": {
+                    "code": "Administrator",
+                    "name": "Administrator"
+                }
+            },
+            "町名番地": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "高師浜2-10-18"
+            },
+            "送り先サロン名": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "RETROground"
+            },
+            "市区町村": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "高石市"
+            },
+            "メールアドレス": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "retro82.ground@au.com"
+            },
+            "隈部入出荷実行日付": {
+                "type": "DATE",
+                "value": "2025-01-16"
+            },
+            "入出荷": {
+                "type": "DROP_DOWN",
+                "value": "出荷"
+            },
+            "Stripe_CustomerID": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "cus_RaycWRbpjufKa3"
+            },
+            "ヤマトステータス": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": ""
+            },
+            "電話番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "0722668622"
+            },
+            "マンション・建物名・部屋番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "RETROground藪谷由香"
+            },
+            "代理店コード": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "001156"
+            },
+            "Stripe_checkout_session_ID": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "cs_live_b1b4DpHn7i45RwtoFC4Ok6sz9tlao1RyDBYji0cGrGTVYmkQBRhXVgMCai"
+            },
+            "作成者": {
+                "type": "CREATOR",
+                "value": {
+                    "code": "Administrator",
+                    "name": "Administrator"
+                }
+            },
+            "郵便番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "592-0004"
+            },
+            "ステータス日時": {
+                "type": "DATETIME",
+                "value": ""
+            },
+            "$revision": {
+                "type": "__REVISION__",
+                "value": "1"
+            },
+            "到着したら0未着なら1": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": ""
+            },
+            "更新日時": {
+                "type": "UPDATED_TIME",
+                "value": "2025-01-16T06:36:00Z"
+            },
+            "レボナイザー引き当て製造番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "2311010183"
+            },
+            "都道府県": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "大阪府"
+            },
+            "数値": {
+                "type": "NUMBER",
+                "value": ""
+            },
+            "送り状伝票番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "392209300943"
+            },
+            "Stripe_SubscriptionID": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "sub_1QhmeuAPdno01lSPllj1UHPl"
+            },
+            "作成日時": {
+                "type": "CREATED_TIME",
+                "value": "2025-01-16T06:36:00Z"
+            },
+            "$id": {
+                "type": "__ID__",
+                "value": "172"
+            }
+        }
+    ],
+    "totalCount": null
+}

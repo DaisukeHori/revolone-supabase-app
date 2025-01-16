@@ -1,0 +1,395 @@
+左ペインにレボナイザーという項目を作ってください。これは楕円の柱型の美容機器です
+
+これはサブスクリプションで契約しているレボナイザーの一覧です。
+サブスクリプションのセクションに入ると店舗ごとになりますが、レボナイザーも店舗ごとになります。
+データは店舗の部分まではStripe、でその店舗に何のレボナイザーがあるのか、そのステータスや修理もできるようにするのですがそれはKintoneから取得します。
+Kintoneにメールアドレスや関連するStirp情報が入っています。
+
+KintoneのAPIトークンはXPT17lEFSp9oVbHjjtEt0yXX3TsETX0NslhBcq6xです。
+
+外部のプログラムからREST APIを呼び出す際に使用する認証情報（APIトークン）を管理します。
+この画面でAPIトークンを生成し、REST APIのリクエストヘッダに付与することで、REST APIを実行することができます。
+
+
+
+下記はReactで同じようなレコードの配置になっているもののサンプルです。
+参考にしてください
+
+1. **APIを叩いてJSONデータを取得する**  
+2. **取得したJSONデータを「いま借りっぱなし」(出荷中)のレコードだけにフィルタする**  
+3. **(必要であれば)貸出先IDごとにグルーピングし、現在借りている商品を取り出す**  
+
+ここでは、  
+- 「出荷か返却か」カラムについては `status` などのキー名  
+- 「貸出先ID」カラムについては `customerId` などのキー名  
+- 「商品ID」「商品名」などのカラムについては `productId`、`productName`  
+という仮のキー名を使って例示します。  
+（実際にはAPIから返ってくるJSONの構造に合わせてください）  
+
+---
+
+## APIからのJSONデータの想定例
+
+```jsonc
+[
+  {
+    "productId": "A001",
+    "productName": "三脚",
+    "date": "2025-01-10",
+    "status": "出荷",         // or "返却"など
+    "customerId": "C001"
+  },
+  {
+    "productId": "A002",
+    "productName": "照明機材",
+    "date": "2025-01-10",
+    "status": "返却",  
+    "customerId": "C001"
+  },
+  {
+    "productId": "A001",
+    "productName": "三脚",
+    "date": "2025-01-12",
+    "status": "返却",
+    "customerId": "C001"
+  },
+  {
+    "productId": "B101",
+    "productName": "カメラレンズ",
+    "date": "2025-01-12",
+    "status": "出荷",
+    "customerId": "C002"
+  }
+]
+```
+
+- 例えば上記のようなログがあったとして、「商品A001」は2025-01-10に出荷され、2025-01-12に返却されています。  
+- 一方、「商品A002」は2025-01-10に出荷され、その日のうちに返却されています。  
+- 「商品B101」はC002に出荷されていて、まだ返却されていません(2025-01-12時点)。  
+
+---
+
+## いま借りている(まだ返却が完了していない)判定の方法
+
+最もシンプルな考え方としては下記です。
+
+- **同一の `productId` において最も新しいステータスが `出荷` ならば、まだ借りている状態**  
+- 同一商品の履歴が複数あったとき、最新のもの(= `date` がもっとも新しい) だけ見れば、その商品が今出荷中か返却済みかわかる  
+
+### ロジックの概要
+
+1. **商品IDごとにレコードをグルーピング**  
+2. **日付が最新のレコードを1件だけ取り出す**  
+3. そのレコードの `status` が `出荷` であれば「まだ借りている」状態である  
+
+ここでは**最終的に「貸出先ID」と「いま借りている商品」**の一覧を取得したいというケースを想定し、  
+- 貸出先IDでさらにグルーピングして、  
+- いま借りっぱなしの商品をまとめる  
+というイメージで実装してみます。  
+
+---
+
+## 実装例 (TypeScript + React)
+
+以下の例では、Reactのコンポーネントとして実装しています。  
+- `useEffect` フック内でAPIを叩く  
+- 取得したデータを整形してステートに保持  
+- 表示する  
+
+### ポイント
+
+- `fetch` などで取得した生データを一度 `console.log` などで確認しながら、キーの名前を合わせること  
+- フィルタ条件(「出荷か返却か」が `出荷` かどうか) を適宜変更する  
+
+```tsx
+import React, { useEffect, useState } from "react";
+
+// JSONが1件分持つ型
+type RecordType = {
+  productId: string;
+  productName: string;
+  date: string;      // "2025-01-12" など。比較するときは Date型に変換してもOK
+  status: string;    // "出荷" or "返却"
+  customerId: string;
+};
+
+type GroupedDataType = {
+  customerId: string;
+  borrowedProducts: {
+    productId: string;
+    productName: string;
+  }[];
+};
+
+const BorrowedList: React.FC = () => {
+  const [records, setRecords] = useState<RecordType[]>([]);
+  const [groupedData, setGroupedData] = useState<GroupedDataType[]>([]);
+
+  useEffect(() => {
+    // API呼び出し
+    // 例: fetch("https://example.com/api/records")
+    //     .then((response) => response.json())
+    //     .then((data) => { ... という流れ
+    const fetchData = async () => {
+      try {
+        const response = await fetch("https://example.com/api/records");
+        const data: RecordType[] = await response.json();
+        setRecords(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (records.length === 0) return;
+
+    // 1. 商品IDごとにグルーピング
+    // 例: { A001: [ {...}, {...}, ...], A002: [...], ... }
+    const productGroups: { [productId: string]: RecordType[] } = records.reduce(
+      (groups, record) => {
+        if (!groups[record.productId]) {
+          groups[record.productId] = [];
+        }
+        groups[record.productId].push(record);
+        return groups;
+      },
+      {} as { [productId: string]: RecordType[] }
+    );
+
+    // 2. 商品IDごとの最新レコードを取得し、"出荷"ならまだ借りっぱなしと判定
+    //    ここでは「貸出先ID」も考慮したいので、最新レコードを1件拾ってきておく
+    const latestRecords = Object.values(productGroups).map((productLog) => {
+      // productLog の中で、もっとも新しい日付のレコードを探す
+      // date が文字列なら Date型に変換してソートすると良い
+      const sortedByDateDesc = productLog.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      return sortedByDateDesc[0]; // 一番日付が新しいレコード
+    });
+
+    // 3. "出荷"のものだけがまだ借りっぱなし
+    const borrowedRecords = latestRecords.filter(
+      (record) => record.status === "出荷"
+    );
+
+    // 4. 貸出先IDごとにグルーピング
+    // { C001: [ { productId, productName, ... }, {...} ], C002: [...] }
+    const groupedByCustomer = borrowedRecords.reduce(
+      (acc, record) => {
+        if (!acc[record.customerId]) {
+          acc[record.customerId] = [];
+        }
+        acc[record.customerId].push({
+          productId: record.productId,
+          productName: record.productName,
+        });
+        return acc;
+      },
+      {} as { [customerId: string]: { productId: string; productName: string }[] }
+    );
+
+    // 5. 表示用の配列に整形
+    // groupedData: { customerId, borrowedProducts: [...] }[]
+    const groupedDataArray = Object.entries(groupedByCustomer).map(
+      ([customerId, products]) => {
+        return {
+          customerId,
+          borrowedProducts: products,
+        };
+      }
+    );
+
+    setGroupedData(groupedDataArray);
+  }, [records]);
+
+  return (
+    <div>
+      <h1>いま借りている商品一覧</h1>
+      {groupedData.map((group) => (
+        <div key={group.customerId}>
+          <h2>貸出先ID: {group.customerId}</h2>
+          <ul>
+            {group.borrowedProducts.map((prod) => (
+              <li key={prod.productId}>
+                {prod.productId}: {prod.productName}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default BorrowedList;
+```
+
+---
+
+## 処理の流れまとめ
+
+1. **全レコードを取得**  
+2. **`productId` ごとに履歴をまとめる**  
+3. **日付の新しい順にソートして、先頭(一番新しい)レコードのみ取り出す**  
+4. **そのレコードが `status = "出荷"` なら「まだ借りている」とみなす**  
+5. **そのレコードの `customerId` をキーにグルーピングし、最終的に画面表示**  
+
+これで、**「今まさに貸し出されており、貸出先IDがどれか分かる」一覧** を取得できます。
+
+---
+
+## もしシンプルに「貸出先IDごと」にだけ絞り込みたい場合
+
+例えば、**「ある貸出先IDだけのいま持っている商品一覧を知りたい」** というケースがあれば、  
+上記のステップを踏んだあとにその `customerId` でさらにフィルタしても構いませんし、  
+最初から `customerId` で絞り込んでから同様のロジックを行ってもOKです。
+
+```ts
+// ある貸出先ID (例: C001) だけ
+const targetCustomerId = "C001";
+const recordsForCustomer = records.filter(
+  (record) => record.customerId === targetCustomerId
+);
+
+// あとは同じように処理して「今借りている商品」を特定する
+```
+
+---
+
+## まとめ
+
+- **ポイントは「商品単位で最新のログを見る」「そのステータスが出荷状態であるかどうか」で、いま貸出中かどうか判定できる** というところです。  
+- React/TypeScriptで実装する場合は、API呼び出し → state への格納 → useEffect等でフィルタ → 画面表示、という流れにすればOKです。  
+
+*本当のJSONはこれです
+
+{
+    "records": [
+        {
+            "属性": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": ""
+            },
+            "レコード番号": {
+                "type": "RECORD_NUMBER",
+                "value": "172"
+            },
+            "更新者": {
+                "type": "MODIFIER",
+                "value": {
+                    "code": "Administrator",
+                    "name": "Administrator"
+                }
+            },
+            "町名番地": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "高師浜2-10-18"
+            },
+            "送り先サロン名": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "RETROground"
+            },
+            "市区町村": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "高石市"
+            },
+            "メールアドレス": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "retro82.ground@au.com"
+            },
+            "隈部入出荷実行日付": {
+                "type": "DATE",
+                "value": "2025-01-16"
+            },
+            "入出荷": {
+                "type": "DROP_DOWN",
+                "value": "出荷"
+            },
+            "Stripe_CustomerID": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "cus_RaycWRbpjufKa3"
+            },
+            "ヤマトステータス": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": ""
+            },
+            "電話番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "0722668622"
+            },
+            "マンション・建物名・部屋番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "RETROground藪谷由香"
+            },
+            "代理店コード": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "001156"
+            },
+            "Stripe_checkout_session_ID": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "cs_live_b1b4DpHn7i45RwtoFC4Ok6sz9tlao1RyDBYji0cGrGTVYmkQBRhXVgMCai"
+            },
+            "作成者": {
+                "type": "CREATOR",
+                "value": {
+                    "code": "Administrator",
+                    "name": "Administrator"
+                }
+            },
+            "郵便番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "592-0004"
+            },
+            "ステータス日時": {
+                "type": "DATETIME",
+                "value": ""
+            },
+            "$revision": {
+                "type": "__REVISION__",
+                "value": "1"
+            },
+            "到着したら0未着なら1": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": ""
+            },
+            "更新日時": {
+                "type": "UPDATED_TIME",
+                "value": "2025-01-16T06:36:00Z"
+            },
+            "レボナイザー引き当て製造番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "2311010183"
+            },
+            "都道府県": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "大阪府"
+            },
+            "数値": {
+                "type": "NUMBER",
+                "value": ""
+            },
+            "送り状伝票番号": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "392209300943"
+            },
+            "Stripe_SubscriptionID": {
+                "type": "SINGLE_LINE_TEXT",
+                "value": "sub_1QhmeuAPdno01lSPllj1UHPl"
+            },
+            "作成日時": {
+                "type": "CREATED_TIME",
+                "value": "2025-01-16T06:36:00Z"
+            },
+            "$id": {
+                "type": "__ID__",
+                "value": "172"
+            }
+        }
+    ],
+    "totalCount": null
+}
+
+以上を参考に実装してみてください。
