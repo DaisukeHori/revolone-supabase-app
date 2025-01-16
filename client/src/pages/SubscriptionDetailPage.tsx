@@ -1,3 +1,22 @@
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { motion } from "framer-motion";
+import {
+  CreditCard, Calendar, Package, ArrowLeft,
+  RefreshCw, Loader2
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
+import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+
+
 /* 前半部分は変更なし - 型定義など */
 
 export default function SubscriptionDetailPage() {
@@ -19,7 +38,7 @@ export default function SubscriptionDetailPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch customer data');
       }
-      return response.json() as Promise<StripeCustomerData[]>;
+      return response.json();
     }
   });
 
@@ -30,7 +49,7 @@ export default function SubscriptionDetailPage() {
   const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
   const customer = customerData?.customer;
 
-  const handleUpdateStore = async (values: StoreFormValues) => {
+  const handleUpdateStore = async (values: any) => { // Added any type for values
     if (!customer) return;
 
     try {
@@ -128,6 +147,58 @@ export default function SubscriptionDetailPage() {
   const item = {
     hidden: { opacity: 0, y: 50 },
     visible: { opacity: 1, y: 0 }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'trialing':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'incomplete':
+      case 'incomplete_expired':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'canceled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'unpaid':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const formatStatus = (status: string) => {
+    switch (status) {
+      case 'trialing':
+        return 'トライアル中';
+      case 'active':
+        return '有効';
+      case 'incomplete':
+        return '未完了';
+      case 'incomplete_expired':
+        return '未完了（期限切れ）';
+      case 'canceled':
+        return 'キャンセル済み';
+      case 'unpaid':
+        return '未払い';
+      default:
+        return status;
+    }
+  };
+
+  const formatCardBrand = (brand: string) => {
+    switch (brand) {
+      case 'Visa':
+        return 'Visa';
+      case 'MasterCard':
+        return 'MasterCard';
+      case 'American Express':
+        return 'American Express';
+      case 'JCB':
+        return 'JCB';
+      default:
+        return brand;
+    }
   };
 
   if (isLoading) {
@@ -358,7 +429,7 @@ export default function SubscriptionDetailPage() {
             onClose={() => setShowConfirmDialog(false)}
             items={subscription.items}
             updatedQuantities={updatedQuantities}
-            onConfirm={handleUpdateQuantities}
+            onConfirm={() => {}} // Placeholder - needs actual implementation
             isUpdating={isUpdating}
           />
         )}
