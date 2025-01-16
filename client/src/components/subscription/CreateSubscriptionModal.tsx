@@ -14,6 +14,7 @@ import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 import { useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { useQuery } from '@tanstack/react-query'; // Assuming react-query is used
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -24,22 +25,25 @@ interface CreateSubscriptionModalProps {
   onSuccess: () => Promise<void>;
 }
 
-function CreateSubscriptionModalContent({
-  isOpen,
+// 数量選択フォームコンポーネント
+function QuantityFormContent({
   onClose,
   customerId,
-  onSuccess,
-  clientSecret,
   setClientSecret,
-}: CreateSubscriptionModalProps & {
-  clientSecret: string | null;
+  isSubmitting,
+  setIsSubmitting,
+  error,
+  setError,
+}: {
+  onClose: () => void;
+  customerId: string;
   setClientSecret: (secret: string | null) => void;
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
+  error: string | null;
+  setError: (error: string | null) => void;
 }) {
   const [quantity, setQuantity] = useState<number>(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const stripe = clientSecret ? useStripe() : null;
-  const elements = clientSecret ? useElements() : null;
 
   const handleSubmit = async () => {
     try {
@@ -79,9 +83,87 @@ function CreateSubscriptionModalContent({
     }
   };
 
+  // 現在の設定での商品内訳を計算
+  const quantities = calculateRevonizerQuantities(quantity);
+  const nonZeroQuantities = Object.entries(quantities).filter(([_, qty]) => qty > 0);
+
+  return (
+    <>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">利用台数</label>
+        <Input
+          type="number"
+          min={1}
+          value={quantity}
+          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+          className="w-full"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">内訳</h3>
+        <div className="space-y-2 pl-4 text-sm text-muted-foreground">
+          {nonZeroQuantities.map(([priceId, qty]) => {
+            const product = Object.values(REVONIZER_PRODUCTS).find(p => p.priceId === priceId);
+            return product && (
+              <p key={priceId}>{product.name}: {qty}台</p>
+            );
+          })}
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-500">{error}</p>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          キャンセル
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+          支払い方法を設定
+        </Button>
+      </div>
+    </>
+  );
+}
+
+// 支払いフォームコンポーネント
+function PaymentFormContent({
+  onClose,
+  onSuccess,
+  isSubmitting,
+  setIsSubmitting,
+  error,
+  setError,
+  customer,
+}: {
+  onClose: () => void;
+  onSuccess: () => Promise<void>;
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
+  error: string | null;
+  setError: (error: string | null) => void;
+  customer: {
+    name: string | null;
+    email: string;
+  };
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements || !clientSecret) return;
+    if (!stripe || !elements) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -102,9 +184,58 @@ function CreateSubscriptionModalContent({
     }
   };
 
-  // 現在の設定での商品内訳を計算
-  const quantities = calculateRevonizerQuantities(quantity);
-  const nonZeroQuantities = Object.entries(quantities).filter(([_, qty]) => qty > 0);
+  return (
+    <form onSubmit={handlePaymentSubmit}>
+      <PaymentElement options={{
+        paymentMethodOrder: ['card'],
+        defaultValues: {
+          billingDetails: {
+            name: customer.name || customer.email,
+            email: customer.email,
+          }
+        },
+        wallets: {
+          applePay: 'auto',
+          googlePay: 'auto',
+        }
+      }} />
+      {error && (
+        <p className="text-sm text-red-500 mt-4">{error}</p>
+      )}
+      <div className="flex justify-end gap-2 mt-6">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          キャンセル
+        </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting || !stripe || !elements}
+        >
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+          支払いを確定
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function CreateSubscriptionModal({
+  isOpen,
+  onClose,
+  customerId,
+  onSuccess,
+}: CreateSubscriptionModalProps) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { data: customerData, isLoading } = useQuery<any>(['/api/stripe/customer']);
+  const customer = customerData?.find((data: any) => data.customer.id === customerId)?.customer;
+
+  if (isLoading) return <p>Loading customer data...</p>; // Handle loading state
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -118,115 +249,35 @@ function CreateSubscriptionModalContent({
 
         <div className="space-y-6 py-4">
           {!clientSecret ? (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">利用台数</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">内訳</h3>
-                <div className="space-y-2 pl-4 text-sm text-muted-foreground">
-                  {nonZeroQuantities.map(([priceId, qty]) => {
-                    const product = Object.values(REVONIZER_PRODUCTS).find(p => p.priceId === priceId);
-                    return product && (
-                      <p key={priceId}>{product.name}: {qty}台</p>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-sm text-red-500">{error}</p>
-              )}
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  支払い方法を設定
-                </Button>
-              </div>
-            </>
-          ) : (
-            <form onSubmit={handlePaymentSubmit}>
-              <PaymentElement options={{
-                paymentMethodOrder: ['card'],
-                defaultValues: {
-                  billingDetails: {
-                    name: '堀大輔',
-                  }
-                },
-                wallets: {
-                  applePay: 'auto',
-                  googlePay: 'auto',
-                }
-              }} />
-              {error && (
-                <p className="text-sm text-red-500 mt-4">{error}</p>
-              )}
-              <div className="flex justify-end gap-2 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !stripe || !elements}
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  支払いを確定
-                </Button>
-              </div>
-            </form>
-          )}
+            <QuantityFormContent
+              onClose={onClose}
+              customerId={customerId}
+              setClientSecret={setClientSecret}
+              isSubmitting={isSubmitting}
+              setIsSubmitting={setIsSubmitting}
+              error={error}
+              setError={setError}
+            />
+          ) : customer ? (
+            <Elements stripe={stripePromise} options={{
+              clientSecret,
+              appearance: {
+                theme: 'stripe',
+              },
+            }}>
+              <PaymentFormContent
+                onClose={onClose}
+                onSuccess={onSuccess}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
+                error={error}
+                setError={setError}
+                customer={customer}
+              />
+            </Elements>
+          ) : <p>Customer data not found.</p>} {/* Handle case where customer data is not found */}
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-export function CreateSubscriptionModal(props: CreateSubscriptionModalProps) {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-
-  return clientSecret ? (
-    <Elements stripe={stripePromise} options={{
-      clientSecret,
-      appearance: {
-        theme: 'stripe',
-      },
-    }}>
-      <CreateSubscriptionModalContent 
-        {...props} 
-        clientSecret={clientSecret}
-        setClientSecret={setClientSecret}
-      />
-    </Elements>
-  ) : (
-    <CreateSubscriptionModalContent 
-      {...props} 
-      clientSecret={clientSecret}
-      setClientSecret={setClientSecret}
-    />
   );
 }
