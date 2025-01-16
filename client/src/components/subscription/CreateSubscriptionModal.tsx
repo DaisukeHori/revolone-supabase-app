@@ -24,7 +24,7 @@ interface CreateSubscriptionModalProps {
   onSuccess: () => Promise<void>;
 }
 
-export function CreateSubscriptionModalContent({
+function CreateSubscriptionModalContent({
   isOpen,
   onClose,
   customerId,
@@ -192,8 +192,15 @@ export function CreateSubscriptionModalContent({
 }
 
 export function CreateSubscriptionModal(props: CreateSubscriptionModalProps) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={clientSecret ? {
+      clientSecret,
+      appearance: {
+        theme: 'stripe',
+      },
+    } : undefined}>
       <CreateSubscriptionModalContent {...props} />
     </Elements>
   );
