@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import {
   CreditCard, Calendar, Package, ArrowLeft,
-  RefreshCw, Loader2
+  RefreshCw, Loader2, Settings, History
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
