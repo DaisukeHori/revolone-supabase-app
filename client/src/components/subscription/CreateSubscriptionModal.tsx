@@ -198,18 +198,24 @@ function CreateSubscriptionModalContent({
 export function CreateSubscriptionModal(props: CreateSubscriptionModalProps) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-  return (
-    <Elements stripe={stripePromise} options={clientSecret ? {
+  return clientSecret ? (
+    <Elements stripe={stripePromise} options={{
       clientSecret,
       appearance: {
         theme: 'stripe',
       },
-    } : undefined}>
+    }}>
       <CreateSubscriptionModalContent 
         {...props} 
         clientSecret={clientSecret}
         setClientSecret={setClientSecret}
       />
     </Elements>
+  ) : (
+    <CreateSubscriptionModalContent 
+      {...props} 
+      clientSecret={clientSecret}
+      setClientSecret={setClientSecret}
+    />
   );
 }
