@@ -274,8 +274,9 @@ export default function SubscriptionDetailPage() {
 
       // 更新用のアイテムリストを作成
       const updates = [];
+      const itemsToDelete = [];
 
-      // 既存のアイテムを更新
+      // 既存のアイテムを処理
       for (const item of subscription.items) {
         const priceId = subscriptionItemPriceMap[item.subscription_item_id];
         let quantity = quantities[item.subscription_item_id] || 0;
@@ -285,10 +286,15 @@ export default function SubscriptionDetailPage() {
           quantity = revonizerQuantities[priceId as keyof typeof revonizerQuantities];
         }
 
-        updates.push({
-          subscription_item_id: item.subscription_item_id,
-          quantity: quantity,
-        });
+        // 数量が0の場合は削除リストに追加
+        if (quantity === 0) {
+          itemsToDelete.push(item.subscription_item_id);
+        } else {
+          updates.push({
+            subscription_item_id: item.subscription_item_id,
+            quantity: quantity,
+          });
+        }
       }
 
       // 5台目以降の商品が必要で、まだ存在しない場合は新規作成
@@ -304,7 +310,21 @@ export default function SubscriptionDetailPage() {
       }
 
       console.log('Final updates to send:', updates);
+      console.log('Items to delete:', itemsToDelete);
 
+      // 数量が0のアイテムを削除
+      for (const itemId of itemsToDelete) {
+        try {
+          await fetch(`/api/stripe/subscription-item/${itemId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+        } catch (error) {
+          console.error('Error deleting subscription item:', error);
+        }
+      }
+
+      // 残りのアイテムを更新
       const response = await fetch(`/api/stripe/subscription/${subscription.id}/quantities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

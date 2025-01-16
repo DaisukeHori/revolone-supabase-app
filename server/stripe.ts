@@ -347,6 +347,38 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
       res.status(500).json({ message: "数量の更新中にエラーが発生しました" });
     }
   });
+
+  // サブスクリプションアイテムの削除エンドポイントを追加
+  app.delete("/api/stripe/subscription-item/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    const subscriptionItemId = req.params.id;
+
+    try {
+      // アクセス権限の確認
+      const item = await stripe.subscriptionItems.retrieve(subscriptionItemId);
+      const subscription = await stripe.subscriptions.retrieve(item.subscription as string);
+      const customersData = await getCustomersByEmail(req.user.email);
+
+      if (!customersData?.some(data =>
+        data.subscriptions.some(sub => sub.id === subscription.id)
+      )) {
+        return res.status(403).json({ message: "このサブスクリプションアイテムにアクセスする権限がありません" });
+      }
+
+      // サブスクリプションアイテムを削除
+      await stripe.subscriptionItems.del(subscriptionItemId);
+      console.log('[Stripe] Successfully deleted subscription item:', subscriptionItemId);
+
+      res.json({ message: "サブスクリプションアイテムを削除しました" });
+    } catch (error) {
+      console.error('[Stripe] Error deleting subscription item:', error);
+      res.status(500).json({ message: "サブスクリプションアイテムの削除中にエラーが発生しました" });
+    }
+  });
+
 }
 
 // subscription_item_idからpriceIdを取得する関数を追加
