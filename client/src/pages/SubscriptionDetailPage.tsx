@@ -279,11 +279,14 @@ export default function SubscriptionDetailPage() {
       // 既存のアイテムを処理
       for (const item of subscription.items) {
         const priceId = subscriptionItemPriceMap[item.subscription_item_id];
-        let quantity = quantities[item.subscription_item_id] || 0;
+        let quantity = 0;
 
         // レボナイザー商品の場合は自動計算した数量を使用
         if (priceId && revonizerQuantities[priceId as keyof typeof revonizerQuantities] !== undefined) {
           quantity = revonizerQuantities[priceId as keyof typeof revonizerQuantities];
+        } else {
+          // レボナイザー以外の商品は指定された数量を使用
+          quantity = quantities[item.subscription_item_id] || 0;
         }
 
         // 数量が0の場合は削除リストに追加
@@ -297,17 +300,18 @@ export default function SubscriptionDetailPage() {
         }
       }
 
-      // 5台目以降の商品が必要で、まだ存在しない場合は新規作成
-      const hasFifthAndMore = subscription.items.some(item =>
-        Object.values(subscriptionItemPriceMap).includes(REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId)
-      );
+      // 存在しないレボナイザー商品の追加が必要かチェック
+      const existingPriceIds = new Set(Object.values(subscriptionItemPriceMap));
 
-      if (!hasFifthAndMore && totalQuantity > 4) {
-        updates.push({
-          price: REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
-          quantity: revonizerQuantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId],
-        });
-      }
+      // 必要な商品のみを追加
+      Object.entries(revonizerQuantities).forEach(([priceId, quantity]) => {
+        if (quantity > 0 && !existingPriceIds.has(priceId)) {
+          updates.push({
+            price: priceId,
+            quantity: quantity,
+          });
+        }
+      });
 
       console.log('Final updates to send:', updates);
       console.log('Items to delete:', itemsToDelete);

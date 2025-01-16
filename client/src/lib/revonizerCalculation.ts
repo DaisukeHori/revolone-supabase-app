@@ -2,8 +2,8 @@ import { REVONIZER_PRODUCTS, type RevonizerPriceId } from "@/lib/revonizerProduc
 
 const priceIdCache = new Map<string, string>();
 
-// priceIdからproduct typeを取得する関数
-async function getPriceId(subscriptionItemId: string): Promise<string | null> {
+// subscription_item_idからpriceIdを取得する関数
+export async function getPriceId(subscriptionItemId: string): Promise<string | null> {
   if (priceIdCache.has(subscriptionItemId)) {
     return priceIdCache.get(subscriptionItemId) || null;
   }
@@ -50,28 +50,44 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<Revo
   // 入力値の検証（最小1台）
   const validQuantity = Math.max(1, totalQuantity);
 
-  // 基本ライセンスは常に1台
+  // 初期化：すべての商品の数量を0に設定
   const quantities: Record<RevonizerPriceId, number> = {
-    [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 1,
+    [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 0,
     [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]: 0,
     [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
   };
 
+  // 基本ライセンス（1台目）は常に1台
+  quantities[REVONIZER_PRODUCTS.FIRST_UNIT.priceId] = 1;
+
+  // 2台目以上の処理
   if (validQuantity > 1) {
-    // 2台目から4台目までは SECOND_TO_FOURTH を使用（最大3台）
-    const remainingUnits = validQuantity - 1; // 1台目を除いた残りの台数
-    const secondToFourthCount = Math.min(remainingUnits, 3); // 最大3台まで
+    // 2-4台目の処理
+    const secondToFourthCount = Math.min(validQuantity - 1, 3);
     quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
 
-    // 5台目以降がある場合（4台を超える分）
-    if (remainingUnits > 3) {
-      // 4台（1台目 + 2-4台目の3台）を超える分
-      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = remainingUnits - 3;
+    // 5台目以降の処理（4台を超える場合のみ）
+    if (validQuantity > 4) {
+      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = validQuantity - 4;
     }
   }
 
   console.log('Calculated quantities:', quantities);
   return quantities;
+}
+
+// レボナイザー商品のみを抽出する関数
+export async function filterRevonizerItems(items: Array<{
+  subscription_item_id: string;
+  quantity: number;
+}>): Promise<typeof items> {
+  const filteredItems = [];
+  for (const item of items) {
+    if (await isRevonizerProduct(item.subscription_item_id)) {
+      filteredItems.push(item);
+    }
+  }
+  return filteredItems;
 }
 
 // 既存のサブスクリプションアイテムから合計台数を計算する関数
@@ -101,21 +117,6 @@ export async function calculateTotalQuantityFromItems(items: Array<{
   return Math.max(1, total); // 最小1台を保証
 }
 
-// レボナイザー商品のみを抽出する関数
-export async function filterRevonizerItems(items: Array<{
-  subscription_item_id: string;
-  quantity: number;
-}>): Promise<typeof items> {
-  const filteredItems = [];
-  for (const item of items) {
-    if (await isRevonizerProduct(item.subscription_item_id)) {
-      filteredItems.push(item);
-    }
-  }
-
-  return filteredItems;
-}
-
 // レボナイザー商品の定義
 export const REVONIZER_PRODUCTS = {
   FIRST_UNIT: {
@@ -140,87 +141,3 @@ export const REVONIZER_PRODUCTS = {
     maxQuantity: null,
   },
 } as const;
-
-// 既存のサブスクリプションアイテムから合計台数を計算する関数 (original function - kept for completeness, though now redundant)
-export async function calculateTotalQuantityFromItemsOld(items: Array<{
-  subscription_item_id: string;
-  quantity: number;
-}>): Promise<number> {
-  let total = 0;
-
-  for (const item of items) {
-    const productType = await getRevonizerProductType(item.subscription_item_id);
-    if (productType) {
-      total += item.quantity;
-    }
-  }
-
-  return Math.max(1, total); // 最小1台を保証
-}
-
-
-// レボナイザー商品かどうかを判定する関数 (original function - kept for completeness, though now redundant)
-export function isRevonizerProductSync(id: string): boolean {
-  const priceIds = [
-    REVONIZER_PRODUCTS.FIRST_UNIT.priceId,
-    REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId,
-    REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
-  ];
-  return priceIds.includes(id);
-}
-
-
-// 合計台数から各商品の必要数量を計算する関数 (original function - kept for completeness, though now redundant)
-export function calculateRevonizerQuantitiesSync(totalQuantity: number): Record<string, number> {
-  if (totalQuantity <= 0) {
-    throw new Error('数量は1以上である必要があります');
-  }
-
-  // 初期化：すべての商品の数量を0に設定
-  const quantities: Record<string, number> = {
-    [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 0,
-    [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]: 0,
-    [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
-  };
-
-  // 1台目は必ずFIRST_UNITを使用
-  quantities[REVONIZER_PRODUCTS.FIRST_UNIT.priceId] = 1;
-
-  if (totalQuantity > 1) {
-    // 2-4台目はSECOND_TO_FOURTHを使用
-    const secondToFourthCount = Math.min(totalQuantity - 1, 3);
-    quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
-
-    // 5台目以降はFIFTH_AND_MOREを使用
-    if (totalQuantity > 4) {
-      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = totalQuantity - 4;
-    }
-  }
-
-  return quantities;
-}
-
-// 既存のサブスクリプションアイテムから合計台数を計算する関数 (original function - kept for completeness, though now redundant)
-export function calculateTotalQuantityFromItemsSync(items: Array<{
-  subscription_item_id: string;
-  quantity: number;
-}>): number {
-  let total = 0;
-
-  // 各レボナイザー商品の数量を合算
-  items.forEach(item => {
-    if (isRevonizerProductSync(item.subscription_item_id)) {
-      total += item.quantity;
-    }
-  });
-
-  return total;
-}
-
-// レボナイザー商品のみを抽出する関数 (original function - kept for completeness, though now redundant)
-export function filterRevonizerItemsSync(items: Array<{
-  subscription_item_id: string;
-  quantity: number;
-}>): typeof items {
-  return items.filter(item => isRevonizerProductSync(item.subscription_item_id));
-}
