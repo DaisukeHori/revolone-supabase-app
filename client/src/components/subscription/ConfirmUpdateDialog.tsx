@@ -61,7 +61,7 @@ export function ConfirmUpdateDialog({
 
       try {
         // 合計台数を計算（最小1台）
-        const validTotalQuantity = Math.max(1, Math.max(...Object.values(updatedQuantities)));
+        const validTotalQuantity = Math.max(1, updatedQuantities['total'] || 1);
         if (isMounted) {
           setTotalRevonizerQuantity(validTotalQuantity);
         }
@@ -168,24 +168,42 @@ export function ConfirmUpdateDialog({
             <h3 className="font-medium">レボナイザー利用ライセンス</h3>
             <div className="space-y-1 text-sm">
               <p>合計: {totalRevonizerQuantity}台</p>
+              <div className="pl-4 text-muted-foreground">
+                {itemsWithQuantities
+                  .filter(({ isRevonizerProduct }) => isRevonizerProduct)
+                  .map(({ item, newQuantity, quantityDiff, productType }) => (
+                    <div key={item.subscription_item_id} className="space-y-1">
+                      <p className="font-medium">{item.product.name}</p>
+                      <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
+                      <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
+                      {quantityDiff !== 0 && productType !== 'FIRST_UNIT' && (
+                        <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
+                          {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
+                        </p>
+                      )}
+                    </div>
+                  ))}
+              </div>
             </div>
           </div>
 
-          {/* 各商品の変更内容 */}
-          {itemsWithQuantities.map(({ item, newQuantity, quantityDiff, productType }) => (
-            <div key={item.subscription_item_id} className="space-y-1">
-              <h3 className="font-medium">{item.product.name}</h3>
-              <div className="space-y-1 text-sm pl-4 text-muted-foreground">
-                <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
-                <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
-                {quantityDiff !== 0 && productType !== 'FIRST_UNIT' && (
-                  <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
-                    {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
-                  </p>
-                )}
+          {/* その他の商品の変更内容 */}
+          {itemsWithQuantities
+            .filter(({ isRevonizerProduct }) => !isRevonizerProduct)
+            .map(({ item, newQuantity, quantityDiff }) => (
+              <div key={item.subscription_item_id} className="space-y-1">
+                <h3 className="font-medium">{item.product.name}</h3>
+                <div className="space-y-1 text-sm pl-4 text-muted-foreground">
+                  <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
+                  <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
+                  {quantityDiff !== 0 && (
+                    <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
+                      {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {/* 警告メッセージ（削除対象の商品がある場合のみ表示） */}
           {removedItems.length > 0 && (
