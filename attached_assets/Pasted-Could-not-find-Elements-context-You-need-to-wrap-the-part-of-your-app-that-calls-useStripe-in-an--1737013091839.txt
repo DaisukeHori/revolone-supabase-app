@@ -1,0 +1,21 @@
+Could not find Elements context; You need to wrap the part of your app that calls useStripe() in an  provider.
+Could not find Elements context; You need to wrap the part of your app that calls useStripe() in an  provider.
+The above error occurred in the <CreateSubscriptionModalContent> component:
+
+    at CreateSubscriptionModalContent (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/components/subscription/CreateSubscriptionModal.tsx:36:3)
+    at CreateSubscriptionModal (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/components/subscription/CreateSubscriptionModal.tsx:311:43)
+    at div
+    at MotionComponent (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=2a986eb0:6536:40)
+    at main
+    at div
+    at div
+    at AppLayout (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/components/layout/AppLayout.tsx:35:29)
+    at StoreDetailPage (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/StoreDetailPage.tsx:106:27)
+    at Route (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=2a986eb0:323:16)
+    at Switch (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=2a986eb0:379:17)
+    at App (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/App.tsx:36:31)
+    at QueryClientProvider (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=2a986eb0:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Could not find Elements context; You need to wrap the part of your app that calls useStripe() in an  provider.

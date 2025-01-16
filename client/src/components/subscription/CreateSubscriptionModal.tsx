@@ -38,8 +38,8 @@ function CreateSubscriptionModalContent({
   const [quantity, setQuantity] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const stripe = useStripe();
-  const elements = useElements();
+  const stripe = clientSecret ? useStripe() : null;
+  const elements = clientSecret ? useElements() : null;
 
   const handleSubmit = async () => {
     try {
