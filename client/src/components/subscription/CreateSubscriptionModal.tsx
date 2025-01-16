@@ -166,7 +166,18 @@ function CreateSubscriptionModalContent({
             </>
           ) : (
             <form onSubmit={handlePaymentSubmit}>
-              <PaymentElement />
+              <PaymentElement options={{
+                paymentMethodOrder: ['card'],
+                defaultValues: {
+                  billingDetails: {
+                    name: '堀大輔',
+                  }
+                },
+                wallets: {
+                  applePay: 'auto',
+                  googlePay: 'auto',
+                }
+              }} />
               {error && (
                 <p className="text-sm text-red-500 mt-4">{error}</p>
               )}

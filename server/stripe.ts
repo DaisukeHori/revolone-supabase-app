@@ -39,6 +39,16 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
       console.log('[Stripe] Creating subscription for customer:', customerId);
       console.log('[Stripe] Items:', items);
 
+      // 既存の支払い方法を取得
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+      });
+
+      // デフォルトの支払い方法を取得
+      const customer = await stripe.customers.retrieve(customerId);
+      const defaultPaymentMethod = typeof customer === 'object' && customer.invoice_settings?.default_payment_method;
+
       // サブスクリプションを作成
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
@@ -52,11 +62,14 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
           save_default_payment_method: 'on_subscription',
         },
         expand: ['latest_invoice.payment_intent'],
+        default_payment_method: defaultPaymentMethod || undefined,
       });
 
       res.json({
         subscriptionId: subscription.id,
         clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        paymentMethods: paymentMethods.data,
+        defaultPaymentMethod,
       });
     } catch (error) {
       console.error('[Stripe] サブスクリプション作成エラー:', error);
