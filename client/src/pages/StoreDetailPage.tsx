@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Store, CreditCard, Calendar, Package, ArrowLeft, Clock,
   Receipt, History, Settings, RefreshCw, Building2,
@@ -14,7 +14,6 @@ import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
-import { Switch } from "@/components/ui/switch";
 import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 
@@ -164,63 +163,14 @@ function formatAddress(address: {
 export default function StoreDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const customerId = window.location.pathname.split("/").pop();
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
 
-  const { data: stripeData, isLoading, error, refetch } = useQuery({
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
-    queryFn: async () => {
-      const response = await fetch('/api/stripe/customer', {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch customer data');
-      }
-      return response.json();
-    }
+    staleTime: 0,
   });
-
-  const updateAutoRenewalMutation = useMutation({
-    mutationFn: async ({ subscriptionId, isEnabled }: { subscriptionId: string, isEnabled: boolean }) => {
-      const response = await fetch(`/api/stripe/subscription/${subscriptionId}/auto-renewal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isEnabled }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stripe/customer'] });
-      toast({
-        description: "自動更新設定を更新しました",
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "自動更新設定の更新中にエラーが発生しました",
-      });
-    },
-  });
-
-  const handleAutoRenewalToggle = async (subscriptionId: string, currentValue: boolean) => {
-    try {
-      await updateAutoRenewalMutation.mutateAsync({
-        subscriptionId,
-        isEnabled: currentValue,
-      });
-    } catch (error) {
-      console.error('自動更新設定の更新エラー:', error);
-    }
-  };
 
   const customerData = stripeData?.find(data => data.customer.id === customerId);
   const customer = customerData?.customer;
@@ -434,18 +384,6 @@ export default function StoreDetailPage() {
                           >
                             {formatStatus(subscription.status)}
                           </Badge>
-                          {subscription.status === 'active' && (
-                            <div className="flex items-center gap-2 ml-4">
-                              <span className="text-sm text-muted-foreground">自動更新</span>
-                              <Switch
-                                checked={!subscription.cancel_at_period_end}
-                                onCheckedChange={(checked) => {
-                                  handleAutoRenewalToggle(subscription.id, checked);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
