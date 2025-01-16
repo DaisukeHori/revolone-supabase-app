@@ -58,13 +58,15 @@ export function calculateRevonizerQuantities(totalQuantity: number): Record<Revo
   };
 
   if (validQuantity > 1) {
-    // 2-4台目の数量を計算（最大3台）
-    const secondToFourthCount = Math.min(validQuantity - 1, 3);
+    // 2台目から4台目までは SECOND_TO_FOURTH を使用（最大3台）
+    const remainingUnits = validQuantity - 1; // 1台目を除いた残りの台数
+    const secondToFourthCount = Math.min(remainingUnits, 3); // 最大3台まで
     quantities[REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId] = secondToFourthCount;
 
-    // 5台目以降の数量を計算
-    if (validQuantity > 4) {
-      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = validQuantity - 4;
+    // 5台目以降がある場合（4台を超える分）
+    if (remainingUnits > 3) {
+      // 4台（1台目 + 2-4台目の3台）を超える分
+      quantities[REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId] = remainingUnits - 3;
     }
   }
 
@@ -82,7 +84,17 @@ export async function calculateTotalQuantityFromItems(items: Array<{
   for (const item of items) {
     const productType = await getRevonizerProductType(item.subscription_item_id);
     if (productType) {
-      total += item.quantity;
+      switch (productType) {
+        case 'FIRST_UNIT':
+          total += 1; // 基本ライセンスは常に1台
+          break;
+        case 'SECOND_TO_FOURTH':
+          total += item.quantity;
+          break;
+        case 'FIFTH_AND_MORE':
+          total += item.quantity;
+          break;
+      }
     }
   }
 
@@ -129,6 +141,24 @@ export const REVONIZER_PRODUCTS = {
   },
 } as const;
 
+// 既存のサブスクリプションアイテムから合計台数を計算する関数 (original function - kept for completeness, though now redundant)
+export async function calculateTotalQuantityFromItemsOld(items: Array<{
+  subscription_item_id: string;
+  quantity: number;
+}>): Promise<number> {
+  let total = 0;
+
+  for (const item of items) {
+    const productType = await getRevonizerProductType(item.subscription_item_id);
+    if (productType) {
+      total += item.quantity;
+    }
+  }
+
+  return Math.max(1, total); // 最小1台を保証
+}
+
+
 // レボナイザー商品かどうかを判定する関数 (original function - kept for completeness, though now redundant)
 export function isRevonizerProductSync(id: string): boolean {
   const priceIds = [
@@ -141,7 +171,6 @@ export function isRevonizerProductSync(id: string): boolean {
 
 
 // 合計台数から各商品の必要数量を計算する関数 (original function - kept for completeness, though now redundant)
-
 export function calculateRevonizerQuantitiesSync(totalQuantity: number): Record<string, number> {
   if (totalQuantity <= 0) {
     throw new Error('数量は1以上である必要があります');
