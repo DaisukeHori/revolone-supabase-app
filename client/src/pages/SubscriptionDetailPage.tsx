@@ -17,16 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
 import { calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
+import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { useState } from 'react';
 import { z } from "zod";
-
-// Assuming REVONIZER_PRODUCTS is defined elsewhere and accessible here.  Example:
-const REVONIZER_PRODUCTS = {
-  FIFTH_AND_MORE: { priceId: 'price_1...', name: '5台目以降' } // Replace 'price_1...' with actual price ID
-  // Add other revonizer products here if needed.
-};
-
 
 // フォームのスキーマ定義
 const storeFormSchema = z.object({
