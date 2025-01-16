@@ -232,7 +232,20 @@ export function CreateSubscriptionModal({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: customerData, isLoading } = useQuery<any>(['/api/stripe/customer']);
+
+  const { data: customerData, isLoading } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch customer data');
+      }
+      return response.json();
+    }
+  });
+
   const customer = customerData?.find((data: any) => data.customer.id === customerId)?.customer;
 
   if (isLoading) return <p>Loading customer data...</p>; // Handle loading state
