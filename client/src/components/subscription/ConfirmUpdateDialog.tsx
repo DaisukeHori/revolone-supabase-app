@@ -70,6 +70,7 @@ export function ConfirmUpdateDialog({
         const revonizerQuantities = calculateRevonizerQuantities(validTotalQuantity);
         const itemsData: ItemWithUpdatedQuantity[] = [];
 
+        // 既存のアイテムを処理
         for (const item of items) {
           const productType = await getRevonizerProductType(item.subscription_item_id);
           let newQuantity = item.quantity;
@@ -101,6 +102,32 @@ export function ConfirmUpdateDialog({
               priceId,
             });
           }
+        }
+
+        // 5台目以降の商品が存在しない場合は新規作成
+        const hasFifthAndMore = itemsData.some(item => item.productType === 'FIFTH_AND_MORE');
+        if (!hasFifthAndMore && validTotalQuantity > 4) {
+          const fifthAndMoreQuantity = validTotalQuantity - 4;
+          const dummyItem: SubscriptionItem = {
+            subscription_item_id: REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
+            amount: 8800, // 仮の金額
+            currency: 'jpy',
+            interval: 'month',
+            quantity: 0,
+            product: {
+              name: REVONIZER_PRODUCTS.FIFTH_AND_MORE.name,
+              description: null,
+            },
+          };
+
+          itemsData.push({
+            item: dummyItem,
+            newQuantity: fifthAndMoreQuantity,
+            quantityDiff: fifthAndMoreQuantity,
+            isRevonizerProduct: true,
+            productType: 'FIFTH_AND_MORE',
+            priceId: REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId,
+          });
         }
 
         if (isMounted) {
@@ -171,12 +198,16 @@ export function ConfirmUpdateDialog({
               <div className="pl-4 text-muted-foreground">
                 {itemsWithQuantities
                   .filter(({ isRevonizerProduct }) => isRevonizerProduct)
-                  .map(({ item, newQuantity, quantityDiff, productType }) => (
-                    <div key={item.subscription_item_id} className="space-y-1">
+                  .sort((a, b) => {
+                    const order = ['FIRST_UNIT', 'SECOND_TO_FOURTH', 'FIFTH_AND_MORE'];
+                    return order.indexOf(a.productType!) - order.indexOf(b.productType!);
+                  })
+                  .map(({ item, newQuantity, quantityDiff }) => (
+                    <div key={item.subscription_item_id} className="space-y-1 mt-2">
                       <p className="font-medium">{item.product.name}</p>
                       <p>変更前: {item.quantity}個（{calculatePrice(item, item.quantity)}）</p>
                       <p>変更後: {newQuantity}個（{calculatePrice(item, newQuantity)}）</p>
-                      {quantityDiff !== 0 && productType !== 'FIRST_UNIT' && (
+                      {quantityDiff !== 0 && (
                         <p className={quantityDiff > 0 ? "text-green-600" : "text-red-600"}>
                           {quantityDiff > 0 ? "+" : ""}{quantityDiff}個
                         </p>
