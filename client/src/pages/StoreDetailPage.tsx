@@ -276,24 +276,6 @@ export default function StoreDetailPage() {
     }
   };
 
-  const handleSyncDevices = async () => {
-    try {
-      await fetch('/api/devices/sync', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      await refetchDevices();
-      toast({
-        description: "デバイス情報を同期しました",
-      });
-    } catch (error) {
-      console.error('デバイス同期エラー:', error);
-      toast({
-        variant: "destructive",
-        description: "デバイス情報の同期に失敗しました",
-      });
-    }
-  };
 
   return (
     <AppLayout>
@@ -476,25 +458,15 @@ export default function StoreDetailPage() {
           </Card>
         </motion.div>
 
-        {/* Add Device Management Section */}
+        {/* レボナイザー一覧 */}
         <motion.div variants={item}>
           <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
-                    <Smartphone className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-2xl">レボナイザー</CardTitle>
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <Smartphone className="h-6 w-6 text-primary" />
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handleSyncDevices}
-                  className="gap-2"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Kintoneと同期
-                </Button>
+                <CardTitle className="text-2xl">レボナイザー</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
