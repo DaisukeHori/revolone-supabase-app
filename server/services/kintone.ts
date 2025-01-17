@@ -17,39 +17,47 @@ export interface KintoneDeviceRecord {
 export async function getKintoneDevices(customerIds?: string[]) {
   try {
     console.log('Kintone APIリクエスト開始');
-    let query = '';
-    if (customerIds?.length) {
-      query = `Stripe_CustomerID in (${customerIds.map(id => `"${id}"`).join(',')})`;
+
+    // APIトークンの存在確認
+    if (!process.env.KINTONE_API_TOKEN) {
+      throw new Error('KINTONE_API_TOKENが設定されていません');
     }
 
-    const requestConfig = {
-      params: {
-        app: KINTONE_APP_ID,
-        query: query,
-      },
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-      },
-    };
-
-    console.log('Kintoneリクエスト詳細:', {
-      url: `${KINTONE_BASE_URL}/records.json`,
-      params: requestConfig.params,
-      headers: {
-        ...requestConfig.headers,
-        'X-Cybozu-API-Token': '********', // トークンは表示しない
-      },
+    let url = `${KINTONE_BASE_URL}/records.json`;
+    const params = new URLSearchParams({
+      app: KINTONE_APP_ID,
     });
 
-    const response = await axios.get(
-      `${KINTONE_BASE_URL}/records.json`,
-      requestConfig
-    );
+    // クエリパラメータの構築
+    if (customerIds?.length) {
+      const query = `Stripe_CustomerID in (${customerIds.map(id => `"${id}"`).join(',')})`;
+      params.append('query', query);
+    }
+
+    const fullUrl = `${url}?${params.toString()}`;
+    console.log('Kintone APIリクエストURL:', fullUrl);
+
+    // リクエストの詳細をログ出力
+    console.log('Kintoneリクエスト詳細:', {
+      url: fullUrl,
+      method: 'GET',
+      headers: {
+        'X-Cybozu-API-Token': '********' // トークンは表示しない
+      }
+    });
+
+    const response = await axios.get(fullUrl, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN
+      }
+    });
 
     console.log('Kintone APIレスポンス:', {
       status: response.status,
       statusText: response.statusText,
       totalRecords: response.data.records?.length || 0,
+      firstRecord: response.data.records?.[0] ? '存在します' : 'データがありません',
+      responseData: response.data // レスポンスの詳細を確認
     });
 
     return response.data.records as KintoneDeviceRecord[];
@@ -60,17 +68,13 @@ export async function getKintoneDevices(customerIds?: string[]) {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        headers: error.response?.headers,
       },
       request: {
         url: error.config?.url,
         method: error.config?.method,
         params: error.config?.params,
-        headers: {
-          ...error.config?.headers,
-          'X-Cybozu-API-Token': '********', // トークンは表示しない
-        },
-      },
+        fullUrl: error.config?.url + (error.config?.params ? '?' + new URLSearchParams(error.config?.params).toString() : ''),
+      }
     });
     throw new Error(`Kintoneからのデータ取得に失敗: ${error.message}`);
   }
@@ -81,34 +85,26 @@ export async function getKintoneDeviceBySerialNumber(serialNumber: string) {
     const query = `レボナイザー引き当て製造番号 = "${serialNumber}"`;
     console.log('Kintone APIリクエスト開始 (シリアル番号検索):', { serialNumber });
 
-    const requestConfig = {
-      params: {
-        app: KINTONE_APP_ID,
-        query: query,
-      },
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-      },
-    };
-
-    console.log('Kintoneリクエスト詳細:', {
-      url: `${KINTONE_BASE_URL}/records.json`,
-      params: requestConfig.params,
-      headers: {
-        ...requestConfig.headers,
-        'X-Cybozu-API-Token': '********', // トークンは表示しない
-      },
+    let url = `${KINTONE_BASE_URL}/records.json`;
+    const params = new URLSearchParams({
+      app: KINTONE_APP_ID,
+      query: query,
     });
 
-    const response = await axios.get(
-      `${KINTONE_BASE_URL}/records.json`,
-      requestConfig
-    );
+    const fullUrl = `${url}?${params.toString()}`;
+    console.log('Kintone APIリクエストURL:', fullUrl);
+
+    const response = await axios.get(fullUrl, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN
+      }
+    });
 
     console.log('Kintone APIレスポンス (シリアル番号検索):', {
       status: response.status,
       statusText: response.statusText,
       recordFound: response.data.records?.length > 0,
+      responseData: response.data // レスポンスの詳細を確認
     });
 
     const records = response.data.records as KintoneDeviceRecord[];
@@ -120,17 +116,13 @@ export async function getKintoneDeviceBySerialNumber(serialNumber: string) {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        headers: error.response?.headers,
       },
       request: {
         url: error.config?.url,
         method: error.config?.method,
         params: error.config?.params,
-        headers: {
-          ...error.config?.headers,
-          'X-Cybozu-API-Token': '********', // トークンは表示しない
-        },
-      },
+        fullUrl: error.config?.url + (error.config?.params ? '?' + new URLSearchParams(error.config?.params).toString() : ''),
+      }
     });
     throw new Error(`Kintoneからのデータ取得に失敗: ${error.message}`);
   }

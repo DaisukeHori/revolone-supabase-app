@@ -13,21 +13,26 @@ router.get("/api/devices", async (req, res) => {
     console.log("デバイス一覧の取得を開始");
 
     // 1. データベースから店舗情報を取得
+    console.log("店舗情報の取得を開始");
     const allStores = await db.query.stores.findMany({
       with: {
         devices: true,
       },
     });
+    console.log(`店舗情報の取得完了: ${allStores.length}件`);
 
     // 2. Kintoneから最新のデバイス情報を取得
     const customerIds = allStores.map(store => store.stripeCustomerId).filter(Boolean) as string[];
+    console.log("Kintoneへのリクエスト準備:", { customerIds });
     const kintoneDevices = await getKintoneDevices(customerIds);
+    console.log(`Kintoneからのデバイス情報取得完了: ${kintoneDevices.length}件`);
 
     // 3. Kintoneのデータを店舗ごとにグループ化
     const devicesByStore = allStores.map(store => {
       const storeDevices = kintoneDevices.filter(
         device => device.Stripe_CustomerID.value === store.stripeCustomerId
       );
+      console.log(`店舗 ${store.name} のデバイス数: ${storeDevices.length}件`);
 
       return {
         id: store.id,
@@ -47,6 +52,14 @@ router.get("/api/devices", async (req, res) => {
     res.json(devicesByStore);
   } catch (error: any) {
     console.error("デバイス一覧の取得に失敗:", error);
+    if (error.response) {
+      console.error("Kintone APIエラーレスポンス:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers,
+      });
+    }
     res.status(500).json({ 
       message: "デバイス一覧の取得に失敗しました",
       details: error.message 
@@ -105,6 +118,14 @@ router.post("/api/devices/sync", async (req, res) => {
     });
   } catch (error: any) {
     console.error("デバイス参照情報の同期に失敗:", error);
+    if (error.response) {
+      console.error("Kintone APIエラーレスポンス:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers,
+      });
+    }
     res.status(500).json({ 
       message: "デバイス参照情報の同期に失敗しました",
       details: error.message 
