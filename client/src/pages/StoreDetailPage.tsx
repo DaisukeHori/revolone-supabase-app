@@ -466,7 +466,10 @@ export default function StoreDetailPage() {
                 <div className="bg-primary/10 p-3 rounded-lg">
                   <Smartphone className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">レボナイザー</CardTitle>
+                <div>
+                  <CardTitle className="text-2xl">レボナイザー</CardTitle>
+                  <CardDescription>現在出荷中のデバイス一覧</CardDescription>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -485,13 +488,11 @@ export default function StoreDetailPage() {
                         <div className="space-y-1">
                           <p className="font-medium">製造番号: {device.serialNumber}</p>
                           <p className="text-sm text-muted-foreground">
-                            更新日時: {new Date(device.statusUpdatedAt).toLocaleString()}
+                            出荷日: {new Date(device.statusUpdatedAt).toLocaleString()}
                           </p>
                         </div>
-                        <Badge
-                          variant={device.status === "出荷" ? "default" : "secondary"}
-                        >
-                          {device.status}
+                        <Badge variant="default">
+                          出荷中
                         </Badge>
                       </div>
                     </div>
@@ -499,7 +500,7 @@ export default function StoreDetailPage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground text-center py-8">
-                  登録されているデバイスはありません
+                  現在出荷中のデバイスはありません
                 </p>
               )}
             </CardContent>

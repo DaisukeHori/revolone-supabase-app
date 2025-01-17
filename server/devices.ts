@@ -7,16 +7,39 @@ const router = Router();
 router.get("/api/devices", async (req, res) => {
   try {
     const kintoneRecords = await getDeviceRecords();
-    const groupedDevices = {};
+
+    // 製造番号ごとに最新のステータスを持つレコードを抽出
+    const latestDeviceStatuses = new Map();
 
     kintoneRecords.forEach(record => {
-      const storeId = record.店舗ID.value;
+      const serialNumber = record.レボナイザー引き当て製造番号.value;
+      const currentDate = new Date(record.隈部入出荷実行日付.value);
+
+      if (!latestDeviceStatuses.has(serialNumber) || 
+          currentDate > new Date(latestDeviceStatuses.get(serialNumber).隈部入出荷実行日付.value)) {
+        latestDeviceStatuses.set(serialNumber, record);
+      }
+    });
+
+    // 出荷中のデバイスのみをグループ化
+    const groupedDevices = {};
+
+    latestDeviceStatuses.forEach((record) => {
+      // 最新のステータスが「返却」の場合はスキップ
+      if (record.入出荷.value === "返却") return;
+
+      const storeId = record.Stripe_CustomerID.value;
       if (!groupedDevices[storeId]) {
         groupedDevices[storeId] = {
-          store: {id: storeId, name: record.店舗名.value, address: record.店舗住所.value},
+          store: {
+            id: storeId,
+            name: record.送り先サロン名.value,
+            address: record.送り先住所?.value || '住所未設定',
+          },
           devices: []
         };
       }
+
       groupedDevices[storeId].devices.push({
         serialNumber: record.レボナイザー引き当て製造番号.value,
         status: record.入出荷.value,
@@ -36,16 +59,30 @@ router.get("/api/devices", async (req, res) => {
 router.get("/api/stores/:storeId/devices", async (req, res) => {
   try {
     const { storeId } = req.params;
-
-    // storeIdはStripeのcustomer_idとして使用
     const kintoneDevices = await getDevicesByCustomerId(storeId);
 
-    const devices = kintoneDevices.map(record => ({
-      serialNumber: record.レボナイザー引き当て製造番号.value,
-      status: record.入出荷.value,
-      statusUpdatedAt: record.隈部入出荷実行日付.value,
-      stripeSubscriptionId: record.Stripe_SubscriptionID.value,
-    }));
+    // 製造番号ごとに最新のステータスを持つレコードを抽出
+    const latestDeviceStatuses = new Map();
+
+    kintoneDevices.forEach(record => {
+      const serialNumber = record.レボナイザー引き当て製造番号.value;
+      const currentDate = new Date(record.隈部入出荷実行日付.value);
+
+      if (!latestDeviceStatuses.has(serialNumber) || 
+          currentDate > new Date(latestDeviceStatuses.get(serialNumber).隈部入出荷実行日付.value)) {
+        latestDeviceStatuses.set(serialNumber, record);
+      }
+    });
+
+    // 出荷中のデバイスのみを配列に変換
+    const devices = Array.from(latestDeviceStatuses.values())
+      .filter(record => record.入出荷.value === "出荷")
+      .map(record => ({
+        serialNumber: record.レボナイザー引き当て製造番号.value,
+        status: record.入出荷.value,
+        statusUpdatedAt: record.隈部入出荷実行日付.value,
+        stripeSubscriptionId: record.Stripe_SubscriptionID.value,
+      }));
 
     res.json(devices);
   } catch (error) {
