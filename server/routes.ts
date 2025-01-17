@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { setupStoreRoutes } from "./stores";
 import { setupMFARoutes } from "./mfa";
+import { setupDeviceRoutes } from "./devices";
 
 export function registerRoutes(app: Express): Server {
   // 認証関連のルートを設定
@@ -17,6 +18,9 @@ export function registerRoutes(app: Express): Server {
 
   // MFA関連のルートを設定
   setupMFARoutes(app);
+
+  // デバイス管理関連のルートを設定
+  setupDeviceRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
