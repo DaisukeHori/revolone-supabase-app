@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Store, CreditCard, Calendar, Package, ArrowLeft,
   Receipt, History, Settings, RefreshCw, Building2,
-  CheckCircle, Ban, ExternalLink, Loader2, Pencil
+  CheckCircle, Ban, ExternalLink, Loader2, Pencil,
+  Smartphone // Add Smartphone icon for devices section
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
 import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
+
+interface Device {
+  serialNumber: string;
+  status: "出荷" | "返却";
+  statusUpdatedAt: string;
+  stripeSubscriptionId: string | null;
+}
 
 type StripeCustomerData = {
   customer: {
@@ -167,9 +175,16 @@ export default function StoreDetailPage() {
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
 
+  // Fetch store data
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
     staleTime: 0,
+  });
+
+  // Fetch device data
+  const { data: deviceData, isLoading: isLoadingDevices, refetch: refetchDevices } = useQuery<Device[]>({
+    queryKey: [`/api/stores/${customerId}/devices`],
+    enabled: !!customerId,
   });
 
   const customerData = stripeData?.find(data => data.customer.id === customerId);
@@ -257,6 +272,25 @@ export default function StoreDetailPage() {
       toast({
         variant: "destructive",
         description: error instanceof Error ? error.message : "店舗情報の更新中にエラーが発生しました",
+      });
+    }
+  };
+
+  const handleSyncDevices = async () => {
+    try {
+      await fetch('/api/devices/sync', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      await refetchDevices();
+      toast({
+        description: "デバイス情報を同期しました",
+      });
+    } catch (error) {
+      console.error('デバイス同期エラー:', error);
+      toast({
+        variant: "destructive",
+        description: "デバイス情報の同期に失敗しました",
       });
     }
   };
@@ -442,12 +476,73 @@ export default function StoreDetailPage() {
           </Card>
         </motion.div>
 
+        {/* Add Device Management Section */}
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                    <Smartphone className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl">レボナイザー</CardTitle>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSyncDevices}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Kintoneと同期
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingDevices ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : deviceData?.length ? (
+                <div className="space-y-4">
+                  {deviceData.map((device) => (
+                    <div
+                      key={device.serialNumber}
+                      className="bg-primary/5 rounded-lg p-6 space-y-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="font-medium">製造番号: {device.serialNumber}</p>
+                          <p className="text-sm text-muted-foreground">
+                            更新日時: {new Date(device.statusUpdatedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={device.status === "出荷" ? "default" : "secondary"}
+                        >
+                          {device.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  登録されているデバイスはありません
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {isCreatingSubscription && customer && (
           <CreateSubscriptionModal
             isOpen={isCreatingSubscription}
             onClose={() => setIsCreatingSubscription(false)}
             customerId={customer.id}
-            onSuccess={refetch}
+            onSuccess={async () => {
+              await refetch();
+              await refetchDevices();
+            }}
           />
         )}
 

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@db";
 import { devices, stores } from "@db/schema";
-import { getDeviceRecords } from "./services/kintone";
+import { getDeviceRecords, getDevicesByCustomerId } from "./services/kintone";
 import { z } from "zod";
 
 const router = Router();
@@ -47,11 +47,39 @@ router.get("/api/devices", async (req, res) => {
   }
 });
 
+// 特定の店舗のデバイス一覧を取得
+router.get("/api/stores/:storeId/devices", async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const store = await db.query.stores.findFirst({
+      where: eq(stores.id, parseInt(storeId)),
+    });
+
+    if (!store) {
+      return res.status(404).json({ message: "店舗が見つかりません" });
+    }
+
+    const kintoneDevices = await getDevicesByCustomerId(store.stripeCustomerId);
+
+    const devices = kintoneDevices.map(record => ({
+      serialNumber: record.レボナイザー引き当て製造番号.value,
+      status: record.入出荷.value,
+      statusUpdatedAt: record.隈部入出荷実行日付.value,
+      stripeSubscriptionId: record.Stripe_SubscriptionID.value,
+    }));
+
+    res.json(devices);
+  } catch (error) {
+    console.error("店舗のデバイス一覧の取得に失敗:", error);
+    res.status(500).json({ message: "店舗のデバイス一覧の取得に失敗しました" });
+  }
+});
+
 // Kintoneからデバイス情報を同期
 router.post("/api/devices/sync", async (req, res) => {
   try {
     const kintoneRecords = await getDeviceRecords();
-    
+
     for (const record of kintoneRecords) {
       const store = await db.query.stores.findFirst({
         where: eq(stores.stripeCustomerId, record.Stripe_CustomerID.value),

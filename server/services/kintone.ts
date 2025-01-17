@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const KINTONE_BASE_URL = 'https://revol.kintone.com/k/v1';
-const KINTONE_APP_ID = '1'; // TODO: 正しいアプリIDを設定する必要があります
+const KINTONE_BASE_URL = 'https://e18p5.cybozu.com/k/v1';
+const KINTONE_APP_ID = '40';
 
 interface KintoneDeviceRecord {
   $id: { value: string };
@@ -43,6 +43,25 @@ export async function getDeviceRecordBySerialNumber(serialNumber: string) {
 
     const records = response.data.records as KintoneDeviceRecord[];
     return records[0] || null;
+  } catch (error) {
+    console.error('Kintone APIエラー:', error);
+    throw new Error('デバイスレコードの取得に失敗しました');
+  }
+}
+
+export async function getDevicesByCustomerId(customerId: string) {
+  try {
+    const query = `Stripe_CustomerID = "${customerId}"`;
+    const response = await axios.get(
+      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_APP_ID}&query=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        },
+      }
+    );
+
+    return response.data.records as KintoneDeviceRecord[];
   } catch (error) {
     console.error('Kintone APIエラー:', error);
     throw new Error('デバイスレコードの取得に失敗しました');
