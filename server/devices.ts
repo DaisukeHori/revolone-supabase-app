@@ -10,6 +10,7 @@ const router = Router();
 // デバイス一覧を取得（店舗ごとにグループ化）
 router.get("/api/devices", async (req, res) => {
   try {
+    console.log("デバイス一覧の取得を開始");
     const allDevices = await db.query.devices.findMany({
       with: {
         store: true,
@@ -22,11 +23,9 @@ router.get("/api/devices", async (req, res) => {
       const store = device.store;
       if (!acc[store.id]) {
         acc[store.id] = {
-          store: {
-            id: store.id,
-            name: store.name,
-            address: store.address,
-          },
+          id: store.id,
+          name: store.name,
+          address: store.address,
           devices: [],
         };
       }
@@ -38,55 +37,79 @@ router.get("/api/devices", async (req, res) => {
         stripeSubscriptionId: device.stripeSubscriptionId,
       });
       return acc;
-    }, {} as Record<number, { store: any; devices: any[] }>);
+    }, {} as Record<number, { id: number; name: string; address: string; devices: any[] }>);
 
+    console.log(`デバイス一覧を取得完了: ${Object.keys(groupedDevices).length}件の店舗データ`);
     res.json(Object.values(groupedDevices));
-  } catch (error) {
+  } catch (error: any) {
     console.error("デバイス一覧の取得に失敗:", error);
-    res.status(500).json({ message: "デバイス一覧の取得に失敗しました" });
+    res.status(500).json({ 
+      message: "デバイス一覧の取得に失敗しました",
+      details: error.message 
+    });
   }
 });
 
 // Kintoneからデバイス情報を同期
 router.post("/api/devices/sync", async (req, res) => {
   try {
+    console.log("Kintoneからのデータ同期を開始");
     const kintoneRecords = await getDeviceRecords();
-    
+    console.log(`Kintoneから${kintoneRecords.length}件のレコードを取得`);
+
+    let successCount = 0;
+    let errorCount = 0;
+
     for (const record of kintoneRecords) {
-      const store = await db.query.stores.findFirst({
-        where: eq(stores.stripeCustomerId, record.Stripe_CustomerID.value),
-      });
+      try {
+        const store = await db.query.stores.findFirst({
+          where: eq(stores.stripeCustomerId, record.Stripe_CustomerID.value),
+        });
 
-      if (!store) {
-        console.warn(`Store not found for Stripe Customer ID: ${record.Stripe_CustomerID.value}`);
-        continue;
-      }
+        if (!store) {
+          console.warn(`Store not found for Stripe Customer ID: ${record.Stripe_CustomerID.value}`);
+          errorCount++;
+          continue;
+        }
 
-      // デバイスの更新または作成
-      await db
-        .insert(devices)
-        .values({
-          storeId: store.id,
-          serialNumber: record.レボナイザー引き当て製造番号.value,
-          status: record.入出荷.value,
-          statusUpdatedAt: new Date(record.隈部入出荷実行日付.value),
-          stripeSubscriptionId: record.Stripe_SubscriptionID.value,
-          kintoneRecordId: record.$id.value,
-        })
-        .onConflictDoUpdate({
-          target: devices.serialNumber,
-          set: {
+        // デバイスの更新または作成
+        await db
+          .insert(devices)
+          .values({
+            storeId: store.id,
+            serialNumber: record.レボナイザー引き当て製造番号.value,
             status: record.入出荷.value,
             statusUpdatedAt: new Date(record.隈部入出荷実行日付.value),
             stripeSubscriptionId: record.Stripe_SubscriptionID.value,
-          },
-        });
+            kintoneRecordId: record.$id.value,
+          })
+          .onConflictDoUpdate({
+            target: devices.serialNumber,
+            set: {
+              status: record.入出荷.value,
+              statusUpdatedAt: new Date(record.隈部入出荷実行日付.value),
+              stripeSubscriptionId: record.Stripe_SubscriptionID.value,
+            },
+          });
+
+        successCount++;
+      } catch (error) {
+        console.error(`デバイス同期エラー (${record.レボナイザー引き当て製造番号.value}):`, error);
+        errorCount++;
+      }
     }
 
-    res.json({ message: "デバイス情報の同期が完了しました" });
-  } catch (error) {
+    console.log(`同期完了: 成功=${successCount}, 失敗=${errorCount}`);
+    res.json({ 
+      message: "デバイス情報の同期が完了しました",
+      details: `${successCount}件成功, ${errorCount}件失敗`
+    });
+  } catch (error: any) {
     console.error("デバイス情報の同期に失敗:", error);
-    res.status(500).json({ message: "デバイス情報の同期に失敗しました" });
+    res.status(500).json({ 
+      message: "デバイス情報の同期に失敗しました",
+      details: error.message 
+    });
   }
 });
 
@@ -109,9 +132,12 @@ router.patch("/api/devices/:id/status", async (req, res) => {
       .where(eq(devices.id, parseInt(id)));
 
     res.json({ message: "デバイスステータスを更新しました" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("デバイスステータスの更新に失敗:", error);
-    res.status(500).json({ message: "デバイスステータスの更新に失敗しました" });
+    res.status(500).json({ 
+      message: "デバイスステータスの更新に失敗しました",
+      details: error.message 
+    });
   }
 });
 

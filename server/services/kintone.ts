@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const KINTONE_BASE_URL = 'https://revol.kintone.com/k/v1';
-const KINTONE_APP_ID = '1'; // TODO: 正しいアプリIDを設定する必要があります
+const KINTONE_APP_ID = '40'; // レボナイザー管理アプリのID
 
 interface KintoneDeviceRecord {
   $id: { value: string };
@@ -16,11 +16,14 @@ interface KintoneDeviceRecord {
 
 export async function getDeviceRecords() {
   try {
-    const response = await axios.get(`${KINTONE_BASE_URL}/records.json?app=${KINTONE_APP_ID}`, {
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-      },
-    });
+    const response = await axios.get(
+      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_APP_ID}`, 
+      {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        },
+      }
+    );
 
     return response.data.records as KintoneDeviceRecord[];
   } catch (error) {

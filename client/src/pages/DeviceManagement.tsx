@@ -22,13 +22,22 @@ interface Store {
 }
 
 export default function DeviceManagement() {
-  const { data, isLoading, isError, refetch } = useQuery<Store[]>({
+  const { data, isLoading, isError, error, refetch } = useQuery<Store[], Error>({
     queryKey: ["/api/devices"],
   });
 
   const handleSync = async () => {
     try {
-      await fetch("/api/devices/sync", { method: "POST" });
+      const response = await fetch("/api/devices/sync", { 
+        method: "POST",
+        credentials: "include"
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || '同期に失敗しました');
+      }
+
       refetch();
     } catch (error) {
       console.error("同期に失敗しました:", error);
@@ -56,11 +65,23 @@ export default function DeviceManagement() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             デバイス情報の取得に失敗しました。
+            {error && (
+              <div className="mt-2 text-sm">
+                エラー詳細: {error.message}
+              </div>
+            )}
+          </AlertDescription>
+        </Alert>
+      ) : !data?.length ? (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            デバイス情報が見つかりませんでした。Kintoneと同期を実行してください。
           </AlertDescription>
         </Alert>
       ) : (
         <div className="grid gap-6">
-          {data?.map((store) => (
+          {data.map((store) => (
             <Card key={store.id}>
               <CardHeader>
                 <CardTitle>{store.name}</CardTitle>
