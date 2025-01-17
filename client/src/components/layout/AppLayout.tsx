@@ -9,7 +9,8 @@ import {
   X,
   CreditCard,
   Settings,
-  Home
+  Home,
+  Cpu
 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,6 +35,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const menuItems = [
     { icon: Home, label: "ホーム", href: "/" },
     { icon: User, label: "プロフィール", href: "/profile" },
+    { icon: Cpu, label: "デバイス管理", href: "/devices" },
     { icon: CreditCard, label: "支払い設定", href: "/billing" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];

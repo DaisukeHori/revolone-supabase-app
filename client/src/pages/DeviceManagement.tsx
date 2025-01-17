@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Device {
   id: number;
@@ -34,32 +35,7 @@ export default function DeviceManagement() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-8 bg-gray-200 rounded"></div>
-          <div className="h-8 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            デバイス情報の取得に失敗しました。
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  return (
+  const content = (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">レボナイザー管理</h1>
@@ -69,38 +45,55 @@ export default function DeviceManagement() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {data?.map((store) => (
-          <Card key={store.id}>
-            <CardHeader>
-              <CardTitle>{store.name}</CardTitle>
-              <p className="text-sm text-gray-500">{store.address}</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {store.devices.map((device) => (
-                  <div
-                    key={device.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium">製造番号: {device.serialNumber}</p>
-                      <p className="text-sm text-gray-500">
-                        更新日時: {new Date(device.statusUpdatedAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={device.status === "出荷" ? "default" : "secondary"}
+      {isLoading ? (
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-8 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded"></div>
+        </div>
+      ) : isError ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            デバイス情報の取得に失敗しました。
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <div className="grid gap-6">
+          {data?.map((store) => (
+            <Card key={store.id}>
+              <CardHeader>
+                <CardTitle>{store.name}</CardTitle>
+                <p className="text-sm text-gray-500">{store.address}</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {store.devices.map((device) => (
+                    <div
+                      key={device.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
                     >
-                      {device.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                      <div>
+                        <p className="font-medium">製造番号: {device.serialNumber}</p>
+                        <p className="text-sm text-gray-500">
+                          更新日時: {new Date(device.statusUpdatedAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={device.status === "出荷" ? "default" : "secondary"}
+                      >
+                        {device.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
+
+  return <AppLayout>{content}</AppLayout>;
 }
