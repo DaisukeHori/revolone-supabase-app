@@ -23,30 +23,34 @@ export async function getKintoneDevices(customerIds?: string[]) {
       throw new Error('KINTONE_API_TOKENが設定されていません');
     }
 
-    // クエリの構築
+    // クエリの構築と詳細ログ
     let query = '';
-    if (customerIds?.length) {
+    if (customerIds?.length === 1) {
+      query = `Stripe_CustomerID = "${customerIds[0]}"`;
+    } else if (customerIds?.length > 1) {
       query = `Stripe_CustomerID in (${customerIds.map(id => `"${id}"`).join(',')})`;
     }
+    console.log('構築されたクエリ:', query || '(クエリなし)');
 
-    // リクエストの詳細をログ出力
+    // リクエストの設定を構築
     const requestConfig = {
-      url: `${KINTONE_BASE_URL}/records.json`,
       method: 'GET',
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN
-      },
+      url: `${KINTONE_BASE_URL}/records.json`,
       params: {
         app: KINTONE_APP_ID,
-        query: query
+        query: query || undefined // クエリが空の場合はundefinedを設定
+      },
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN
       }
     };
 
+    // リクエストの詳細をログ出力
     console.log('Kintoneリクエスト詳細:', {
       url: requestConfig.url,
       method: requestConfig.method,
       params: requestConfig.params,
-      query: query || '(クエリなし)',
+      fullUrl: `${requestConfig.url}?${new URLSearchParams(requestConfig.params).toString()}`,
       headers: {
         'X-Cybozu-API-Token': '********' // トークンは隠す
       }
@@ -54,30 +58,35 @@ export async function getKintoneDevices(customerIds?: string[]) {
 
     const response = await axios(requestConfig);
 
+    // レスポンスの詳細をログ出力
     console.log('Kintone APIレスポンス:', {
       status: response.status,
       statusText: response.statusText,
       totalRecords: response.data.records?.length || 0,
-      firstRecord: response.data.records?.[0] ? JSON.stringify(response.data.records[0]) : 'データがありません'
+      firstRecord: response.data.records?.[0]
+        ? JSON.stringify(response.data.records[0], null, 2)
+        : 'データがありません'
     });
 
     return response.data.records as KintoneDeviceRecord[];
   } catch (error: any) {
+    // エラーの詳細をログ出力
     console.error('Kintone APIエラー詳細:', {
       message: error.message,
-      response: {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      },
-      request: {
-        url: error.config?.url,
-        method: error.config?.method,
-        params: error.config?.params,
-        fullUrl: error.config?.url + (error.config?.params ? '?' + new URLSearchParams(error.config?.params).toString() : ''),
-      }
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      } : 'レスポンスなし',
+      request: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        params: error.config.params,
+        fullUrl: `${error.config.url}?${new URLSearchParams(error.config.params).toString()}`
+      } : 'リクエスト設定なし'
     });
-    throw new Error(`Kintoneからのデータ取得に失敗: ${error.message}`);
+    throw error;
   }
 }
 
