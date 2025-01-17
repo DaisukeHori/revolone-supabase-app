@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -24,6 +24,8 @@ export const devices = pgTable("devices", {
   storeId: integer("store_id").notNull().references(() => stores.id),
   serialNumber: text("serial_number").unique().notNull(),
   kintoneRecordId: text("kintone_record_id").unique(),
+  status: text("status"),
+  statusUpdatedAt: timestamp("status_updated_at"),
 });
 
 // リレーション定義
