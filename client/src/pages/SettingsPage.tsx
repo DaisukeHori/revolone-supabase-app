@@ -11,14 +11,11 @@ import { useTheme } from "@/hooks/use-theme";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
+import { useToast } from "@/hooks/use-toast";
 
-interface MFAStatus {
-  enabled: boolean;
-  type?: string;
-  phoneNumber?: string;
-}
+// ... (アニメーション関連のコードは変更なし)
 
 const container = {
   hidden: { opacity: 0 },
@@ -40,48 +37,78 @@ export default function SettingsPage() {
   const { isDark, toggleTheme } = useTheme();
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [, setLocation] = useLocation();
   const { user } = useUser();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // MFA設定の取得
-  const { data: mfaStatus, isLoading, error, refetch } = useQuery<MFAStatus>({
+  const { data: mfaStatus, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/mfa/status'],
   });
 
   // MFA有効化のミューテーション
   const setupMFAMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (phoneNumber: string) => {
       const response = await fetch('/api/mfa/setup/sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: user?.phoneNumber }),
+        body: JSON.stringify({ phoneNumber }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const error = await response.json();
+        throw new Error(error.message || "認証コードの送信に失敗しました");
       }
 
       return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        description: "認証コードを送信しました",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        description: error.message,
+      });
+      setShowPhoneVerification(false);
     },
   });
 
   // SMS認証コードの検証
   const verifySMSMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (code: string) => {
       const response = await fetch('/api/mfa/verify/sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: verificationCode }),
+        body: JSON.stringify({ code }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const error = await response.json();
+        throw new Error(error.message || "認証に失敗しました");
       }
 
       return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        description: "2段階認証が有効化されました",
+      });
+      setShowPhoneVerification(false);
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        description: error.message,
+      });
     },
   });
 
@@ -94,46 +121,57 @@ export default function SettingsPage() {
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const error = await response.json();
+        throw new Error(error.message || "2段階認証の無効化に失敗しました");
       }
 
       return response.json();
     },
+    onSuccess: () => {
+      toast({
+        description: "2段階認証を無効化しました",
+      });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        description: error.message,
+      });
+    },
   });
 
   const handleMFAToggle = async () => {
-    if (!user?.phoneNumber) {
-      alert("プロフィールで電話番号を設定してください。");
-      return;
-    }
-
     if (mfaStatus?.enabled) {
-      // MFAの無効化
-      try {
-        await disableMFAMutation.mutateAsync();
-        refetch();
-      } catch (error) {
-        console.error('MFA無効化エラー:', error);
-      }
+      await disableMFAMutation.mutateAsync();
     } else {
-      // MFAの有効化プロセスを開始
-      try {
-        await setupMFAMutation.mutateAsync();
-        setShowPhoneVerification(true);
-      } catch (error) {
-        console.error('MFA設定エラー:', error);
-      }
+      setShowPhoneVerification(true);
     }
   };
 
-  const handleVerifyCode = async () => {
-    try {
-      await verifySMSMutation.mutateAsync();
-      setShowPhoneVerification(false);
-      refetch();
-    } catch (error) {
-      console.error('認証コード検証エラー:', error);
+  const handleSendVerificationCode = async () => {
+    if (!phoneNumber) {
+      toast({
+        variant: "destructive",
+        description: "電話番号を入力してください",
+      });
+      return;
     }
+
+    await setupMFAMutation.mutateAsync(phoneNumber);
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode) {
+      toast({
+        variant: "destructive",
+        description: "認証コードを入力してください",
+      });
+      return;
+    }
+
+    await verifySMSMutation.mutateAsync(verificationCode);
   };
 
   if (isLoading) {
@@ -265,54 +303,90 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">
                     ログイン時に追加の認証を要求します
                   </p>
-                  {!user?.phoneNumber && (
-                    <p className="text-sm text-red-500">
-                      ※プロフィールで電話番号を設定してください
-                    </p>
-                  )}
                 </div>
                 <Switch
                   checked={mfaStatus?.enabled || false}
                   onCheckedChange={handleMFAToggle}
-                  disabled={!user?.phoneNumber || setupMFAMutation.isPending || disableMFAMutation.isPending}
+                  disabled={
+                    setupMFAMutation.isPending ||
+                    disableMFAMutation.isPending ||
+                    verifySMSMutation.isPending
+                  }
                 />
               </div>
 
-              {/* SMS認証コード入力モーダル */}
+              {/* 電話番号検証のモーダル */}
               <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>認証コードの確認</DialogTitle>
+                    <DialogTitle>2段階認証の設定</DialogTitle>
                     <DialogDescription>
-                      登録された電話番号（{user?.phoneNumber}）にSMSで送信された6桁の認証コードを入力してください。
+                      2段階認証を有効化するには、電話番号の検証が必要です
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>認証コード</Label>
-                      <Input
-                        placeholder="123456"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                      />
-                    </div>
+                    {!setupMFAMutation.isSuccess && (
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">電話番号</Label>
+                        <Input
+                          id="phone"
+                          placeholder="+818012345678"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          disabled={setupMFAMutation.isPending}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          国際電話形式で入力してください（例：+818012345678）
+                        </p>
+                      </div>
+                    )}
+
+                    {setupMFAMutation.isSuccess && (
+                      <div className="space-y-2">
+                        <Label htmlFor="code">認証コード</Label>
+                        <Input
+                          id="code"
+                          placeholder="123456"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          disabled={verifySMSMutation.isPending}
+                        />
+                      </div>
+                    )}
+
                     <div className="flex justify-end gap-2">
                       <Button
                         variant="outline"
-                        onClick={() => setShowPhoneVerification(false)}
-                        disabled={verifySMSMutation.isPending}
+                        onClick={() => {
+                          setShowPhoneVerification(false);
+                          setPhoneNumber("");
+                          setVerificationCode("");
+                        }}
+                        disabled={setupMFAMutation.isPending || verifySMSMutation.isPending}
                       >
                         キャンセル
                       </Button>
-                      <Button
-                        onClick={handleVerifyCode}
-                        disabled={!verificationCode || verifySMSMutation.isPending}
-                      >
-                        {verifySMSMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        認証する
-                      </Button>
+                      {!setupMFAMutation.isSuccess ? (
+                        <Button
+                          onClick={handleSendVerificationCode}
+                          disabled={!phoneNumber || setupMFAMutation.isPending}
+                        >
+                          {setupMFAMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          認証コードを送信
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleVerifyCode}
+                          disabled={!verificationCode || verifySMSMutation.isPending}
+                        >
+                          {verifySMSMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          認証する
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </DialogContent>
