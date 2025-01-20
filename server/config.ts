@@ -22,7 +22,7 @@ const config = {
   development: {
     // 開発環境用の設定
     kintone: {
-      baseUrl: 'https://e18p5.cybozu.com/k/v1',
+      baseUrl: 'https://dev-revonizer.cybozu.com/k/v1',
       apiToken: process.env.KINTONE_API_TOKEN_DEV || process.env.KINTONE_API_TOKEN,
     },
     stripe: {
@@ -36,7 +36,7 @@ const config = {
   production: {
     // 本番環境用の設定
     kintone: {
-      baseUrl: 'https://e18p5.cybozu.com/k/v1',
+      baseUrl: 'https://revonizer.cybozu.com/k/v1',
       apiToken: process.env.KINTONE_API_TOKEN_PROD || process.env.KINTONE_API_TOKEN,
     },
     stripe: {
