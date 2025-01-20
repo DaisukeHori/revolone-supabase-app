@@ -1,69 +1,101 @@
 import axios from 'axios';
+import { currentConfig } from '../config';
 
-const KINTONE_BASE_URL = 'https://e18p5.cybozu.com/k/v1';
-const KINTONE_APP_ID = '40';
-
-interface KintoneDeviceRecord {
-  $id: { value: string };
-  レボナイザー引き当て製造番号: { value: string };
-  入出荷: { value: "出荷" | "返却" };
-  隈部入出荷実行日付: { value: string };
-  Stripe_SubscriptionID: { value: string };
-  Stripe_CustomerID: { value: string };
-  送り先サロン名: { value: string };
-  メールアドレス: { value: string };
+// Kintone APIのレスポンス型定義
+interface KintoneRecord {
+  $id: {
+    type: string;
+    value: string;
+  };
+  Stripe_CustomerID: {
+    type: string;
+    value: string;
+  };
+  送り状伝票番号: {
+    type: string;
+    value: string;
+  };
+  [key: string]: {
+    type: string;
+    value: string;
+  };
 }
 
-export async function getDeviceRecords() {
-  try {
-    const response = await axios.get(`${KINTONE_BASE_URL}/records.json?app=${KINTONE_APP_ID}`, {
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-      },
-    });
-
-    return response.data.records as KintoneDeviceRecord[];
-  } catch (error) {
-    console.error('Kintone APIエラー:', error);
-    throw new Error('デバイスレコードの取得に失敗しました');
-  }
+interface KintoneResponse {
+  records: KintoneRecord[];
 }
 
-export async function getDeviceRecordBySerialNumber(serialNumber: string) {
+export async function getDeviceRecords(customerId: string) {
   try {
-    const query = `レボナイザー引き当て製造番号 = "${serialNumber}"`;
-    const response = await axios.get(
-      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_APP_ID}&query=${encodeURIComponent(query)}`,
+    const response = await axios.get<KintoneResponse>(
+      `${currentConfig.kintone.baseUrl}/records.json`,
       {
+        params: {
+          app: '40',
+          query: `Stripe_CustomerID="${customerId}"`,
+        },
         headers: {
-          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+          'X-Cybozu-API-Token': currentConfig.kintone.apiToken,
         },
       }
     );
 
-    const records = response.data.records as KintoneDeviceRecord[];
-    return records[0] || null;
+    return response.data.records;
   } catch (error) {
-    console.error('Kintone APIエラー:', error);
-    throw new Error('デバイスレコードの取得に失敗しました');
+    console.error('Kintone API error:', error);
+    throw new Error('デバイス情報の取得に失敗しました');
   }
 }
 
 export async function getDevicesByCustomerId(customerId: string) {
   try {
-    const query = `Stripe_CustomerID = "${customerId}"`;
-    const response = await axios.get(
-      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_APP_ID}&query=${encodeURIComponent(query)}`,
+    const records = await getDeviceRecords(customerId);
+    return records.map(record => ({
+      id: record.$id.value,
+      stripeCustomerId: record.Stripe_CustomerID.value,
+      // 他の必要なフィールドもマッピング
+      ...Object.entries(record).reduce((acc, [key, value]) => {
+        if (key !== '$id' && key !== 'Stripe_CustomerID') {
+          acc[key] = value.value;
+        }
+        return acc;
+      }, {} as Record<string, string>)
+    }));
+  } catch (error) {
+    console.error('Kintone API error:', error);
+    throw new Error('デバイス情報の取得に失敗しました');
+  }
+}
+
+export async function getShippingDetailsByCustomerId(customerId: string) {
+  try {
+    const response = await axios.get<KintoneResponse>(
+      `${currentConfig.kintone.baseUrl}/records.json`,
       {
+        params: {
+          app: '55',
+          query: `Stripe_CustomerID="${customerId}"`,
+        },
         headers: {
-          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+          'X-Cybozu-API-Token': currentConfig.kintone.apiToken,
         },
       }
     );
 
-    return response.data.records as KintoneDeviceRecord[];
+    return response.data.records.map(record => ({
+      id: record.$id.value,
+      stripeCustomerId: record.Stripe_CustomerID.value,
+      trackingNumber: record.送り状伝票番号.value,
+      // 他の必要なフィールドもマッピング
+      ...Object.entries(record).reduce((acc, [key, value]) => {
+        if (key !== '$id' && key !== 'Stripe_CustomerID' && key !== '送り状伝票番号') {
+          acc[key] = value.value;
+        }
+        return acc;
+      }, {} as Record<string, string>)
+    }));
   } catch (error) {
-    console.error('Kintone APIエラー:', error);
-    throw new Error('デバイスレコードの取得に失敗しました');
+    console.error('Kintone API error:', error);
+    throw new Error('配送情報の取得に失敗しました');
   }
 }
