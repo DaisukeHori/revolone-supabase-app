@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+import { StoreEditModal } from "@/components/store/StoreEditModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,8 +28,51 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface StripeSubscriptionItem {
+  subscription_item_id: string;
+  amount: number | null;
+  currency: string;
+  interval: string;
+  quantity: number;
+  product: {
+    name: string;
+    description: string | null;
+  };
+}
 
-// ... (Existing type definitions remain unchanged) ...
+interface StripeSubscription {
+  id: string;
+  status: string;
+  current_period_end: number;
+  trial_end: number | null;
+  trial_start: number | null;
+  cancel_at_period_end: boolean;
+  default_payment_method: {
+    card: {
+      brand: string;
+      last4: string;
+      exp_month: number;
+      exp_year: number;
+    };
+  } | null;
+  items: StripeSubscriptionItem[];
+}
+
+interface StripeCustomer {
+  id: string;
+  name: string | null;
+  email: string;
+  metadata: {
+    サロン名?: string;
+    代理店名?: string;
+    [key: string]: string | undefined;
+  };
+}
+
+interface StripeCustomerData {
+  customer: StripeCustomer;
+  subscriptions: StripeSubscription[];
+}
 
 export default function SubscriptionDetailPage() {
   const [location, setLocation] = useLocation();
@@ -41,8 +85,8 @@ export default function SubscriptionDetailPage() {
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
 
-  const { data: stripeData, isLoading, error, refetch } = useQuery({
-    queryKey: ['stripe-customer'],
+  const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
+    queryKey: ['/api/stripe/customer'],
     queryFn: async () => {
       const response = await fetch('/api/stripe/customer', {
         credentials: 'include'
@@ -61,7 +105,7 @@ export default function SubscriptionDetailPage() {
   const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
   const customer = customerData?.customer;
 
-  const handleUpdateStore = async (values: any) => { // Added any type for values
+  const handleUpdateStore = async (values: any) => {
     if (!customer) return;
 
     try {
@@ -271,6 +315,39 @@ export default function SubscriptionDetailPage() {
 
   const isTrialing = subscription.trial_end && subscription.trial_end > Date.now() / 1000;
 
+  const handleConfirmQuantityUpdate = async (quantities: Record<string, number>) => {
+    if (!subscription) return;
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch(`/api/stripe/subscription/${subscription.id}/quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantities }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "契約数量を更新しました",
+      });
+      setShowConfirmDialog(false);
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -476,7 +553,7 @@ export default function SubscriptionDetailPage() {
             onClose={() => setShowConfirmDialog(false)}
             items={subscription.items}
             updatedQuantities={updatedQuantities}
-            onConfirm={() => {}} // Placeholder - needs actual implementation
+            onConfirm={handleConfirmQuantityUpdate}
             isUpdating={isUpdating}
           />
         )}

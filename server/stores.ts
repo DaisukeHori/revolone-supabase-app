@@ -2,17 +2,27 @@ import { type Express } from "express";
 import { db } from "@db";
 import { stores, insertStoreSchema, updateStoreSchema } from "@db/schema";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
+
+interface AuthenticatedRequest extends Express.Request {
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+  };
+  isAuthenticated(): boolean;
+}
 
 export function setupStoreRoutes(app: Express) {
   // 店舗一覧の取得
-  app.get("/api/stores", async (req, res) => {
+  app.get("/api/stores", async (req: AuthenticatedRequest, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
 
     try {
       const userStores = await db.query.stores.findMany({
-        where: eq(stores.userId, req.user.id),
+        where: eq(stores.userId, req.user!.id),
         orderBy: stores.createdAt,
       });
 
@@ -24,7 +34,7 @@ export function setupStoreRoutes(app: Express) {
   });
 
   // 店舗の新規登録
-  app.post("/api/stores", async (req, res) => {
+  app.post("/api/stores", async (req: AuthenticatedRequest, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
@@ -41,7 +51,7 @@ export function setupStoreRoutes(app: Express) {
         .insert(stores)
         .values({
           ...result.data,
-          userId: req.user.id,
+          userId: req.user!.id,
         })
         .returning();
 
@@ -56,7 +66,7 @@ export function setupStoreRoutes(app: Express) {
   });
 
   // 店舗詳細の取得
-  app.get("/api/stores/:id", async (req, res) => {
+  app.get("/api/stores/:id", async (req: AuthenticatedRequest, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
@@ -76,7 +86,7 @@ export function setupStoreRoutes(app: Express) {
         return res.status(404).json({ message: "店舗が見つかりません" });
       }
 
-      if (store.userId !== req.user.id) {
+      if (store.userId !== req.user!.id) {
         return res.status(403).json({ message: "アクセス権限がありません" });
       }
 
@@ -88,7 +98,7 @@ export function setupStoreRoutes(app: Express) {
   });
 
   // 店舗情報の更新
-  app.put("/api/stores/:id", async (req, res) => {
+  app.put("/api/stores/:id", async (req: AuthenticatedRequest, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
@@ -115,7 +125,7 @@ export function setupStoreRoutes(app: Express) {
         return res.status(404).json({ message: "店舗が見つかりません" });
       }
 
-      if (store.userId !== req.user.id) {
+      if (store.userId !== req.user!.id) {
         return res.status(403).json({ message: "アクセス権限がありません" });
       }
 
@@ -139,7 +149,7 @@ export function setupStoreRoutes(app: Express) {
   });
 
   // 店舗の削除
-  app.delete("/api/stores/:id", async (req, res) => {
+  app.delete("/api/stores/:id", async (req: AuthenticatedRequest, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
@@ -159,7 +169,7 @@ export function setupStoreRoutes(app: Express) {
         return res.status(404).json({ message: "店舗が見つかりません" });
       }
 
-      if (store.userId !== req.user.id) {
+      if (store.userId !== req.user!.id) {
         return res.status(403).json({ message: "アクセス権限がありません" });
       }
 

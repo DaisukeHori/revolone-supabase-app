@@ -1,7 +1,34 @@
 import { Router } from "express";
 import { getDeviceRecords, getDevicesByCustomerId } from "./services/kintone";
+import { z } from "zod";
 
 const router = Router();
+
+interface DeviceRecord {
+  レボナイザー引き当て製造番号: { value: string };
+  隈部入出荷実行日付: { value: string };
+  入出荷: { value: string };
+  Stripe_CustomerID: { value: string };
+  送り先サロン名: { value: string };
+  送り先住所: { value: string | undefined };
+  Stripe_SubscriptionID: { value: string };
+}
+
+interface GroupedDevices {
+  [key: string]: {
+    store: {
+      id: string;
+      name: string;
+      address: string;
+    };
+    devices: Array<{
+      serialNumber: string;
+      status: string;
+      statusUpdatedAt: string;
+      stripeSubscriptionId: string;
+    }>;
+  };
+}
 
 // デバイス一覧を取得（店舗ごとにグループ化）
 router.get("/api/devices", async (req, res) => {
@@ -9,20 +36,20 @@ router.get("/api/devices", async (req, res) => {
     const kintoneRecords = await getDeviceRecords();
 
     // 製造番号ごとに最新のステータスを持つレコードを抽出
-    const latestDeviceStatuses = new Map();
+    const latestDeviceStatuses = new Map<string, DeviceRecord>();
 
-    kintoneRecords.forEach(record => {
+    kintoneRecords.forEach((record: DeviceRecord) => {
       const serialNumber = record.レボナイザー引き当て製造番号.value;
       const currentDate = new Date(record.隈部入出荷実行日付.value);
 
       if (!latestDeviceStatuses.has(serialNumber) || 
-          currentDate > new Date(latestDeviceStatuses.get(serialNumber).隈部入出荷実行日付.value)) {
+          currentDate > new Date(latestDeviceStatuses.get(serialNumber)!.隈部入出荷実行日付.value)) {
         latestDeviceStatuses.set(serialNumber, record);
       }
     });
 
     // 出荷中のデバイスのみをグループ化
-    const groupedDevices = {};
+    const groupedDevices: GroupedDevices = {};
 
     latestDeviceStatuses.forEach((record) => {
       // 最新のステータスが「返却」の場合はスキップ
@@ -62,14 +89,14 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
     const kintoneDevices = await getDevicesByCustomerId(storeId);
 
     // 製造番号ごとに最新のステータスを持つレコードを抽出
-    const latestDeviceStatuses = new Map();
+    const latestDeviceStatuses = new Map<string, DeviceRecord>();
 
-    kintoneDevices.forEach(record => {
+    kintoneDevices.forEach((record: DeviceRecord) => {
       const serialNumber = record.レボナイザー引き当て製造番号.value;
       const currentDate = new Date(record.隈部入出荷実行日付.value);
 
       if (!latestDeviceStatuses.has(serialNumber) || 
-          currentDate > new Date(latestDeviceStatuses.get(serialNumber).隈部入出荷実行日付.value)) {
+          currentDate > new Date(latestDeviceStatuses.get(serialNumber)!.隈部入出荷実行日付.value)) {
         latestDeviceStatuses.set(serialNumber, record);
       }
     });
@@ -88,23 +115,6 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
   } catch (error) {
     console.error("店舗のデバイス一覧の取得に失敗:", error);
     res.status(500).json({ message: "店舗のデバイス一覧の取得に失敗しました" });
-  }
-});
-
-// Kintoneからデバイス情報を同期
-router.post("/api/devices/sync", async (req, res) => {
-  try {
-    const kintoneRecords = await getDeviceRecords();
-
-    for (const record of kintoneRecords) {
-        // Kintoneから直接取得したデータをそのまま返すように変更
-        // データベースへの書き込みは行わない
-    }
-
-    res.json({ message: "デバイス情報の同期が完了しました" });
-  } catch (error) {
-    console.error("デバイス情報の同期に失敗:", error);
-    res.status(500).json({ message: "デバイス情報の同期に失敗しました" });
   }
 });
 

@@ -17,22 +17,36 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface MFAStatus {
+  enabled: boolean;
+  type?: string;
+  phoneNumber?: string;
+}
+
+interface MFASetupResponse {
+  success: boolean;
+  message?: string;
+}
+
+interface MFAVerifyResponse {
+  success: boolean;
+  message?: string;
+}
+
 export default function SecuritySettingsPage() {
   const { toast } = useToast();
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
 
   // MFA設定の取得
-  const { data: mfaStatus, isLoading, error, refetch } = useQuery({
+  const { data: mfaStatus, isLoading, error, refetch } = useQuery<MFAStatus>({
     queryKey: ['/api/mfa/status'],
   });
 
   // MFA有効化のミューテーション
-  const setupMFAMutation = useMutation({
+  const setupMFAMutation = useMutation<MFASetupResponse, Error, void>({
     mutationFn: async () => {
-      // まず電話番号の検証を開始
       const response = await fetch('/api/mfa/setup/sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +76,7 @@ export default function SecuritySettingsPage() {
   });
 
   // SMS認証コードの検証
-  const verifySMSMutation = useMutation({
+  const verifySMSMutation = useMutation<MFAVerifyResponse, Error, void>({
     mutationFn: async () => {
       const response = await fetch('/api/mfa/verify/sms', {
         method: 'POST',
@@ -75,7 +89,8 @@ export default function SecuritySettingsPage() {
         throw new Error(await response.text());
       }
 
-      return response.json();
+      const data = await response.json();
+      return data;
     },
     onSuccess: () => {
       toast({
@@ -93,7 +108,7 @@ export default function SecuritySettingsPage() {
   });
 
   // MFA無効化のミューテーション
-  const disableMFAMutation = useMutation({
+  const disableMFAMutation = useMutation<{ success: boolean }, Error, void>({
     mutationFn: async () => {
       const response = await fetch('/api/mfa/disable', {
         method: 'POST',
@@ -104,7 +119,8 @@ export default function SecuritySettingsPage() {
         throw new Error(await response.text());
       }
 
-      return response.json();
+      const data = await response.json();
+      return data;
     },
     onSuccess: () => {
       toast({
@@ -140,13 +156,13 @@ export default function SecuritySettingsPage() {
     );
   }
 
-  if (error) {
+  if (error instanceof Error) {
     return (
       <AppLayout>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            セキュリティ設定の取得に失敗しました
+            セキュリティ設定の取得に失敗しました: {error.message}
           </AlertDescription>
         </Alert>
       </AppLayout>

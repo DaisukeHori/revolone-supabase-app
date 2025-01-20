@@ -13,6 +13,22 @@ import { sendMail, generatePasswordResetEmail } from "./mail";
 import speakeasy from "speakeasy";
 import twilio from "twilio";
 
+// セッションの型拡張
+declare module "express-session" {
+  interface SessionData {
+    mfaPendingUserId?: number;
+  }
+}
+
+// Passportのユーザー型拡張
+declare global {
+  namespace Express {
+    interface User extends SelectUser {
+      requiresMFA?: boolean;
+    }
+  }
+}
+
 const scryptAsync = promisify(scrypt);
 const crypto = {
   hash: async (password: string) => {
@@ -31,12 +47,6 @@ const crypto = {
     return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
   },
 };
-
-declare global {
-  namespace Express {
-    interface User extends SelectUser {}
-  }
-}
 
 export const updateProfileSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません"),
@@ -77,42 +87,44 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy({
-      usernameField: 'email',
-      passwordField: 'password'
-    }, async (email, password, done) => {
-      try {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+    new LocalStrategy(
+      {
+        usernameField: 'email',
+        passwordField: 'password'
+      },
+      async (email: string, password: string, done: (error: any, user?: Express.User | false, options?: IVerifyOptions) => void) => {
+        try {
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
-        if (!user) {
-          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
-        }
-        const isMatch = await crypto.compare(password, user.password);
-        if (!isMatch) {
-          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
-        }
+          if (!user) {
+            return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
+          }
+          const isMatch = await crypto.compare(password, user.password);
+          if (!isMatch) {
+            return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
+          }
 
-        // 2段階認証が有効な場合は、要認証フラグを立てる
-        if (user.mfaEnabled) {
-          return done(null, { ...user, requiresMFA: true });
-        }
+          if (user.mfaEnabled) {
+            return done(null, { ...user, requiresMFA: true });
+          }
 
-        return done(null, user);
-      } catch (err) {
-        return done(err);
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
       }
-    })
+    )
   );
 
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user: Express.User, done: (err: any, id?: number) => void) => {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: number, done: (err: any, user?: Express.User | false) => void) => {
     try {
       const [user] = await db
         .select()
