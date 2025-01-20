@@ -69,6 +69,12 @@ export async function getDevicesByCustomerId(customerId: string) {
 
 export async function getShippingDetailsByCustomerId(customerId: string) {
   try {
+    console.log('Kintone API呼び出し開始:', {
+      url: `${currentConfig.kintone.baseUrl}/records.json`,
+      app: '55',
+      query: `Stripe_CustomerID="${customerId}"`,
+    });
+
     const response = await axios.get<KintoneResponse>(
       `${currentConfig.kintone.baseUrl}/records.json`,
       {
@@ -82,11 +88,15 @@ export async function getShippingDetailsByCustomerId(customerId: string) {
       }
     );
 
+    console.log('Kintone APIレスポンス:', {
+      status: response.status,
+      recordCount: response.data.records.length,
+    });
+
     return response.data.records.map(record => ({
       id: record.$id.value,
       stripeCustomerId: record.Stripe_CustomerID.value,
       trackingNumber: record.送り状伝票番号.value,
-      // 他の必要なフィールドもマッピング
       ...Object.entries(record).reduce((acc, [key, value]) => {
         if (key !== '$id' && key !== 'Stripe_CustomerID' && key !== '送り状伝票番号') {
           acc[key] = value.value;
@@ -96,6 +106,13 @@ export async function getShippingDetailsByCustomerId(customerId: string) {
     }));
   } catch (error) {
     console.error('Kintone API error:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('詳細エラー情報:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+    }
     throw new Error('配送情報の取得に失敗しました');
   }
 }
