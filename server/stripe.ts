@@ -2,6 +2,15 @@ import { type Express } from "express";
 import Stripe from 'stripe';
 import { currentConfig } from './config';
 
+// Product型の定義
+interface StripeProduct {
+  id: string;
+  name?: string;
+  description?: string | null;
+  active?: boolean;
+  // 他の必要なプロパティを追加
+}
+
 if (!currentConfig.stripe.secretKey) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
 }
@@ -48,7 +57,7 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
 
       // デフォルトの支払い方法を取得
       const customer = await stripe.customers.retrieve(customerId);
-      const defaultPaymentMethod = typeof customer === 'object' && customer.invoice_settings?.default_payment_method;
+      const defaultPaymentMethod = customer.invoice_settings?.default_payment_method;
 
       // サブスクリプションを作成
       const subscription = await stripe.subscriptions.create({
@@ -66,9 +75,19 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
         default_payment_method: defaultPaymentMethod || undefined,
       });
 
+      const invoice = subscription.latest_invoice;
+      let clientSecret = null;
+
+      if (typeof invoice !== 'string' && invoice?.payment_intent) {
+        const paymentIntent = typeof invoice.payment_intent === 'string' 
+          ? await stripe.paymentIntents.retrieve(invoice.payment_intent)
+          : invoice.payment_intent;
+        clientSecret = paymentIntent.client_secret;
+      }
+
       res.json({
         subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        clientSecret,
         paymentMethods: paymentMethods.data,
         defaultPaymentMethod,
       });
@@ -523,7 +542,8 @@ export async function getCustomersByEmail(email: string) {
           expand: ['product'],
         });
 
-        const product = typeof price.product === 'object' ? price.product : null;
+        // Product型を適切に処理
+        const product = typeof price.product === 'object' ? price.product as StripeProduct : null;
 
         return {
           subscription_item_id: item.id,

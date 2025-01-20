@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getRevonizerProductType, calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
+import { getRevonizerProductType, calculateRevonizerQuantities, RevonizerQuantities } from "@/lib/revonizerCalculation";
 import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";
 
 type SubscriptionItem = {
@@ -67,7 +67,7 @@ export function ConfirmUpdateDialog({
         }
 
         // レボナイザー商品の数量を計算
-        const revonizerQuantities = calculateRevonizerQuantities(validTotalQuantity);
+        const revonizerQuantities: RevonizerQuantities = calculateRevonizerQuantities(validTotalQuantity);
         const itemsData: ItemWithUpdatedQuantity[] = [];
 
         // 既存のアイテムを処理
@@ -82,8 +82,8 @@ export function ConfirmUpdateDialog({
               const data = await response.json();
               priceId = data.priceId;
 
-              if (priceId && revonizerQuantities[priceId] !== undefined) {
-                newQuantity = revonizerQuantities[priceId];
+              if (priceId && priceId in revonizerQuantities) {
+                newQuantity = revonizerQuantities[priceId as keyof RevonizerQuantities];
               }
             } catch (error) {
               console.error('Error fetching price ID:', error);
@@ -129,11 +129,11 @@ export function ConfirmUpdateDialog({
                 newQuantity: quantity,
                 quantityDiff: quantity,
                 isRevonizerProduct: true,
-                productType: productConfig === REVONIZER_PRODUCTS.FIRST_UNIT 
-                  ? 'FIRST_UNIT' 
+                productType: productConfig === REVONIZER_PRODUCTS.FIRST_UNIT
+                  ? 'FIRST_UNIT'
                   : productConfig === REVONIZER_PRODUCTS.SECOND_TO_FOURTH
-                  ? 'SECOND_TO_FOURTH'
-                  : 'FIFTH_AND_MORE',
+                    ? 'SECOND_TO_FOURTH'
+                    : 'FIFTH_AND_MORE',
                 priceId,
               });
             }

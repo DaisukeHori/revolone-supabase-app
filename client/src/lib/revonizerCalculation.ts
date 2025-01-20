@@ -1,5 +1,7 @@
+import { z } from 'zod';
 import { REVONIZER_PRODUCTS, type RevonizerPriceId } from "@/lib/revonizerProducts";
 
+// キャッシュ用のMap
 const priceIdCache = new Map<string, string>();
 
 // subscription_item_idからpriceIdを取得する関数
@@ -39,15 +41,18 @@ export async function getRevonizerProductType(subscriptionItemId: string): Promi
   return null;
 }
 
+// 数量計算の戻り値の型定義
+export type RevonizerQuantities = Record<RevonizerPriceId, number>;
+
 // 台数に応じた各商品の必要数量を計算する関数
-export function calculateRevonizerQuantities(totalQuantity: number): Record<RevonizerPriceId, number> {
+export function calculateRevonizerQuantities(totalQuantity: number): RevonizerQuantities {
   console.log('Calculating quantities for total:', totalQuantity);
 
   // 入力値の検証（最小1台）
   const validQuantity = Math.max(1, totalQuantity);
 
   // 初期化：すべての商品の数量を0に設定
-  const quantities: Record<RevonizerPriceId, number> = {
+  const quantities: RevonizerQuantities = {
     [REVONIZER_PRODUCTS.FIRST_UNIT.priceId]: 0,
     [REVONIZER_PRODUCTS.SECOND_TO_FOURTH.priceId]: 0,
     [REVONIZER_PRODUCTS.FIFTH_AND_MORE.priceId]: 0,
