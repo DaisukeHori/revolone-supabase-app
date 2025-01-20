@@ -1,11 +1,12 @@
 import { type Express } from "express";
 import Stripe from 'stripe';
+import { currentConfig } from './config';
 
-if (!process.env.STRIPE_SECRET_KEY) {
+if (!currentConfig.stripe.secretKey) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(currentConfig.stripe.secretKey);
 
 // setupStripeRoutesの型定義を修正
 type SetupOptions = {

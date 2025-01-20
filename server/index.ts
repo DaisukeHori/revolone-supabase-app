@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { env, isDevelopment } from "./config";
 
 const app = express();
 app.use(express.json());
@@ -48,7 +49,7 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
-    if (app.get("env") === "development") {
+    if (isDevelopment) {
       await setupVite(app, server);
     } else {
       serveStatic(app);
@@ -56,7 +57,7 @@ app.use((req, res, next) => {
 
     const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {
-      log(`サーバーが起動しました。ポート: ${PORT}`);
+      log(`サーバーが起動しました。ポート: ${PORT} (${env.NODE_ENV}環境)`);
     });
   } catch (error) {
     console.error('アプリケーション起動エラー:', error);

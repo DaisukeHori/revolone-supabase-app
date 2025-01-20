@@ -1,10 +1,11 @@
 import mail from "@sendgrid/mail";
+import { currentConfig } from './config';
 
-if (!process.env.SENDGRID_API_KEY) {
+if (!currentConfig.sendgrid.apiKey) {
   throw new Error("SENDGRID_API_KEY環境変数が設定されていません");
 }
 
-mail.setApiKey(process.env.SENDGRID_API_KEY);
+mail.setApiKey(currentConfig.sendgrid.apiKey);
 
 type SendMailOptions = {
   to: string;
