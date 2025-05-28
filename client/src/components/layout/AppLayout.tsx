@@ -151,17 +151,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
           <div className="flex h-20 items-center gap-4 px-6">
-            {/* デスクトップ用メニューボタン（ヘッダー内） */}
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="rounded-xl md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
             <div className="flex-1" />
             <div className="text-sm text-gray-500">
               {new Date().toLocaleDateString('ja-JP', { 
