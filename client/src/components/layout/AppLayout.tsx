@@ -59,27 +59,32 @@ export function AppLayout({ children }: AppLayoutProps) {
       <motion.aside
         initial={false}
         animate={{ 
-          x: isSidebarOpen ? 0 : -240,
-          width: isSidebarOpen ? 240 : 0
+          x: isSidebarOpen ? 0 : -280,
+          width: isSidebarOpen ? 280 : 0
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
           "fixed top-0 left-0 z-40 h-screen",
-          "bg-background/95 backdrop-blur-sm border-r border-primary/10",
-          "md:translate-x-0 md:w-60",
+          "bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 shadow-xl",
+          "md:translate-x-0 md:w-70",
           !isMobile && "md:block"
         )}
       >
         <div className="flex h-full flex-col">
           {/* ロゴ/ブランド部分 */}
-          <div className="flex h-16 items-center justify-between px-4 border-b border-primary/10">
-            <span className="text-xl font-semibold">管理画面</span>
+          <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md"></div>
+              </div>
+              <span className="text-xl font-bold text-white">Revonizer管理</span>
+            </div>
             {isMobile && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSidebarOpen(false)}
-                className="md:hidden"
+                className="md:hidden text-white hover:bg-white/20"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -87,39 +92,50 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           {/* ナビゲーションメニュー */}
-          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+          <nav className="flex-1 space-y-2 p-6 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Button
                   key={item.href}
                   variant="ghost"
-                  className="w-full justify-start gap-3 mb-1"
+                  className="w-full justify-start gap-4 h-12 px-4 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 group"
                   onClick={() => {
                     setLocation(item.href);
                     isMobile && setIsSidebarOpen(false);
                   }}
                 >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
+                  <div className="p-2 rounded-lg bg-slate-100 group-hover:bg-blue-100 transition-colors">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">{item.label}</span>
                 </Button>
               );
             })}
           </nav>
 
           {/* ユーザー情報とログアウト */}
-          <div className="border-t border-primary/10 p-4">
-            <div className="mb-2 text-sm">
-              <div className="font-medium">{user?.username}</div>
-              <div className="text-muted-foreground">{user?.email}</div>
+          <div className="border-t border-slate-200 p-6">
+            <div className="mb-4 p-4 bg-slate-50 rounded-xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  {user?.username?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800">{user?.username}</div>
+                  <div className="text-sm text-slate-500">{user?.email}</div>
+                </div>
+              </div>
             </div>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-3 text-red-600 hover:text-red-600 hover:bg-red-50"
+              className="w-full justify-start gap-3 h-12 px-4 rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
               onClick={() => logout()}
             >
-              <LogOut className="h-5 w-5" />
-              ログアウト
+              <div className="p-2 rounded-lg bg-red-100">
+                <LogOut className="h-4 w-4" />
+              </div>
+              <span className="font-medium">ログアウト</span>
             </Button>
           </div>
         </div>
@@ -127,26 +143,36 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* メインコンテンツ */}
       <div className={cn(
-        "min-h-screen transition-all duration-200",
-        "md:ml-60"
+        "min-h-screen transition-all duration-200 bg-slate-50",
+        "md:ml-70"
       )}>
         {/* ヘッダー */}
-        <header className="sticky top-0 z-30 h-16 border-b border-primary/10 bg-background/95 backdrop-blur">
-          <div className="flex h-16 items-center gap-4 px-4">
+        <header className="sticky top-0 z-30 h-20 border-b border-slate-200 bg-white/95 backdrop-blur-sm shadow-sm">
+          <div className="flex h-20 items-center gap-4 px-6">
             {isMobile && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="rounded-xl"
               >
                 <Menu className="h-5 w-5" />
               </Button>
             )}
+            <div className="flex-1" />
+            <div className="text-sm text-slate-500">
+              {new Date().toLocaleDateString('ja-JP', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                weekday: 'long'
+              })}
+            </div>
           </div>
         </header>
 
         {/* コンテンツエリア */}
-        <main className="container mx-auto p-4 md:p-8">
+        <main className="container mx-auto p-6 md:p-8">
           {children}
         </main>
       </div>

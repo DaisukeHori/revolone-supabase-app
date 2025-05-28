@@ -75,28 +75,45 @@ export default function HomePage() {
         className="space-y-8"
       >
         <motion.div variants={item}>
-          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-            <CardHeader className="space-y-1">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <Clock className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl">
-                    ようこそ、{user?.username}さん
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    今日は{new Date().toLocaleDateString("ja-JP", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      weekday: "long"
-                    })}です
-                  </p>
-                </div>
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <Clock className="h-8 w-8 text-white" />
               </div>
-            </CardHeader>
-          </Card>
+              <div>
+                <h1 className="text-3xl font-bold mb-2">
+                  おかえりなさい、{user?.username}さん
+                </h1>
+                <p className="text-blue-100 text-lg">
+                  {new Date().toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    weekday: "long"
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">{stripeData?.length || 0}</div>
+                <div className="text-blue-100">総店舗数</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">
+                  {stripeData?.reduce((acc, customer) => acc + customer.subscriptions.length, 0) || 0}
+                </div>
+                <div className="text-blue-100">アクティブな契約</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">
+                  {stripeData?.reduce((acc, customer) => 
+                    acc + customer.subscriptions.filter(sub => sub.status === 'active').length, 0) || 0}
+                </div>
+                <div className="text-blue-100">稼働中のサービス</div>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {error ? (
@@ -109,51 +126,59 @@ export default function HomePage() {
           </motion.div>
         ) : stripeData && stripeData.length > 0 ? (
           <motion.div variants={item}>
-            <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
-                    <Building2 className="h-6 w-6 text-primary" />
+            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 pb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Building2 className="h-6 w-6 text-blue-600" />
                   </div>
-                  <CardTitle className="text-2xl">店舗一覧</CardTitle>
+                  <div>
+                    <CardTitle className="text-2xl text-slate-800">店舗一覧</CardTitle>
+                    <p className="text-slate-600">管理中の店舗とサービス状況</p>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 p-6">
                 {stripeData.map((customerData) => (
                   <motion.div
                     key={customerData.customer.id}
-                    className="bg-primary/5 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-primary/10 transition-colors"
-                    whileHover={{ scale: 1.01 }}
+                    className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+                    whileHover={{ scale: 1.01, y: -2 }}
                     transition={{ type: "spring", stiffness: 300 }}
                     onClick={() => {
                       setLocation(`/store/${customerData.customer.id}`);
                     }}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <h3 className="text-xl font-semibold">
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-bold text-slate-800">
                           {customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定'}
                         </h3>
                         {customerData.customer.metadata?.代理店名 && (
-                          <p className="text-sm text-muted-foreground">
+                          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                            <Building2 className="h-3 w-3" />
                             代理店: {customerData.customer.metadata.代理店名}
-                          </p>
+                          </div>
                         )}
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-slate-500 flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
                           登録日: {new Date(customerData.customer.created * 1000).toLocaleDateString("ja-JP")}
                         </p>
                       </div>
                     </div>
                     {customerData.subscriptions.length > 0 && (
-                      <div className="grid gap-4 pt-4 border-t border-primary/10">
-                        <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">契約中のサービス</p>
+                      <div className="grid gap-4 pt-4 border-t border-slate-200">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                            <p className="text-sm font-medium text-slate-700">契約中のサービス</p>
+                          </div>
                           <div className="flex flex-wrap gap-2">
                             {customerData.subscriptions.flatMap(subscription =>
                               subscription.items.map(item => (
                                 <div
                                   key={item.subscription_item_id}
-                                  className="bg-primary/10 px-3 py-1 rounded-full text-sm text-primary"
+                                  className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
                                 >
                                   {item.product.name} {item.quantity > 1 ? `× ${item.quantity}` : ''}
                                 </div>
@@ -171,18 +196,27 @@ export default function HomePage() {
         ) : null}
 
         <motion.div variants={item}>
-          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-            <CardHeader className="space-y-1">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <Activity className="h-6 w-6 text-primary" />
+          <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-green-50 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-600" />
                 </div>
-                <CardTitle className="text-xl">最近のアクティビティ</CardTitle>
+                <div>
+                  <CardTitle className="text-2xl text-slate-800">最近のアクティビティ</CardTitle>
+                  <p className="text-slate-600">システムの活動状況</p>
+                </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Activity className="h-8 w-8 text-slate-400" />
+              </div>
+              <p className="text-slate-500 text-lg">
                 アクティビティはまだありません
+              </p>
+              <p className="text-sm text-slate-400 mt-2">
+                新しい活動が発生すると、ここに表示されます
               </p>
             </CardContent>
           </Card>
