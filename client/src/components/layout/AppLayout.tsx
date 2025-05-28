@@ -30,7 +30,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useUser();
 
   // 店舗詳細ページかどうかを判定し、店舗IDを取得
-  const storeMatch = location.match(/^\/store\/(.+)$/);
+  const storeMatch = location.match(/^\/store\/([^\/]+)/);
   const storeId = storeMatch ? storeMatch[1] : null;
 
   // 店舗情報を取得（店舗詳細ページの場合のみ）
@@ -219,18 +219,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {(storeId ? storeMenuItems : menuItems).map((item) => {
                 const Icon = item.icon;
                 // 店舗詳細ページでのタブ選択状態を正しく判定
-                let isActive = false;
-                if (storeId) {
-                  if (item.href === `/store/${storeId}` && location === `/store/${storeId}`) {
-                    isActive = true; // 店舗情報タブ
-                  } else if (item.href === `/store/${storeId}/services` && location === `/store/${storeId}/services`) {
-                    isActive = true; // サービスタブ
-                  } else if (item.href === `/store/${storeId}/devices` && location === `/store/${storeId}/devices`) {
-                    isActive = true; // デバイスタブ
-                  }
-                } else {
-                  isActive = location === item.href; // 通常のメニュー
-                }
+                const isActive = location === item.href;
                 
                 return (
                   <Button
