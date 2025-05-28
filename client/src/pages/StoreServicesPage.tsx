@@ -117,57 +117,60 @@ export default function StoreServicesPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-6">
+                <div className="mb-6">
+                  <button className="w-full bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 text-left hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <CreditCard className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="font-medium text-gray-800">新しいサブスクリプションに加入</span>
+                    </div>
+                  </button>
+                </div>
+
                 {currentStore.subscriptions.length > 0 ? (
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {currentStore.subscriptions.map((subscription) => (
                       <div key={subscription.id} className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6">
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                              サブスクリプション ID: {subscription.id}
-                            </h3>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              subscription.status === 'active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {subscription.status}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-500">
-                            次回更新: {new Date(subscription.current_period_end * 1000).toLocaleDateString("ja-JP")}
-                          </p>
+                        <div className="flex items-center justify-between mb-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            subscription.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : subscription.status === 'incomplete'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {subscription.status}
+                          </span>
                         </div>
                         
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-700">サービス詳細</h4>
-                          <div className="grid gap-3">
-                            {subscription.items.map((item) => (
-                              <div key={item.subscription_item_id} className="bg-white border border-gray-200 rounded-lg p-4">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h5 className="font-medium text-gray-800">{item.product.name}</h5>
-                                    {item.product.description && (
-                                      <p className="text-sm text-gray-600 mt-1">{item.product.description}</p>
-                                    )}
-                                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                                      <span>数量: {item.quantity}</span>
-                                      <span>間隔: {item.interval === 'month' ? '月額' : '年額'}</span>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="text-lg font-semibold text-gray-800">
-                                      ¥{(item.amount || 0).toLocaleString()}
-                                    </div>
-                                    <div className="text-sm text-gray-500">
-                                      /{item.interval === 'month' ? '月' : '年'}
-                                    </div>
-                                  </div>
-                                </div>
+                        <div className="space-y-4">
+                          {subscription.items.map((item) => (
+                            <div key={item.subscription_item_id}>
+                              <h3 className="text-lg font-semibold text-gray-800 mb-2">{item.product.name}</h3>
+                              {item.product.description && (
+                                <p className="text-sm text-gray-600 mb-4">{item.product.description}</p>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <span className="text-2xl font-bold text-gray-800">
+                                  {(item.amount || 0).toLocaleString()} JPY
+                                </span>
+                                <span className="text-gray-600">× {item.quantity}</span>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
+
+                        {subscription.default_payment_method?.card && (
+                          <div className="mt-6 pt-4 border-t border-gray-200">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <CreditCard className="h-4 w-4" />
+                              <span className="text-sm">
+                                {subscription.default_payment_method.card.brand.toUpperCase()}**** {subscription.default_payment_method.card.last4}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
