@@ -15,6 +15,7 @@ import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
 import { Background } from "@/components/ui/background";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -26,13 +27,36 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useUser();
 
+  // 店舗詳細ページかどうかを判定し、店舗IDを取得
+  const storeMatch = location.match(/^\/store\/(.+)$/);
+  const storeId = storeMatch ? storeMatch[1] : null;
+
+  // 店舗情報を取得（店舗詳細ページの場合のみ）
+  const { data: storeData } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch customer data');
+      }
+      return response.json();
+    },
+    enabled: !!storeId
+  });
+
+  // 現在の店舗情報を取得
+  const currentStore = storeData?.find((customer: any) => customer.customer.id === storeId);
+  const storeName = currentStore?.customer?.metadata?.サロン名 || currentStore?.customer?.name || '店舗名未設定';
+
   // ウィンドウ幅が変更されたときの処理
   useEffect(() => {
     setIsSidebarOpen(!isMobile);
   }, [isMobile]);
 
   const menuItems = [
-    { icon: Home, label: "ホーム", href: "/" },
+    { icon: Home, label: "店舗選択", href: "/" },
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];
@@ -150,7 +174,14 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
           <div className="flex h-20 items-center gap-4 px-6">
-            <div className="flex-1" />
+            {storeId && (
+              <div className="flex-1">
+                <h1 className="text-lg font-semibold text-gray-800">
+                  {storeName}
+                </h1>
+              </div>
+            )}
+            {!storeId && <div className="flex-1" />}
             <div className="text-sm text-gray-500">
               {new Date().toLocaleDateString('ja-JP', { 
                 year: 'numeric', 
