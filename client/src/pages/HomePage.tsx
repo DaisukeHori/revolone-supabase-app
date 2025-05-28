@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useUser } from "@/hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Building2, Clock, Activity } from "lucide-react";
+import { CreditCard, Building2, Clock, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
 
@@ -106,6 +106,26 @@ export default function HomePage() {
               </AlertDescription>
             </Alert>
           </motion.div>
+        ) : isLoading ? (
+          <motion.div variants={item}>
+            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-6 w-6 text-gray-600" />
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <CardTitle className="text-xl sm:text-2xl text-gray-800">店舗一覧</CardTitle>
+                    <p className="text-gray-600 text-sm sm:text-base">管理中の店舗とサービス状況</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center p-12">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
+                <p className="text-gray-500 text-sm">店舗情報を読み込み中...</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         ) : stripeData && stripeData.length > 0 ? (
           <motion.div variants={item}>
             <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
@@ -177,32 +197,7 @@ export default function HomePage() {
           </motion.div>
         ) : null}
 
-        <motion.div variants={item}>
-          <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-slate-50 to-green-50 pb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl text-slate-800">最近のアクティビティ</CardTitle>
-                  <p className="text-slate-600">システムの活動状況</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Activity className="h-8 w-8 text-slate-400" />
-              </div>
-              <p className="text-slate-500 text-lg">
-                アクティビティはまだありません
-              </p>
-              <p className="text-sm text-slate-400 mt-2">
-                新しい活動が発生すると、ここに表示されます
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+
       </motion.div>
     </AppLayout>
   );
