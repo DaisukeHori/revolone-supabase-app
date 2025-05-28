@@ -75,7 +75,7 @@ export default function HomePage() {
         className="space-y-8"
       >
         <motion.div variants={item}>
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl">
+          <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-2xl p-8 text-white shadow-xl">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                 <Clock className="h-8 w-8 text-white" />
@@ -84,7 +84,7 @@ export default function HomePage() {
                 <h1 className="text-3xl font-bold mb-2">
                   おかえりなさい、{user?.username}さん
                 </h1>
-                <p className="text-blue-100 text-lg">
+                <p className="text-gray-200 text-lg">
                   {new Date().toLocaleDateString("ja-JP", {
                     year: "numeric",
                     month: "long",
@@ -97,20 +97,20 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="text-2xl font-bold">{stripeData?.length || 0}</div>
-                <div className="text-blue-100">総店舗数</div>
+                <div className="text-gray-200">総店舗数</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="text-2xl font-bold">
                   {stripeData?.reduce((acc, customer) => acc + customer.subscriptions.length, 0) || 0}
                 </div>
-                <div className="text-blue-100">アクティブな契約</div>
+                <div className="text-gray-200">アクティブな契約</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="text-2xl font-bold">
                   {stripeData?.reduce((acc, customer) => 
                     acc + customer.subscriptions.filter(sub => sub.status === 'active').length, 0) || 0}
                 </div>
-                <div className="text-blue-100">稼働中のサービス</div>
+                <div className="text-gray-200">稼働中のサービス</div>
               </div>
             </div>
           </div>
@@ -127,14 +127,14 @@ export default function HomePage() {
         ) : stripeData && stripeData.length > 0 ? (
           <motion.div variants={item}>
             <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 pb-6">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                    <Building2 className="h-6 w-6 text-gray-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-2xl text-slate-800">店舗一覧</CardTitle>
-                    <p className="text-slate-600">管理中の店舗とサービス状況</p>
+                    <CardTitle className="text-2xl text-gray-800">店舗一覧</CardTitle>
+                    <p className="text-gray-600">管理中の店舗とサービス状況</p>
                   </div>
                 </div>
               </CardHeader>
@@ -142,7 +142,7 @@ export default function HomePage() {
                 {stripeData.map((customerData) => (
                   <motion.div
                     key={customerData.customer.id}
-                    className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+                    className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-gray-400 transition-all duration-200"
                     whileHover={{ scale: 1.01, y: -2 }}
                     transition={{ type: "spring", stiffness: 300 }}
                     onClick={() => {
@@ -151,7 +151,7 @@ export default function HomePage() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-2">
-                        <h3 className="text-xl font-bold text-slate-800">
+                        <h3 className="text-xl font-bold text-gray-800">
                           {customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定'}
                         </h3>
                         {customerData.customer.metadata?.代理店名 && (
