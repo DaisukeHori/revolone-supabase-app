@@ -218,7 +218,19 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center justify-around px-4 py-2">
               {(storeId ? storeMenuItems : menuItems).map((item) => {
                 const Icon = item.icon;
-                const isActive = location === item.href;
+                // 店舗詳細ページでのタブ選択状態を正しく判定
+                let isActive = false;
+                if (storeId) {
+                  if (item.href === `/store/${storeId}` && location === `/store/${storeId}`) {
+                    isActive = true; // 店舗情報タブ
+                  } else if (item.href === `/store/${storeId}/services` && location === `/store/${storeId}/services`) {
+                    isActive = true; // サービスタブ
+                  } else if (item.href === `/store/${storeId}/devices` && location === `/store/${storeId}/devices`) {
+                    isActive = true; // デバイスタブ
+                  }
+                } else {
+                  isActive = location === item.href; // 通常のメニュー
+                }
                 
                 return (
                   <Button

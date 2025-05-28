@@ -49,8 +49,8 @@ function App() {
   return (
     <Switch>
       <Route path="/profile" component={ProfilePage} />
-      <Route path="/settings" component={SettingsPage} />
       <Route path="/settings/security" component={SecuritySettingsPage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route path="/store/:id/services" component={StoreServicesPage} />
       <Route path="/store/:id/devices" component={StoreDevicesPage} />
       <Route path="/store/:id" component={StoreDetailPage} />
