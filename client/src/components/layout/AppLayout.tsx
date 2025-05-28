@@ -176,33 +176,79 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* コンテンツエリア */}
         <main className={cn(
           "container mx-auto p-6 md:p-8",
-          isMobile ? "pb-24" : "" // モバイルでボトムボタンのスペースを確保
+          isMobile ? "pb-24" : "" // モバイルでボトムナビゲーションのスペースを確保
         )}>
           {children}
         </main>
       </div>
 
-      {/* モバイル用ボトム固定メニューボタン */}
+      {/* モバイル用ボトムナビゲーションバー */}
       {isMobile && (
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
-          className="fixed bottom-6 right-6 z-50 md:hidden"
+          className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
         >
-          <Button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={cn(
-              "h-14 w-14 rounded-full shadow-lg transition-all duration-300",
-              "bg-gradient-to-r from-gray-800 to-gray-700",
-              "hover:from-gray-700 hover:to-gray-600",
-              "text-white border-2 border-white/20",
-              "backdrop-blur-sm hover:scale-105 active:scale-95",
-              isSidebarOpen && "rotate-90"
-            )}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
+          <div className="bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg">
+            <div className="flex items-center justify-around px-4 py-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const [location] = useLocation();
+                const isActive = location === item.href;
+                
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    className={cn(
+                      "flex flex-col items-center gap-1 h-16 px-3 rounded-lg transition-all duration-200",
+                      isActive 
+                        ? "text-gray-800 bg-gray-100" 
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    )}
+                    onClick={() => setLocation(item.href)}
+                  >
+                    <div className={cn(
+                      "p-1.5 rounded-md transition-colors",
+                      isActive 
+                        ? "bg-gray-200 text-gray-800" 
+                        : "text-gray-500"
+                    )}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-medium leading-none">
+                      {item.label}
+                    </span>
+                  </Button>
+                );
+              })}
+              
+              {/* メニューボタン */}
+              <Button
+                variant="ghost"
+                className={cn(
+                  "flex flex-col items-center gap-1 h-16 px-3 rounded-lg transition-all duration-200",
+                  isSidebarOpen 
+                    ? "text-gray-800 bg-gray-100" 
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                )}
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              >
+                <div className={cn(
+                  "p-1.5 rounded-md transition-colors",
+                  isSidebarOpen 
+                    ? "bg-gray-200 text-gray-800" 
+                    : "text-gray-500"
+                )}>
+                  <Menu className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-medium leading-none">
+                  メニュー
+                </span>
+              </Button>
+            </div>
+          </div>
         </motion.div>
       )}
     </div>
