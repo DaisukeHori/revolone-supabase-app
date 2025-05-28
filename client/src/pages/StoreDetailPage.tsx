@@ -301,30 +301,28 @@ export default function StoreDetailPage() {
         <motion.div variants={item}>
           <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Store className="h-6 w-6 text-gray-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-xl sm:text-2xl text-gray-800 break-words">
-                        {customer.metadata?.サロン名 || '店舗名未設定'}
-                      </CardTitle>
-                      {customer.metadata?.代理店名 && (
-                        <CardDescription className="text-gray-600 text-sm break-words">
-                          代理店: {customer.metadata.代理店名}
-                        </CardDescription>
-                      )}
-                    </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Store className="h-6 w-6 text-gray-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xl sm:text-2xl text-gray-800 break-words">
+                      {customer.metadata?.サロン名 || '店舗名未設定'}
+                    </CardTitle>
+                    {customer.metadata?.代理店名 && (
+                      <CardDescription className="text-gray-600 text-sm break-words">
+                        代理店: {customer.metadata.代理店名}
+                      </CardDescription>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 w-full">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditingStore(true)}
-                    className="gap-2 bg-white hover:bg-gray-50 w-full justify-start"
+                    className="gap-2 bg-white hover:bg-gray-50 justify-start"
                   >
                     <Pencil className="h-4 w-4" />
                     編集
@@ -333,7 +331,7 @@ export default function StoreDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setLocation(`/payment-history/${customer.id}`)}
-                    className="gap-2 bg-white hover:bg-gray-50 w-full justify-start"
+                    className="gap-2 bg-white hover:bg-gray-50 justify-start"
                   >
                     <History className="h-4 w-4" />
                     購入履歴
@@ -382,23 +380,21 @@ export default function StoreDetailPage() {
         <motion.div variants={item}>
           <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Package className="h-6 w-6 text-gray-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-xl sm:text-2xl text-gray-800">契約中のサービス</CardTitle>
-                      <p className="text-gray-600 text-sm">現在の契約状況とサービス詳細</p>
-                    </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Package className="h-6 w-6 text-gray-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xl sm:text-2xl text-gray-800">契約中のサービス</CardTitle>
+                    <p className="text-gray-600 text-sm">現在の契約状況とサービス詳細</p>
                   </div>
                 </div>
-                <div className="w-full">
+                <div>
                   <Button
                     variant="outline"
                     onClick={() => setIsCreatingSubscription(true)}
-                    className="gap-2 bg-white hover:bg-gray-50 w-full justify-start"
+                    className="gap-2 bg-white hover:bg-gray-50 w-full sm:w-auto justify-start"
                   >
                     <Package className="h-4 w-4" />
                     新しいサブスクリプションに加入
