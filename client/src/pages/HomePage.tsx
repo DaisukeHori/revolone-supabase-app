@@ -94,25 +94,7 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <div className="text-xl sm:text-2xl font-bold">{stripeData?.length || 0}</div>
-                <div className="text-gray-200 text-sm sm:text-base">総店舗数</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <div className="text-xl sm:text-2xl font-bold">
-                  {stripeData?.reduce((acc, customer) => acc + customer.subscriptions.length, 0) || 0}
-                </div>
-                <div className="text-gray-200 text-sm sm:text-base">アクティブな契約</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <div className="text-xl sm:text-2xl font-bold">
-                  {stripeData?.reduce((acc, customer) => 
-                    acc + customer.subscriptions.filter(sub => sub.status === 'active').length, 0) || 0}
-                </div>
-                <div className="text-gray-200 text-sm sm:text-base">稼働中のサービス</div>
-              </div>
-            </div>
+
           </div>
         </motion.div>
 
