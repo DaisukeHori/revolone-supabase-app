@@ -67,7 +67,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           "fixed top-0 left-0 z-40 h-screen",
           "bg-white border-r border-gray-200 shadow-lg",
           "md:translate-x-0 md:w-72",
-          !isMobile && "md:block"
+          !isMobile && "md:block",
+          isMobile && "hidden" // モバイルではサイドバーを非表示
         )}
       >
         <div className="flex h-full flex-col">
@@ -184,12 +185,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* モバイル用ボトムナビゲーションバー */}
       {isMobile && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
-          className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
-        >
+        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
           <div className="bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg">
             <div className="flex items-center justify-around px-4 py-2">
               {menuItems.map((item) => {
@@ -222,33 +218,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                   </Button>
                 );
               })}
-              
-              {/* メニューボタン */}
-              <Button
-                variant="ghost"
-                className={cn(
-                  "flex flex-col items-center gap-1 h-16 px-3 rounded-lg transition-all duration-200",
-                  isSidebarOpen 
-                    ? "text-gray-800 bg-gray-100" 
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                )}
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              >
-                <div className={cn(
-                  "p-1.5 rounded-md transition-colors",
-                  isSidebarOpen 
-                    ? "bg-gray-200 text-gray-800" 
-                    : "text-gray-500"
-                )}>
-                  <Menu className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium leading-none">
-                  メニュー
-                </span>
-              </Button>
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );
