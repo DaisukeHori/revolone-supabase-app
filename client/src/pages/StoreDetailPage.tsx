@@ -290,64 +290,71 @@ export default function StoreDetailPage() {
             variant="ghost"
             size="icon"
             onClick={() => setLocation("/")}
-            className="hover:bg-primary/10"
+            className="hover:bg-primary/10 flex-shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-semibold">店舗詳細</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">店舗詳細</h1>
         </div>
 
         {/* 店舗基本情報 */}
         <motion.div variants={item}>
-          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
-                    <Store className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl">
-                      {customer.metadata?.サロン名 || '店舗名未設定'}
-                    </CardTitle>
-                    {customer.metadata?.代理店名 && (
-                      <CardDescription>
-                        代理店: {customer.metadata.代理店名}
-                      </CardDescription>
-                    )}
+          <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
+              <div className="flex flex-col space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Store className="h-6 w-6 text-gray-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-xl sm:text-2xl text-gray-800 break-words">
+                        {customer.metadata?.サロン名 || '店舗名未設定'}
+                      </CardTitle>
+                      {customer.metadata?.代理店名 && (
+                        <CardDescription className="text-gray-600 text-sm break-words">
+                          代理店: {customer.metadata.代理店名}
+                        </CardDescription>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingStore(true)}
-                  className="gap-2"
-                >
-                  <Pencil className="h-4 w-4" />
-                  編集
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLocation(`/payment-history/${customer.id}`)}
-                  className="gap-2"
-                >
-                  <History className="h-4 w-4" />
-                  購入履歴
-                </Button>
+                <div className="flex flex-col gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingStore(true)}
+                    className="gap-2 bg-white hover:bg-gray-50 w-full justify-start"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    編集
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLocation(`/payment-history/${customer.id}`)}
+                    className="gap-2 bg-white hover:bg-gray-50 w-full justify-start"
+                  >
+                    <History className="h-4 w-4" />
+                    購入履歴
+                  </Button>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-4 sm:p-6">
               <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">基本情報</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">メールアドレス</p>
-                      <p className="text-sm">{customer.email}</p>
+                <div className="space-y-3">
+                  <h3 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    基本情報
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-xs sm:text-sm text-gray-500 mb-1">メールアドレス</p>
+                      <p className="text-sm font-medium text-gray-800 break-all">{customer.email}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">電話番号</p>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-xs sm:text-sm text-gray-500 mb-1">電話番号</p>
                       <p className="text-sm">{customer.phone || '未設定'}</p>
                     </div>
                     <div>
@@ -373,31 +380,38 @@ export default function StoreDetailPage() {
 
         {/* サブスクリプション一覧 */}
         <motion.div variants={item}>
-          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
-                    <Package className="h-6 w-6 text-primary" />
+          <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
+              <div className="flex flex-col space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Package className="h-6 w-6 text-gray-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-xl sm:text-2xl text-gray-800">契約中のサービス</CardTitle>
+                      <p className="text-gray-600 text-sm">現在の契約状況とサービス詳細</p>
+                    </div>
                   </div>
-                  <CardTitle className="text-2xl">契約中のサービス</CardTitle>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreatingSubscription(true)}
-                  className="gap-2"
-                >
-                  <Package className="h-4 w-4" />
-                  新しいサブスクリプションに加入
-                </Button>
+                <div className="w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreatingSubscription(true)}
+                    className="gap-2 bg-white hover:bg-gray-50 w-full justify-start"
+                  >
+                    <Package className="h-4 w-4" />
+                    新しいサブスクリプションに加入
+                  </Button>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 p-4 sm:p-6">
               {customerData?.subscriptions.length > 0 ? (
                 customerData.subscriptions.map((subscription) => (
                   <div
                     key={subscription.id}
-                    className="bg-primary/5 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-primary/10 transition-colors"
+                    className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 sm:p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-gray-400 transition-all duration-200"
                     onClick={() => setLocation(`/subscription/${subscription.id}`)}
                   >
                     <div className="flex items-start justify-between">
@@ -413,22 +427,22 @@ export default function StoreDetailPage() {
                       </div>
                     </div>
 
-                    <div className="grid gap-4">
+                    <div className="grid gap-3">
                       {subscription.items.map((item) => (
-                        <div key={item.subscription_item_id} className="flex justify-between items-center">
-                          <div className="space-y-1">
-                            <p className="font-medium">{item.product.name}</p>
+                        <div key={item.subscription_item_id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-white p-3 rounded-lg">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <p className="font-medium text-gray-800 break-words">{item.product.name}</p>
                             {item.product.description && (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-gray-500 break-words">
                                 {item.product.description}
                               </p>
                             )}
                           </div>
-                          <div className="text-right">
-                            <p className="font-medium">
+                          <div className="text-left sm:text-right flex-shrink-0">
+                            <p className="font-medium text-gray-800">
                               {item.amount?.toLocaleString()} {item.currency.toUpperCase()}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-gray-500">
                               × {item.quantity}
                             </p>
                           </div>
