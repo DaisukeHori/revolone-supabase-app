@@ -76,15 +76,15 @@ export default function HomePage() {
       >
         <motion.div variants={item}>
           <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-2xl p-8 text-white shadow-xl">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
                 <Clock className="h-8 w-8 text-white" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold mb-2">
+              <div className="text-center sm:text-left">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">
                   おかえりなさい、{user?.username}さん
                 </h1>
-                <p className="text-gray-200 text-lg">
+                <p className="text-gray-200 text-base sm:text-lg">
                   {new Date().toLocaleDateString("ja-JP", {
                     year: "numeric",
                     month: "long",
@@ -94,23 +94,23 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="text-2xl font-bold">{stripeData?.length || 0}</div>
-                <div className="text-gray-200">総店舗数</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold">{stripeData?.length || 0}</div>
+                <div className="text-gray-200 text-sm sm:text-base">総店舗数</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="text-2xl font-bold">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold">
                   {stripeData?.reduce((acc, customer) => acc + customer.subscriptions.length, 0) || 0}
                 </div>
-                <div className="text-gray-200">アクティブな契約</div>
+                <div className="text-gray-200 text-sm sm:text-base">アクティブな契約</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="text-2xl font-bold">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold">
                   {stripeData?.reduce((acc, customer) => 
                     acc + customer.subscriptions.filter(sub => sub.status === 'active').length, 0) || 0}
                 </div>
-                <div className="text-gray-200">稼働中のサービス</div>
+                <div className="text-gray-200 text-sm sm:text-base">稼働中のサービス</div>
               </div>
             </div>
           </div>
@@ -128,21 +128,21 @@ export default function HomePage() {
           <motion.div variants={item}>
             <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Building2 className="h-6 w-6 text-gray-600" />
                   </div>
-                  <div>
-                    <CardTitle className="text-2xl text-gray-800">店舗一覧</CardTitle>
-                    <p className="text-gray-600">管理中の店舗とサービス状況</p>
+                  <div className="text-center sm:text-left">
+                    <CardTitle className="text-xl sm:text-2xl text-gray-800">店舗一覧</CardTitle>
+                    <p className="text-gray-600 text-sm sm:text-base">管理中の店舗とサービス状況</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 p-6">
+              <CardContent className="space-y-4 p-4 sm:p-6">
                 {stripeData.map((customerData) => (
                   <motion.div
                     key={customerData.customer.id}
-                    className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-gray-400 transition-all duration-200"
+                    className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 sm:p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-gray-400 transition-all duration-200"
                     whileHover={{ scale: 1.01, y: -2 }}
                     transition={{ type: "spring", stiffness: 300 }}
                     onClick={() => {
@@ -151,36 +151,36 @@ export default function HomePage() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-2">
-                        <h3 className="text-xl font-bold text-gray-800">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 break-words">
                           {customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定'}
                         </h3>
                         {customerData.customer.metadata?.代理店名 && (
-                          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                          <div className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
                             <Building2 className="h-3 w-3" />
-                            代理店: {customerData.customer.metadata.代理店名}
+                            <span className="truncate">代理店: {customerData.customer.metadata.代理店名}</span>
                           </div>
                         )}
-                        <p className="text-sm text-slate-500 flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          登録日: {new Date(customerData.customer.created * 1000).toLocaleDateString("ja-JP")}
+                        <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2">
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span>登録日: {new Date(customerData.customer.created * 1000).toLocaleDateString("ja-JP")}</span>
                         </p>
                       </div>
                     </div>
                     {customerData.subscriptions.length > 0 && (
-                      <div className="grid gap-4 pt-4 border-t border-slate-200">
+                      <div className="grid gap-3 pt-4 border-t border-gray-200">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <CreditCard className="h-4 w-4 text-blue-600" />
-                            <p className="text-sm font-medium text-slate-700">契約中のサービス</p>
+                            <CreditCard className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                            <p className="text-xs sm:text-sm font-medium text-gray-700">契約中のサービス</p>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {customerData.subscriptions.flatMap(subscription =>
                               subscription.items.map(item => (
                                 <div
                                   key={item.subscription_item_id}
-                                  className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+                                  className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-1 rounded-lg text-xs sm:text-sm font-medium shadow-sm"
                                 >
-                                  {item.product.name} {item.quantity > 1 ? `× ${item.quantity}` : ''}
+                                  <span className="truncate">{item.product.name} {item.quantity > 1 ? `× ${item.quantity}` : ''}</span>
                                 </div>
                               ))
                             )}

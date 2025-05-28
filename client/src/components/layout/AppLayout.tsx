@@ -59,8 +59,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       <motion.aside
         initial={false}
         animate={{ 
-          x: isSidebarOpen ? 0 : -280,
-          width: isSidebarOpen ? 280 : 0
+          x: isSidebarOpen ? 0 : -288,
+          width: isSidebarOpen ? 288 : 0
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
@@ -144,6 +144,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* メインコンテンツ */}
       <div className={cn(
         "min-h-screen transition-all duration-200 bg-gray-50",
+        isSidebarOpen && isMobile ? "overflow-hidden" : "",
         "md:ml-72"
       )}>
         {/* ヘッダー */}
