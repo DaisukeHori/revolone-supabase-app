@@ -150,12 +150,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
           <div className="flex h-20 items-center gap-4 px-6">
+            {/* デスクトップ用メニューボタン（ヘッダー内） */}
             {isMobile && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="rounded-xl"
+                className="rounded-xl md:hidden"
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -173,10 +174,37 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* コンテンツエリア */}
-        <main className="container mx-auto p-6 md:p-8">
+        <main className={cn(
+          "container mx-auto p-6 md:p-8",
+          isMobile ? "pb-24" : "" // モバイルでボトムボタンのスペースを確保
+        )}>
           {children}
         </main>
       </div>
+
+      {/* モバイル用ボトム固定メニューボタン */}
+      {isMobile && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
+          className="fixed bottom-6 right-6 z-50 md:hidden"
+        >
+          <Button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={cn(
+              "h-14 w-14 rounded-full shadow-lg transition-all duration-300",
+              "bg-gradient-to-r from-gray-800 to-gray-700",
+              "hover:from-gray-700 hover:to-gray-600",
+              "text-white border-2 border-white/20",
+              "backdrop-blur-sm hover:scale-105 active:scale-95",
+              isSidebarOpen && "rotate-90"
+            )}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 }
