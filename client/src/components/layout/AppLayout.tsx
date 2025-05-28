@@ -23,7 +23,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const isMobile = useIsMobile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, logout } = useUser();
 
   // ウィンドウ幅が変更されたときの処理
@@ -194,7 +194,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center justify-around px-4 py-2">
               {menuItems.map((item) => {
                 const Icon = item.icon;
-                const [location] = useLocation();
                 const isActive = location === item.href;
                 
                 return (
