@@ -317,12 +317,12 @@ export default function StoreDetailPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditingStore(true)}
-                    className="gap-2 bg-white hover:bg-gray-50 justify-start"
+                    className="gap-2 bg-white hover:bg-gray-50"
                   >
                     <Pencil className="h-4 w-4" />
                     編集
@@ -331,7 +331,7 @@ export default function StoreDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setLocation(`/payment-history/${customer.id}`)}
-                    className="gap-2 bg-white hover:bg-gray-50 justify-start"
+                    className="gap-2 bg-white hover:bg-gray-50"
                   >
                     <History className="h-4 w-4" />
                     購入履歴
@@ -394,7 +394,7 @@ export default function StoreDetailPage() {
                   <Button
                     variant="outline"
                     onClick={() => setIsCreatingSubscription(true)}
-                    className="gap-2 bg-white hover:bg-gray-50 w-full sm:w-auto justify-start"
+                    className="gap-2 bg-white hover:bg-gray-50"
                   >
                     <Package className="h-4 w-4" />
                     新しいサブスクリプションに加入
