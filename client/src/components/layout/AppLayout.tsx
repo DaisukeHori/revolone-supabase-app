@@ -9,7 +9,9 @@ import {
   X,
   CreditCard,
   Settings,
-  Home
+  Home,
+  Building2,
+  Smartphone
 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
@@ -59,6 +61,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     { icon: Home, label: "店舗選択", href: "/" },
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
+  ];
+
+  // 店舗詳細ページ用のメニュー項目
+  const storeMenuItems = [
+    { icon: Building2, label: "店舗情報", href: `/store/${storeId}` },
+    { icon: CreditCard, label: "契約中のサービス", href: `/store/${storeId}/services` },
+    { icon: Smartphone, label: "レボナイザー", href: `/store/${storeId}/devices` },
   ];
 
   return (
@@ -207,7 +216,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
           <div className="bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg">
             <div className="flex items-center justify-around px-4 py-2">
-              {menuItems.map((item) => {
+              {(storeId ? storeMenuItems : menuItems).map((item) => {
                 const Icon = item.icon;
                 const isActive = location === item.href;
                 
