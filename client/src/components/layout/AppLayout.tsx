@@ -66,7 +66,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         className={cn(
           "fixed top-0 left-0 z-40 h-screen",
           "bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 shadow-xl",
-          "md:translate-x-0 md:w-70",
+          "md:translate-x-0 md:w-72",
           !isMobile && "md:block"
         )}
       >
@@ -144,7 +144,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* メインコンテンツ */}
       <div className={cn(
         "min-h-screen transition-all duration-200 bg-slate-50",
-        "md:ml-70"
+        "md:ml-72"
       )}>
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-20 border-b border-slate-200 bg-white/95 backdrop-blur-sm shadow-sm">
