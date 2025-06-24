@@ -462,6 +462,36 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
     }
   });
 
+  // 価格データ取得
+  app.get('/api/stripe/prices', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "ログインが必要です" });
+    }
+    try {
+      const priceIds = [
+        'price_1NwwacAPdno01lSPWH92pzrl',
+        'price_1OCCkvAPdno01lSP44FyPiZ3', 
+        'price_1OED1uAPdno01lSP3UESyV7C'
+      ];
+
+      const prices = await Promise.all(
+        priceIds.map(priceId => stripe.prices.retrieve(priceId))
+      );
+
+      res.json(prices);
+    } catch (error) {
+      console.error('価格データ取得エラー:', error);
+      res.status(500).send('価格データの取得に失敗しました');
+    }
+  });
+
+  // サブスクリプション詳細取得
+  app.get('/api/stripe/subscription/:id', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "ログインが必要です" });
+    }
+  });
+
 }
 
 // subscription_item_idからpriceIdを取得する関数を追加
@@ -608,7 +638,6 @@ export async function getCustomersByEmail(email: string) {
             city: customer.shipping.address?.city || null,
             state: customer.shipping.address?.state || null,
             postal_code: customer.shipping.address?.postal_code || null,
-            country: customer.shipping.address?.country || null,
           },
           name: customer.shipping.name,
           phone: customer.shipping.phone,

@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -216,14 +215,27 @@ function ConfirmationContent({
 }) {
   const stripe = useStripe();
   const elements = useElements();
-
   const quantities = calculateRevonizerQuantities(quantity);
   const nonZeroQuantities = Object.entries(quantities).filter(([_, qty]) => qty > 0);
 
-  // 合計金額を計算
+  // Fetch prices from Stripe API
+  const { data: priceData, isLoading: isPriceLoading, error: priceError } = useQuery({
+    queryKey: ['stripe-prices'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/prices', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch prices data');
+      }
+      return response.json();
+    }
+  });
+
+  // 合計金額を計算（priceDataから価格を取得）
   const totalAmount = nonZeroQuantities.reduce((total, [priceId, qty]) => {
-    const product = Object.values(REVONIZER_PRODUCTS).find(p => p.priceId === priceId);
-    return total + (product?.price || 0) * qty;
+    const priceInfo = priceData?.find((price: any) => price.id === priceId);
+    return total + (priceInfo?.unit_amount || 0) * qty;
   }, 0);
 
   const handleFinalConfirm = async () => {
@@ -293,31 +305,36 @@ function ConfirmationContent({
     }
   };
 
+  if (isPriceLoading) return <p>Loading prices...</p>;
+  if (priceError) return <p>Error loading prices: {priceError.message}</p>;
+
   return (
     <>
       <div className="space-y-6">
         <div className="space-y-4">
           <h3 className="text-lg font-medium">契約内容の確認</h3>
-          
+
           <div className="bg-gray-50 p-4 rounded-lg space-y-3">
             <div className="flex justify-between">
               <span className="font-medium">利用台数:</span>
               <span>{quantity}台</span>
             </div>
-            
+
             <div className="space-y-2">
               <span className="font-medium">サービス内訳:</span>
               {nonZeroQuantities.map(([priceId, qty]) => {
                 const product = Object.values(REVONIZER_PRODUCTS).find(p => p.priceId === priceId);
-                return product && (
+                const priceInfo = priceData?.find((price: any) => price.id === priceId);
+                const unitAmount = priceInfo?.unit_amount || 0;
+                return product && priceInfo && (
                   <div key={priceId} className="flex justify-between text-sm pl-4">
                     <span>{product.name}</span>
-                    <span>{qty}台 × ¥{product.price.toLocaleString()} = ¥{(qty * product.price).toLocaleString()}</span>
+                    <span>{qty}台 × ¥{unitAmount.toLocaleString()} = ¥{(qty * unitAmount).toLocaleString()}</span>
                   </div>
                 );
               })}
             </div>
-            
+
             <div className="border-t pt-2 flex justify-between font-bold">
               <span>月額合計:</span>
               <span>¥{totalAmount.toLocaleString()}</span>
