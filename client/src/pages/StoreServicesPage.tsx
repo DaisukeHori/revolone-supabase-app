@@ -12,7 +12,7 @@ import { useState } from "react";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 type StripeSubscription = {
   id: string;
