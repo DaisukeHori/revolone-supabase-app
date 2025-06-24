@@ -511,21 +511,62 @@ async function getPriceIdFromSubscriptionItem(subscriptionItemId: string): Promi
 // 既存のコードは変更なし
 export async function getCustomersByEmail(email: string) {
   console.log(`[Stripe] Searching for customers with email: ${email}`);
-  const customers = await stripe.customers.list({
+  
+  // 1. 直接のメールアドレスでStripe顧客を検索
+  const directCustomers = await stripe.customers.list({
     email,
     limit: 100,
     expand: ['data.subscriptions'],
   });
 
-  if (customers.data.length === 0) {
+  // 2. メールマッピングテーブルから関連する顧客IDを取得
+  const { db } = await import("../db");
+  const { emailMappings } = await import("../db/schema");
+  const { eq } = await import("drizzle-orm");
+  
+  const mappings = await db.query.emailMappings.findMany({
+    where: eq(emailMappings.currentEmail, email),
+    with: {
+      store: true,
+    },
+  });
+
+  // 3. マッピングされた顧客IDからStripe顧客を取得
+  const mappedCustomers = await Promise.all(
+    mappings.map(async (mapping) => {
+      try {
+        return await stripe.customers.retrieve(mapping.stripeCustomerId, {
+          expand: ['subscriptions'],
+        });
+      } catch (error) {
+        console.error(`[Stripe] Error retrieving mapped customer ${mapping.stripeCustomerId}:`, error);
+        return null;
+      }
+    })
+  );
+
+  // 4. 結果をマージ（重複除去）
+  const allCustomers = [
+    ...directCustomers.data,
+    ...mappedCustomers.filter(c => c !== null && c.object === 'customer')
+  ];
+
+  const uniqueCustomers = allCustomers.reduce((acc, customer) => {
+    if (!acc.find(c => c.id === customer.id)) {
+      acc.push(customer);
+    }
+    return acc;
+  }, []);
+
+  if (uniqueCustomers.length === 0) {
     console.log(`[Stripe] No customers found for email: ${email}`);
     return null;
   }
 
-  console.log(`[Stripe] Found ${customers.data.length} customers`);
+  console.log(`[Stripe] Found ${uniqueCustomers.length} customers (direct: ${directCustomers.data.length}, mapped: ${mappedCustomers.filter(c => c !== null).length})`);
 
   // 全ての顧客情報とそれぞれのサブスクリプション情報を取得
-  const customersData = await Promise.all(customers.data.map(async (customer) => {
+  const customersData = await Promise.all(uniqueCustomers.map(async (customer) => {
     console.log(`[Stripe] Processing customer: ${customer.id}`);
 
     // サブスクリプション情報の取得

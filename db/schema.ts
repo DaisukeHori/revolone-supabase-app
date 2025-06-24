@@ -46,6 +46,20 @@ export const devices = pgTable("devices", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// メールアドレス変更履歴を管理するテーブル
+export const emailMappings = pgTable("email_mappings", {
+  id: serial("id").primaryKey(),
+  storeId: integer("store_id").notNull().references(() => stores.id),
+  stripeCustomerId: text("stripe_customer_id").notNull(),
+  originalEmail: text("original_email").notNull(), // Stripeに登録されている元のメールアドレス
+  currentEmail: text("current_email").notNull(), // 現在の店舗用メールアドレス
+  changedBy: integer("changed_by").notNull().references(() => users.id), // 変更を行ったユーザー
+  changeReason: text("change_reason"), // 変更理由
+  isActive: boolean("is_active").notNull().default(true), // このマッピングが有効かどうか
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // リレーション定義の更新
 export const usersRelations = relations(users, ({ many }) => ({
   stores: many(stores),
@@ -57,12 +71,24 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
     references: [users.id],
   }),
   devices: many(devices),
+  emailMappings: many(emailMappings),
 }));
 
 export const devicesRelations = relations(devices, ({ one }) => ({
   store: one(stores, {
     fields: [devices.storeId],
     references: [stores.id],
+  }),
+}));
+
+export const emailMappingsRelations = relations(emailMappings, ({ one }) => ({
+  store: one(stores, {
+    fields: [emailMappings.storeId],
+    references: [stores.id],
+  }),
+  changedByUser: one(users, {
+    fields: [emailMappings.changedBy],
+    references: [users.id],
   }),
 }));
 
@@ -102,12 +128,22 @@ export const insertDeviceSchema = createInsertSchema(devices, {
   metadata: z.record(z.unknown()).optional(),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
+export const insertEmailMappingSchema = createInsertSchema(emailMappings, {
+  stripeCustomerId: z.string().min(1, "Stripe顧客IDを入力してください"),
+  originalEmail: z.string().email("有効なメールアドレスを入力してください"),
+  currentEmail: z.string().email("有効なメールアドレスを入力してください"),
+  changeReason: z.string().optional(),
+  isActive: z.boolean().default(true),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
 export const updateStoreSchema = insertStoreSchema.partial();
 export const updateDeviceSchema = insertDeviceSchema.partial();
+export const updateEmailMappingSchema = insertEmailMappingSchema.partial();
 
 export const selectUserSchema = createSelectSchema(users);
 export const selectStoreSchema = createSelectSchema(stores);
 export const selectDeviceSchema = createSelectSchema(devices);
+export const selectEmailMappingSchema = createSelectSchema(emailMappings);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type SelectUser = typeof users.$inferSelect;
@@ -115,3 +151,5 @@ export type InsertStore = z.infer<typeof insertStoreSchema>;
 export type SelectStore = typeof stores.$inferSelect;
 export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type SelectDevice = typeof devices.$inferSelect;
+export type InsertEmailMapping = z.infer<typeof insertEmailMappingSchema>;
+export type SelectEmailMapping = typeof emailMappings.$inferSelect;
