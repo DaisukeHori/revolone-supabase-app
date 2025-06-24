@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
 import { REVONIZER_PRODUCTS } from "@/lib/revonizerProducts";

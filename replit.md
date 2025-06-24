@@ -1,0 +1,121 @@
+# Revonizer Management System
+
+## Overview
+
+This is a comprehensive device and subscription management system for Revonizer, built as a full-stack TypeScript application. The system handles authentication, device tracking, subscription management via Stripe, and multi-factor authentication (MFA) capabilities. It integrates with external services including Kintone for device records, SendGrid for email communications, and Twilio for SMS services.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript
+- **UI Library**: Radix UI components with Tailwind CSS for styling
+- **State Management**: TanStack Query (React Query) for server state management
+- **Routing**: Wouter for client-side routing
+- **Forms**: React Hook Form with Zod validation
+- **Styling**: Tailwind CSS with custom Japanese-inspired patterns and professional theme
+- **Animations**: Framer Motion for smooth transitions
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js server
+- **Authentication**: Passport.js with local strategy and session management
+- **Database**: PostgreSQL with Drizzle ORM
+- **Build System**: Vite for frontend bundling, ESBuild for server bundling
+- **Development**: TSX for TypeScript execution in development
+
+### Key Architectural Decisions
+1. **Full-stack TypeScript**: Ensures type safety across the entire application
+2. **Monorepo Structure**: Client and server code in same repository for easier development
+3. **Database-First Design**: Uses Drizzle ORM for type-safe database operations
+4. **Session-Based Authentication**: Uses memory store for session management with planned PostgreSQL upgrade
+
+## Key Components
+
+### Authentication System
+- Local authentication with username/password
+- Multi-factor authentication (MFA) support via SMS and TOTP
+- Password reset functionality via email
+- Session management with express-session
+
+### Device Management
+- Integration with Kintone API for device record synchronization
+- Device status tracking (出荷/返却)
+- Store-based device grouping
+- Real-time device status updates
+
+### Subscription Management
+- Full Stripe integration for payment processing
+- Subscription lifecycle management
+- Quantity-based pricing for Revonizer products
+- Payment history and billing management
+
+### Store Management
+- Multi-store support per user
+- Store information management
+- Device assignment to stores
+- Stripe customer integration
+
+## Data Flow
+
+### Authentication Flow
+1. User submits credentials → Server validates → Session created
+2. MFA verification if enabled → Additional security layer
+3. Protected routes check authentication status
+
+### Device Management Flow
+1. Kintone API sync → Device records updated in local database
+2. Status changes tracked with timestamps
+3. Real-time updates reflected in UI
+
+### Subscription Flow
+1. Stripe webhook events → Database updates
+2. Quantity changes → Automatic price calculations
+3. Payment processing → Subscription status updates
+
+## External Dependencies
+
+### Required Services
+- **PostgreSQL**: Primary database (configured via DATABASE_URL)
+- **Stripe**: Payment processing (requires secret and publishable keys)
+- **SendGrid**: Email delivery service
+- **Twilio**: SMS service for MFA
+- **Kintone**: Device record management API
+
+### Environment Variables
+- `DATABASE_URL`: PostgreSQL connection string
+- `STRIPE_SECRET_KEY`: Stripe API secret key
+- `STRIPE_PUBLISHABLE_KEY`: Stripe publishable key
+- `SENDGRID_API_KEY`: SendGrid API key
+- `TWILIO_ACCOUNT_SID`: Twilio account identifier
+- `TWILIO_AUTH_TOKEN`: Twilio authentication token
+- `KINTONE_API_TOKEN`: Kintone API access token
+
+## Deployment Strategy
+
+### Production Build
+- Frontend: Vite builds static assets to `dist/public`
+- Backend: ESBuild bundles server code to `dist/index.js`
+- Database: Drizzle migrations handle schema updates
+
+### Replit Configuration
+- **Platform**: Cloud Run deployment target
+- **Port**: 5000 (mapped to external port 80)
+- **Build Command**: `npm run build`
+- **Start Command**: `npm run start`
+
+### Database Migrations
+- Uses Drizzle Kit for schema management
+- Migration files stored in `/migrations` directory
+- Push command: `npm run db:push`
+
+## Changelog
+
+```
+Changelog:
+- June 24, 2025. Initial setup
+```
+
+## User Preferences
+
+```
+Preferred communication style: Simple, everyday language.
+```
