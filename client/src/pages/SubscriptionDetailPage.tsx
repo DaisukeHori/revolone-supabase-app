@@ -530,6 +530,23 @@ export default function SubscriptionDetailPage() {
                   </p>
                 )}
               </div>
+
+              {/* お客様情報 */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">店舗情報</h3>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {customer?.metadata?.サロン名 || '店舗名未設定'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {customer?.address ? (
+                      `〒${customer.address.postal_code || ''} ${customer.address.state || ''} ${customer.address.city || ''} ${customer.address.line1 || ''} ${customer.address.line2 || ''}`.trim()
+                    ) : (
+                      '住所未設定'
+                    )}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
