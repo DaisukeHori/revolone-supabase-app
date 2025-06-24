@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
 import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
+import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
+import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
 
 interface Device {
   serialNumber: string;
@@ -172,8 +174,14 @@ export default function StoreDetailPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const customerId = window.location.pathname.split("/").pop();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>("");
+  const [selectedSubscriptionItems, setSelectedSubscriptionItems] = useState<any[]>([]);
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
-  const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
 
   // Fetch store data
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
@@ -276,6 +284,51 @@ export default function StoreDetailPage() {
     }
   };
 
+  const handleCreateSubscription = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleOpenUpdateModal = (subscriptionId: string) => {
+    const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+    if (subscription) {
+      setSelectedSubscriptionId(subscriptionId);
+      setSelectedSubscriptionItems(subscription.items);
+      setShowUpdateModal(true);
+    }
+  };
+
+  const handleConfirmQuantityUpdate = async (quantities: Record<string, number>) => {
+    if (!selectedSubscriptionId) return;
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch(`/api/stripe/subscription/${selectedSubscriptionId}/quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantities }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "契約数量を更新しました",
+      });
+      setShowConfirmDialog(false);
+      setShowUpdateModal(false);
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -393,7 +446,7 @@ export default function StoreDetailPage() {
                 <div>
                   <Button
                     variant="outline"
-                    onClick={() => setIsCreatingSubscription(true)}
+                    onClick={() => handleCreateSubscription()}
                     className="gap-2 bg-white hover:bg-gray-50"
                   >
                     <Package className="h-4 w-4" />
@@ -517,15 +570,40 @@ export default function StoreDetailPage() {
           </Card>
         </motion.div>
 
-        {isCreatingSubscription && customer && (
+        {showCreateModal && (
           <CreateSubscriptionModal
-            isOpen={isCreatingSubscription}
-            onClose={() => setIsCreatingSubscription(false)}
-            customerId={customer.id}
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            customerId={customerId}
             onSuccess={async () => {
               await refetch();
               await refetchDevices();
             }}
+            onOpenUpdateModal={handleOpenUpdateModal}
+          />
+        )}
+
+        {showUpdateModal && (
+          <UpdateQuantityModal
+            isOpen={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            items={selectedSubscriptionItems}
+            onConfirm={(quantities) => {
+              setUpdatedQuantities(quantities);
+              setShowUpdateModal(false);
+              setShowConfirmDialog(true);
+            }}
+          />
+        )}
+
+        {showConfirmDialog && (
+          <ConfirmUpdateDialog
+            isOpen={showConfirmDialog}
+            onClose={() => setShowConfirmDialog(false)}
+            items={selectedSubscriptionItems}
+            updatedQuantities={updatedQuantities}
+            onConfirm={handleConfirmQuantityUpdate}
+            isUpdating={isUpdating}
           />
         )}
 

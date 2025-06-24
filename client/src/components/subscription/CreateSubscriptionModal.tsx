@@ -23,6 +23,7 @@ interface CreateSubscriptionModalProps {
   onClose: () => void;
   customerId: string;
   onSuccess: () => Promise<void>;
+  onOpenUpdateModal?: (subscriptionId: string) => void;
 }
 
 type Step = 'quantity' | 'payment' | 'confirm';
@@ -384,6 +385,7 @@ export function CreateSubscriptionModal({
   onClose,
   customerId,
   onSuccess,
+  onOpenUpdateModal,
 }: CreateSubscriptionModalProps) {
   const [currentStep, setCurrentStep] = useState<Step>('quantity');
   const [quantity, setQuantity] = useState<number>(1);
@@ -405,6 +407,32 @@ export function CreateSubscriptionModal({
   });
 
   const customer = customerData?.find((data: any) => data.customer.id === customerId)?.customer;
+  const customerSubscriptionData = customerData?.find((data: any) => data.customer.id === customerId);
+
+  // 既存のレボナイザーサブスクリプションをチェック
+  useEffect(() => {
+    if (!isOpen || !customerSubscriptionData || !onOpenUpdateModal) return;
+
+    const hasRevonizerSubscription = async () => {
+      for (const subscription of customerSubscriptionData.subscriptions) {
+        if (subscription.status === 'active' || subscription.status === 'trialing') {
+          for (const item of subscription.items) {
+            const isRevonizer = Object.values(REVONIZER_PRODUCTS).some(
+              product => product.name === item.product.name
+            );
+            if (isRevonizer) {
+              // 既存のレボナイザーサブスクリプションが見つかった場合、更新モーダルを開く
+              onClose();
+              onOpenUpdateModal(subscription.id);
+              return;
+            }
+          }
+        }
+      }
+    };
+
+    hasRevonizerSubscription();
+  }, [isOpen, customerSubscriptionData, onOpenUpdateModal, onClose]);
 
   // モーダルが閉じられた時にステートをリセット
   const handleClose = () => {

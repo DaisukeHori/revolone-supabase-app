@@ -1,4 +1,3 @@
-
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
+import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
+import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+import { toast } from "@/components/ui/use-toast";
 
 type StripeSubscription = {
   id: string;
@@ -113,6 +115,12 @@ export default function StoreServicesPage() {
   const { id: storeId } = useParams();
   const [, setLocation] = useLocation();
   const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>("");
+  const [selectedSubscriptionItems, setSelectedSubscriptionItems] = useState<any[]>([]);
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const { data: stripeData, isLoading, error, refetch } = useQuery({
     queryKey: ['stripe-customer'],
@@ -128,6 +136,7 @@ export default function StoreServicesPage() {
   });
 
   const currentStore = stripeData?.find((customer: any) => customer.customer.id === storeId);
+    const customerId = currentStore?.customer.id;
 
   if (isLoading) {
     return (
@@ -162,6 +171,53 @@ export default function StoreServicesPage() {
       </AppLayout>
     );
   }
+
+  const handleCreateSubscription = () => {
+    setIsCreatingSubscription(true);
+  };
+
+  const handleOpenUpdateModal = (subscriptionId: string) => {
+    const customerData = stripeData?.find(data => data.customer.id === customerId);
+    const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+    if (subscription) {
+      setSelectedSubscriptionId(subscriptionId);
+      setSelectedSubscriptionItems(subscription.items);
+      setShowUpdateModal(true);
+    }
+  };
+
+  const handleConfirmQuantityUpdate = async (quantities: Record<string, number>) => {
+    if (!selectedSubscriptionId) return;
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch(`/api/stripe/subscription/${selectedSubscriptionId}/quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantities }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "契約数量を更新しました",
+      });
+      setShowConfirmDialog(false);
+      setShowUpdateModal(false);
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -215,7 +271,7 @@ export default function StoreServicesPage() {
                   <div
                     key={subscription.id}
                     className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 sm:p-6 space-y-4 cursor-pointer hover:shadow-lg hover:border-gray-400 transition-all duration-200"
-                    onClick={() => setLocation(`/subscription/${subscription.id}`)}
+                    onClick={() => handleOpenUpdateModal(subscription.id)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
@@ -285,10 +341,33 @@ export default function StoreServicesPage() {
           <CreateSubscriptionModal
             isOpen={isCreatingSubscription}
             onClose={() => setIsCreatingSubscription(false)}
-            customerId={currentStore.customer.id}
-            onSuccess={async () => {
-              await refetch();
+            customerId={customerId}
+            onSuccess={refetch}
+            onOpenUpdateModal={handleOpenUpdateModal}
+          />
+        )}
+
+        {showUpdateModal && (
+          <UpdateQuantityModal
+            isOpen={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            items={selectedSubscriptionItems}
+            onConfirm={(quantities) => {
+              setUpdatedQuantities(quantities);
+              setShowUpdateModal(false);
+              setShowConfirmDialog(true);
             }}
+          />
+        )}
+
+        {showConfirmDialog && (
+          <ConfirmUpdateDialog
+            isOpen={showConfirmDialog}
+            onClose={() => setShowConfirmDialog(false)}
+            items={selectedSubscriptionItems}
+            updatedQuantities={updatedQuantities}
+            onConfirm={handleConfirmQuantityUpdate}
+            isUpdating={isUpdating}
           />
         )}
       </motion.div>

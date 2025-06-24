@@ -1,4 +1,3 @@
-
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
+import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
+import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
 
 interface Device {
   serialNumber: string;
@@ -35,7 +37,7 @@ const item = {
 export default function StoreDevicesPage() {
   const { id: storeId } = useParams();
   const [, setLocation] = useLocation();
-  
+
   const { data: devices, isLoading, error } = useQuery({
     queryKey: ['store-devices', storeId],
     queryFn: async () => {
@@ -58,6 +60,61 @@ export default function StoreDevicesPage() {
         return <Badge className="bg-gray-500 hover:bg-gray-500 text-white">返却済み</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>("");
+  const [selectedSubscriptionItems, setSelectedSubscriptionItems] = useState<any[]>([]);
+  const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleCreateSubscription = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleOpenUpdateModal = (subscriptionId: string) => {
+    const customerData = stripeData?.find(data => data.customer.id === customerId);
+    const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+    if (subscription) {
+      setSelectedSubscriptionId(subscriptionId);
+      setSelectedSubscriptionItems(subscription.items);
+      setShowUpdateModal(true);
+    }
+  };
+
+  const handleConfirmQuantityUpdate = async (quantities: Record<string, number>) => {
+    if (!selectedSubscriptionId) return;
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch(`/api/stripe/subscription/${selectedSubscriptionId}/quantities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantities }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await refetch();
+      toast({
+        description: "契約数量を更新しました",
+      });
+      setShowConfirmDialog(false);
+      setShowUpdateModal(false);
+    } catch (error) {
+      console.error('数量更新エラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "数量の更新中にエラーが発生しました",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -150,7 +207,7 @@ export default function StoreDevicesPage() {
                               </p>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
@@ -164,7 +221,7 @@ export default function StoreDevicesPage() {
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="ml-4">
                           {getStatusBadge(device.status)}
                         </div>
@@ -189,6 +246,39 @@ export default function StoreDevicesPage() {
           </Card>
         </motion.div>
       </motion.div>
+      {showCreateModal && (
+          <CreateSubscriptionModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            customerId={customerId}
+            onSuccess={refetch}
+            onOpenUpdateModal={handleOpenUpdateModal}
+          />
+        )}
+
+        {showUpdateModal && (
+          <UpdateQuantityModal
+            isOpen={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            items={selectedSubscriptionItems}
+            onConfirm={(quantities) => {
+              setUpdatedQuantities(quantities);
+              setShowUpdateModal(false);
+              setShowConfirmDialog(true);
+            }}
+          />
+        )}
+
+        {showConfirmDialog && (
+          <ConfirmUpdateDialog
+            isOpen={showConfirmDialog}
+            onClose={() => setShowConfirmDialog(false)}
+            items={selectedSubscriptionItems}
+            updatedQuantities={updatedQuantities}
+            onConfirm={handleConfirmQuantityUpdate}
+            isUpdating={isUpdating}
+          />
+        )}
     </AppLayout>
   );
 }
