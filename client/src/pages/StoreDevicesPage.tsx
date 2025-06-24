@@ -1,11 +1,14 @@
+
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { Smartphone, Loader2, Calendar, Package } from "lucide-react";
+import { Smartphone, Loader2, Calendar, Package, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface Device {
   serialNumber: string;
@@ -31,6 +34,8 @@ const item = {
 
 export default function StoreDevicesPage() {
   const { id: storeId } = useParams();
+  const [, setLocation] = useLocation();
+  
   const { data: devices, isLoading, error } = useQuery({
     queryKey: ['store-devices', storeId],
     queryFn: async () => {
@@ -48,13 +53,35 @@ export default function StoreDevicesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "出荷":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">出荷済み</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-500 text-white">出荷済み</Badge>;
       case "返却":
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">返却済み</Badge>;
+        return <Badge className="bg-gray-500 hover:bg-gray-500 text-white">返却済み</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <Alert variant="destructive">
+          <AlertDescription>
+            デバイス情報の取得に失敗しました
+          </AlertDescription>
+        </Alert>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -64,111 +91,103 @@ export default function StoreDevicesPage() {
         animate="show"
         className="space-y-8"
       >
-        {error ? (
-          <motion.div variants={item}>
-            <Alert variant="destructive">
-              <AlertDescription>
-                デバイス情報の取得に失敗しました
-              </AlertDescription>
-            </Alert>
-          </motion.div>
-        ) : isLoading ? (
-          <motion.div variants={item}>
-            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 pb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Smartphone className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl sm:text-2xl text-gray-800">レボナイザー</CardTitle>
-                    <p className="text-gray-600 text-sm sm:text-base">デバイスの配送・返却状況</p>
-                  </div>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation(`/store/${storeId}`)}
+            className="hover:bg-primary/10 flex-shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">デバイス管理</h1>
+            <p className="text-muted-foreground">レボナイザーデバイスの配送・返却状況</p>
+          </div>
+        </div>
+
+        <motion.div variants={item}>
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card/50 to-card backdrop-blur-sm">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-primary/10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Smartphone className="h-6 w-6 text-primary" />
                 </div>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
-                <p className="text-gray-500 text-sm">デバイス情報を読み込み中...</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ) : (
-          <motion.div variants={item}>
-            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 pb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Smartphone className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl sm:text-2xl text-gray-800">レボナイザー</CardTitle>
-                    <p className="text-gray-600 text-sm sm:text-base">デバイスの配送・返却状況</p>
-                  </div>
+                <div>
+                  <CardTitle className="text-xl text-foreground flex items-center gap-2">
+                    レボナイザーデバイス
+                    <Badge variant="outline" className="text-xs">
+                      {devices?.length || 0} 台
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">配送・返却状況の管理</p>
                 </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                {devices && devices.length > 0 ? (
-                  <div className="space-y-4">
-                    {devices.map((device, index) => (
-                      <motion.div
-                        key={device.serialNumber}
-                        className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <Smartphone className="h-5 w-5 text-purple-600" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-semibold text-gray-800">
-                                  シリアル番号: {device.serialNumber}
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  レボナイザーデバイス
-                                </p>
-                              </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {devices && devices.length > 0 ? (
+                <div className="space-y-4">
+                  {devices.map((device, index) => (
+                    <motion.div
+                      key={device.serialNumber}
+                      className="p-6 rounded-lg border border-border/50 bg-gradient-to-r from-card/30 to-card/50 backdrop-blur-sm hover:shadow-md transition-all duration-200"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-3 flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <Smartphone className="h-5 w-5 text-primary" />
                             </div>
-                            
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
-                                <span>更新日: {new Date(device.statusUpdatedAt).toLocaleDateString("ja-JP")}</span>
-                              </div>
-                              {device.stripeSubscriptionId && (
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-4 w-4" />
-                                  <span className="truncate">ID: {device.stripeSubscriptionId}</span>
-                                </div>
-                              )}
+                            <div>
+                              <h3 className="font-semibold text-foreground">
+                                シリアル番号: {device.serialNumber}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                レボナイザーデバイス
+                              </p>
                             </div>
                           </div>
                           
-                          <div className="text-right">
-                            {getStatusBadge(device.status)}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>更新日: {new Date(device.statusUpdatedAt).toLocaleDateString("ja-JP")}</span>
+                            </div>
+                            {device.stripeSubscriptionId && (
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                <span className="truncate">ID: {device.stripeSubscriptionId}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </motion.div>
-                    ))}
+                        
+                        <div className="ml-4">
+                          {getStatusBadge(device.status)}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Smartphone className="h-8 w-8 text-muted-foreground" />
                   </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Smartphone className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      レボナイザーデバイスがありません
-                    </h3>
-                    <p className="text-gray-500">
-                      現在この店舗に配送されているデバイスはございません
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    デバイスが見つかりません
+                  </h3>
+                  <p className="text-muted-foreground">
+                    現在この店舗に配送されているデバイスはございません
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
     </AppLayout>
   );
