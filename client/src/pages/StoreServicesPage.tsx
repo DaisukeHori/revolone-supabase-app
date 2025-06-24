@@ -12,7 +12,7 @@ import { useState } from "react";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 type StripeSubscription = {
   id: string;
@@ -299,7 +299,7 @@ export default function StoreServicesPage() {
                           </div>
                           <div className="text-left sm:text-right flex-shrink-0">
                             <p className="font-medium text-gray-800">
-                              {item.amount?.toLocaleString()} {item.currency.toUpperCase()}
+                              {item.amount ? `${item.amount.toLocaleString()} ${item.currency.toUpperCase()}` : '価格未設定'}
                             </p>
                             <p className="text-xs sm:text-sm text-gray-500">
                               × {item.quantity}

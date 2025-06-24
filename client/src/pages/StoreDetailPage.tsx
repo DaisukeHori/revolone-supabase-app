@@ -500,7 +500,7 @@ export default function StoreDetailPage() {
                           </div>
                           <div className="text-left sm:text-right flex-shrink-0">
                             <p className="font-medium text-gray-800">
-                              {item.amount?.toLocaleString()} {item.currency.toUpperCase()}
+                              {item.amount ? `${item.amount.toLocaleString()} ${item.currency.toUpperCase()}` : '価格未設定'}
                             </p>
                             <p className="text-xs sm:text-sm text-gray-500">
                               × {item.quantity}

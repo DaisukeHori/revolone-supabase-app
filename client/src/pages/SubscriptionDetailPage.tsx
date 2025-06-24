@@ -414,7 +414,7 @@ export default function SubscriptionDetailPage() {
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <CreditCard className="h-4 w-4" />
                           <span>
-                            {item.amount?.toLocaleString()} {item.currency.toUpperCase()} / {item.interval}
+                            {item.amount ? `${item.amount.toLocaleString()} ${item.currency.toUpperCase()} / ${item.interval}` : '価格未設定'}
                           </span>
                         </div>
                       </div>
