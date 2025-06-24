@@ -19,7 +19,6 @@ import { StoreEditModal } from "@/components/store/StoreEditModal";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
-import { EmailManagementModal } from "@/components/store/EmailManagementModal";
 
 interface Device {
   serialNumber: string;
@@ -183,7 +182,6 @@ export default function StoreDetailPage() {
   const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
-  const [emailManagementModalOpen, setEmailManagementModalOpen] = useState(false);
 
   // Fetch store data
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
@@ -445,7 +443,7 @@ export default function StoreDetailPage() {
                     <p className="text-gray-600 text-sm">現在の契約状況とサービス詳細</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div>
                   <Button
                     variant="outline"
                     onClick={() => handleCreateSubscription()}
@@ -453,15 +451,6 @@ export default function StoreDetailPage() {
                   >
                     <Package className="h-4 w-4" />
                     新しいサブスクリプションに加入
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEmailManagementModalOpen(true)}
-                    className="gap-2 bg-white hover:bg-gray-50"
-                  >
-                    <Mail className="h-4 w-4" />
-                    メールアドレス管理
                   </Button>
                 </div>
               </div>
@@ -626,14 +615,6 @@ export default function StoreDetailPage() {
             onSubmit={handleUpdateStore}
           />
         )}
-
-        <EmailManagementModal
-          isOpen={emailManagementModalOpen}
-          onClose={() => setEmailManagementModalOpen(false)}
-          storeId={parseInt(customerId!)}
-          storeName={customerData?.customer.name || ""}
-          currentStripeEmail={customerData?.customer.email}
-        />
       </motion.div>
     </AppLayout>
   );
