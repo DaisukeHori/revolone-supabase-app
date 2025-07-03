@@ -6,6 +6,7 @@ import { ArrowLeftRight, Package, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { calculateTotalQuantityFromItems } from "@/lib/revonizerCalculation";
 
 interface DeviceActionModalProps {
   isOpen: boolean;
@@ -48,24 +49,36 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
     enabled: isOpen && device.deviceCategory === 'サブスク'
   });
 
-  // サブスクリプションの総台数を計算
+  // サブスクリプションの総台数を計算（Revonizerの正確な計算ロジックを使用）
   useEffect(() => {
-    if (stripeData && device.stripeSubscriptionId) {
-      const customerData = stripeData.find((data: any) => 
-        data.subscriptions.some((sub: StripeSubscription) => sub.id === device.stripeSubscriptionId)
-      );
-      
-      if (customerData) {
-        const subscription = customerData.subscriptions.find(
-          (sub: StripeSubscription) => sub.id === device.stripeSubscriptionId
+    const calculateCurrentQuantity = async () => {
+      if (stripeData && device.stripeSubscriptionId) {
+        const customerData = stripeData.find((data: any) => 
+          data.subscriptions.some((sub: StripeSubscription) => sub.id === device.stripeSubscriptionId)
         );
         
-        if (subscription) {
-          const total = subscription.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-          setTotalQuantity(total);
+        if (customerData) {
+          const subscription = customerData.subscriptions.find(
+            (sub: StripeSubscription) => sub.id === device.stripeSubscriptionId
+          );
+          
+          if (subscription) {
+            try {
+              // Revonizerの正確な台数計算ロジックを使用
+              const total = await calculateTotalQuantityFromItems(subscription.items);
+              setTotalQuantity(total);
+            } catch (error) {
+              console.error('台数計算エラー:', error);
+              // フォールバック：通常の合計計算
+              const total = subscription.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+              setTotalQuantity(total);
+            }
+          }
         }
       }
-    }
+    };
+
+    calculateCurrentQuantity();
   }, [stripeData, device.stripeSubscriptionId]);
 
   const handleExchange = async () => {
@@ -171,8 +184,10 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
                     <div className="text-left">
                       <h3 className="font-medium text-foreground">返却</h3>
                       <p className="text-sm text-muted-foreground">
-                        {totalQuantity > 0 
+                        {totalQuantity > 1 
                           ? `サブスクの契約を${totalQuantity}台から${totalQuantity - 1}台に変更`
+                          : totalQuantity === 1
+                          ? "サブスクの契約を1台から0台に変更（契約終了）"
                           : "サブスクの契約台数を1台減らす"
                         }
                       </p>
