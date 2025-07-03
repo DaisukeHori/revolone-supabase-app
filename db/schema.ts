@@ -60,6 +60,19 @@ export const deviceExchangeRequests = pgTable("device_exchange_requests", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// デバイス操作履歴テーブル（7日間の制限管理）
+export const deviceActionHistory = pgTable("device_action_history", {
+  id: serial("id").primaryKey(),
+  serialNumber: text("serial_number").notNull(),
+  stripeCustomerId: text("stripe_customer_id").notNull(), // 顧客番号
+  actionType: text("action_type").notNull(), // "return" | "exchange"
+  actionDate: timestamp("action_date").defaultNow().notNull(),
+  lockUntil: timestamp("lock_until").notNull(), // 7日後の日時
+  userId: integer("user_id").references(() => users.id).notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // リレーション定義の更新
 export const usersRelations = relations(users, ({ many }) => ({
   stores: many(stores),
@@ -84,6 +97,13 @@ export const devicesRelations = relations(devices, ({ one }) => ({
 export const deviceExchangeRequestsRelations = relations(deviceExchangeRequests, ({ one }) => ({
   user: one(users, {
     fields: [deviceExchangeRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+export const deviceActionHistoryRelations = relations(deviceActionHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceActionHistory.userId],
     references: [users.id],
   }),
 }));
@@ -130,6 +150,15 @@ export const insertDeviceExchangeRequestSchema = createInsertSchema(deviceExchan
   notes: z.string().optional(),
 }).omit({ id: true, createdAt: true, updatedAt: true, requestDate: true, status: true, zapierRequestId: true });
 
+export const insertDeviceActionHistorySchema = createInsertSchema(deviceActionHistory, {
+  serialNumber: z.string().min(1, "製造番号を入力してください"),
+  stripeCustomerId: z.string().min(1, "顧客番号を入力してください"),
+  actionType: z.enum(["return", "exchange"], {
+    invalid_type_error: "アクションタイプは return または exchange である必要があります",
+  }),
+  metadata: z.record(z.unknown()).optional(),
+}).omit({ id: true, createdAt: true, actionDate: true, lockUntil: true });
+
 export const updateStoreSchema = insertStoreSchema.partial();
 export const updateDeviceSchema = insertDeviceSchema.partial();
 export const updateDeviceExchangeRequestSchema = insertDeviceExchangeRequestSchema.partial();
@@ -147,3 +176,5 @@ export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type SelectDevice = typeof devices.$inferSelect;
 export type InsertDeviceExchangeRequest = z.infer<typeof insertDeviceExchangeRequestSchema>;
 export type SelectDeviceExchangeRequest = typeof deviceExchangeRequests.$inferSelect;
+export type InsertDeviceActionHistory = z.infer<typeof insertDeviceActionHistorySchema>;
+export type SelectDeviceActionHistory = typeof deviceActionHistory.$inferSelect;

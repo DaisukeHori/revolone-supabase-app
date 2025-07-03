@@ -22,6 +22,9 @@ interface Device {
   stripeSubscriptionId: string;
   subscriptionRentalAvailability?: string; // サブスク貸出の可不可
   deviceCategory?: string; // 購入機材, 代替え機, サブスク
+  isActionLocked?: boolean; // 操作制限フラグ
+  lockUntil?: Date; // 制限解除日時
+  lastActionType?: string; // 前回の操作タイプ
 }
 
 const container = {

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeftRight, Package, Loader2, ChevronLeft, CheckCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeftRight, Package, Loader2, ChevronLeft, CheckCircle, AlertTriangle, Alert, AlertDescription, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -16,9 +16,13 @@ interface DeviceActionModalProps {
   onClose: () => void;
   device: {
     serialNumber: string;
+    stripeSubscriptionId: string;
     deviceCategory?: string;
-    stripeSubscriptionId?: string;
+    isActionLocked?: boolean;
+    lockUntil?: Date;
+    lastActionType?: string;
   };
+  stripeCustomerId: string;
 }
 
 type StripeSubscription = {
@@ -44,7 +48,7 @@ const DEVICE_ISSUES = [
   '異常発熱する'
 ];
 
-export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModalProps) {
+export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }: DeviceActionModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [totalQuantity, setTotalQuantity] = useState<number>(0);
   const [step, setStep] = useState<'select' | 'issues' | 'confirm' | 'terms' | 'success'>('select');
@@ -85,12 +89,12 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
         const customerData = stripeData.find((data: any) => 
           data.subscriptions.some((sub: StripeSubscription) => sub.id === device.stripeSubscriptionId)
         );
-        
+
         if (customerData) {
           const subscription = customerData.subscriptions.find(
             (sub: StripeSubscription) => sub.id === device.stripeSubscriptionId
           );
-          
+
           if (subscription) {
             try {
               // Revonizerの正確な台数計算ロジックを使用
@@ -136,7 +140,8 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
       const exchangeData = {
         serialNumber: device.serialNumber,
         issues: selectedIssues,
-        notes: notes.trim() || undefined
+        notes: notes.trim() || undefined,
+        customerId: stripeCustomerId,
       };
 
       const response = await fetch('/api/devices/exchange-request', {
@@ -154,7 +159,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
 
       const result = await response.json();
       console.log('交換リクエスト成功:', result);
-      
+
       setStep('success');
     } catch (error) {
       console.error('交換手続きエラー:', error);
@@ -189,11 +194,40 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
     }
   };
 
-  const handleReturn = () => {
-    toast({
-      description: "返却機能は準備中です",
-    });
-    onClose();
+  const handleReturn = async () => {
+    setIsProcessing(true);
+    try {
+      const returnData = {
+        serialNumber: device.serialNumber,
+        customerId: stripeCustomerId,
+      };
+
+      const response = await fetch('/api/devices/return-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(returnData),
+      });
+
+      if (!response.ok) {
+        throw new Error('返却リクエストの送信に失敗しました');
+      }
+
+      const result = await response.json();
+      console.log('返却リクエスト成功:', result);
+
+      setStep('success');
+    } catch (error) {
+      console.error('返却手続きエラー:', error);
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "返却リクエストの送信に失敗しました",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (device.deviceCategory !== 'サブスク') {
@@ -229,75 +263,58 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
     switch (step) {
       case 'select':
         return (
-          <div className="space-y-4 py-4">
-            <div className="text-center mb-6">
-              <p className="text-sm text-muted-foreground">
-                シリアル番号: {device.serialNumber}
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">
+                製造番号: {device.serialNumber}
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                実行したい操作を選択してください
               </p>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-all duration-200 border-blue-200 hover:border-blue-300"
-                onClick={handleReturn}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Package className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-medium text-foreground">返却</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {totalQuantity > 1 
-                          ? `サブスクの契約を${totalQuantity}台から${totalQuantity - 1}台に変更`
-                          : totalQuantity === 1
-                          ? "サブスクの契約を1台から0台に変更（契約終了）"
-                          : "サブスクの契約台数を1台減らす"
-                        }
-                      </p>
+            {device.isActionLocked && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  このデバイスは操作が制限されています。
+                  <br />
+                  制限解除日: {device.lockUntil ? new Date(device.lockUntil).toLocaleDateString('ja-JP') : '不明'}
+                  <br />
+                  前回の操作: {device.lastActionType === 'return' ? '返却' : '交換'}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-1 gap-4">
+              {device.deviceCategory === 'サブスク' && (
+                <Button 
+                  onClick={handleExchangeStart}
+                  className="h-16 text-left justify-start p-6"
+                  variant="outline"
+                  disabled={device.isActionLocked}
+                >
+                  <div>
+                    <div className="font-semibold">交換を申請する</div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      デバイスに不調がある場合の交換手続き
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </Button>
+              )}
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-all duration-200 border-orange-200 hover:border-orange-300"
-                onClick={handleExchangeStart}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <ArrowLeftRight className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-medium text-foreground">交換</h3>
-                      <p className="text-sm text-muted-foreground">
-                        不調があるので別のものと交換する
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <div className="pt-4">
               <Button 
-                onClick={onClose} 
-                variant="outline" 
-                className="w-full"
+                onClick={handleReturn}
+                className="h-16 text-left justify-start p-6"
+                variant="outline"
+                disabled={device.isActionLocked || isProcessing}
               >
-                キャンセル
+                <div>
+                  <div className="font-semibold">返却する</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    デバイスを返却する手続き
+                  </div>
+                </div>
               </Button>
             </div>
           </div>
@@ -377,7 +394,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
                   ))}
                 </ul>
               </div>
-              
+
               {notes && (
                 <div>
                   <h4 className="font-medium text-sm mb-2">備考:</h4>
@@ -589,7 +606,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
             {step === 'success' && '交換リクエスト完了'}
           </DialogTitle>
         </DialogHeader>
-        
+
         {renderStepContent()}
       </DialogContent>
     </Dialog>
