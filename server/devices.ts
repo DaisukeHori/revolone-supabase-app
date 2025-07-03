@@ -186,6 +186,49 @@ router.patch("/api/devices/:id/status", async (req, res) => {
   }
 });
 
+// デバイス交換リクエスト
+router.post("/api/devices/:serialNumber/exchange", async (req, res) => {
+  try {
+    const { serialNumber } = req.params;
+    
+    // Zapier Webhookにリクエストを送信
+    const zapierUrl = 'https://hooks.zapier.com/hooks/catch/17071556/u3orkoq/';
+    const payload = {
+      serialNumber: serialNumber,
+      action: "exchange",
+      timestamp: new Date().toISOString(),
+      requestedBy: req.user?.email || "unknown"
+    };
+
+    const response = await fetch(zapierUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Zapier webhook failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log(`[Device Exchange] シリアル番号 ${serialNumber} の交換リクエスト送信成功:`, result);
+    
+    res.json({ 
+      success: true, 
+      message: "交換リクエストが正常に送信されました",
+      zapierResponse: result
+    });
+  } catch (error) {
+    console.error("デバイス交換リクエストの送信に失敗:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "交換リクエストの送信に失敗しました" 
+    });
+  }
+});
+
 export function setupDeviceRoutes(app: Router) {
   app.use(router);
 }

@@ -21,21 +21,20 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
   const handleExchange = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch('https://hooks.zapier.com/hooks/catch/17071556/u3orkoq/', {
+      const response = await fetch(`/api/devices/${device.serialNumber}/exchange`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          serialNumber: device.serialNumber,
-          action: 'exchange',
-          timestamp: new Date().toISOString(),
-        }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
         throw new Error('交換手続きの送信に失敗しました');
       }
+
+      const result = await response.json();
+      console.log('交換リクエスト成功:', result);
 
       toast({
         description: `デバイス ${device.serialNumber} の交換手続きを開始しました`,
