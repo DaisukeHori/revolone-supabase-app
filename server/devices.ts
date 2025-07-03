@@ -338,7 +338,130 @@ router.post("/api/devices/exchange-request", async (req, res) => {
   }
 });
 
+// デバイス返却リクエスト（台数減算 + メタデータ更新）
+router.post("/api/devices/return", async (req, res) => {
+  try {
+    const { serialNumber, stripeSubscriptionId } = req.body;
+    const userId = req.user?.id;
 
+    if (!userId) {
+      return res.status(401).json({ message: "認証が必要です" });
+    }
+
+    if (!serialNumber || !stripeSubscriptionId) {
+      return res.status(400).json({ message: "製造番号とサブスクリプションIDが必要です" });
+    }
+
+    console.log(`[Device Return] 返却処理開始: ${serialNumber} (サブスクリプション: ${stripeSubscriptionId})`);
+
+    // Stripeクライアントのインポートが必要
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+    // 1. サブスクリプション情報を取得
+    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
+      expand: ['items.data.price.product'],
+    });
+
+    console.log('[Device Return] 現在のサブスクリプション情報取得完了');
+
+    // 2. 現在の台数を計算（簡易版）
+    const currentTotalQuantity = subscription.items.data.reduce((total: number, item: any) => total + item.quantity, 0);
+    
+    if (currentTotalQuantity <= 0) {
+      return res.status(400).json({ message: "返却可能なデバイスがありません" });
+    }
+
+    console.log(`[Device Return] 現在の台数: ${currentTotalQuantity}台`);
+
+    // 3. 台数を1台減算するための新しい台数を計算
+    const newTotalQuantity = currentTotalQuantity - 1;
+    
+    // Revonizer台数配分計算（サーバー側実装）
+    const newQuantities: Record<string, number> = {
+      'price_1NwwacAPdno01lSPWH92pzrl': 0, // 1台目
+      'price_1OCCkvAPdno01lSP44FyPiZ3': 0, // 2-4台目
+      'price_1OED1uAPdno01lSP3UESyV7C': 0  // 5台目以降
+    };
+
+    if (newTotalQuantity >= 1) {
+      newQuantities['price_1NwwacAPdno01lSPWH92pzrl'] = 1; // 1台目は必須
+    }
+    if (newTotalQuantity >= 2) {
+      const secondToFourthCount = Math.min(newTotalQuantity - 1, 3); // 2-4台目（最大3台）
+      newQuantities['price_1OCCkvAPdno01lSP44FyPiZ3'] = secondToFourthCount;
+    }
+    if (newTotalQuantity >= 5) {
+      const fifthAndMoreCount = newTotalQuantity - 4; // 5台目以降
+      newQuantities['price_1OED1uAPdno01lSP3UESyV7C'] = fifthAndMoreCount;
+    }
+
+    console.log(`[Device Return] 新しい台数配分:`, newQuantities);
+
+    // 4. 既存のメタデータから返却製造番号キーを削除
+    let currentMetadata = subscription.metadata || {};
+    const updatedMetadata = { ...currentMetadata };
+    
+    // 既存の返却製造番号キーを削除
+    if (updatedMetadata['返却製造番号']) {
+      delete updatedMetadata['返却製造番号'];
+      console.log('[Device Return] 既存の返却製造番号を削除');
+    }
+
+    // 新しい返却製造番号を追加
+    updatedMetadata['返却製造番号'] = serialNumber;
+
+    // 5. サブスクリプションの台数とメタデータを同時に更新
+    const updatedSubscription = await stripe.subscriptions.update(stripeSubscriptionId, {
+      metadata: updatedMetadata,
+      proration_behavior: 'create_prorations', // 日割り計算を有効にする
+    });
+
+    // 6. 各アイテムの数量を更新
+    const updatePromises = subscription.items.data.map(async (item: any) => {
+      const priceId = item.price.id;
+      let newQuantity = 0;
+
+      // Revonizerの価格IDに対応する新しい数量を取得
+      Object.entries(newQuantities).forEach(([revonizerPriceId, quantity]: [string, number]) => {
+        if (priceId === revonizerPriceId) {
+          newQuantity = quantity;
+        }
+      });
+
+      if (item.quantity !== newQuantity) {
+        console.log(`[Device Return] アイテム更新: ${priceId} ${item.quantity} → ${newQuantity}`);
+        return stripe.subscriptionItems.update(item.id, {
+          quantity: newQuantity,
+        });
+      }
+      return null;
+    });
+
+    await Promise.all(updatePromises.filter(Boolean));
+
+    console.log(`[Device Return] 返却処理完了: ${serialNumber}`);
+    console.log(`[Device Return] 台数変更: ${currentTotalQuantity} → ${newTotalQuantity}台`);
+    console.log(`[Device Return] メタデータ更新: 返却製造番号 = ${serialNumber}`);
+
+    res.json({
+      success: true,
+      message: "デバイスの返却処理が完了しました",
+      serialNumber: serialNumber,
+      oldQuantity: currentTotalQuantity,
+      newQuantity: newTotalQuantity,
+      metadata: updatedMetadata
+    });
+
+  } catch (error) {
+    console.error("デバイス返却処理エラー:", error);
+    res.status(500).json({
+      success: false,
+      message: "返却処理中にエラーが発生しました",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
 
 // 旧エンドポイント（下位互換性のため残す）
 router.post("/api/devices/:serialNumber/exchange", async (req, res) => {

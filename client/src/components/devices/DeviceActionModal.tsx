@@ -197,10 +197,47 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
   };
 
   const handleReturn = async () => {
-    toast({
-      title: "返却機能について",
-      description: "返却機能は現在開発中です。実装完了までお待ちください。",
-    });
+    setIsProcessing(true);
+    try {
+      const returnData = {
+        serialNumber: device.serialNumber,
+        stripeSubscriptionId: device.stripeSubscriptionId,
+      };
+
+      const response = await fetch('/api/devices/return', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(returnData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '返却処理に失敗しました');
+      }
+
+      const result = await response.json();
+      console.log('返却処理成功:', result);
+
+      toast({
+        title: "返却処理完了",
+        description: `デバイス ${device.serialNumber} の返却処理が完了しました。台数が1台減算されました。`,
+      });
+
+      // モーダルを閉じる
+      onClose();
+    } catch (error) {
+      console.error('返却処理エラー:', error);
+      toast({
+        variant: "destructive",
+        title: "返却処理エラー",
+        description: error instanceof Error ? error.message : "返却処理中にエラーが発生しました",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (device.deviceCategory !== 'サブスク') {
@@ -280,12 +317,12 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
                 onClick={handleReturn}
                 className="h-16 text-left justify-start p-6"
                 variant="outline"
-                disabled={true}
+                disabled={device.isActionLocked || isProcessing}
               >
                 <div>
-                  <div className="font-semibold text-gray-400">返却する（開発中）</div>
-                  <div className="text-sm text-gray-400 mt-1">
-                    返却機能は現在開発中です
+                  <div className="font-semibold">返却する</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    デバイスを返却し、台数を1台減算する
                   </div>
                 </div>
               </Button>
