@@ -50,6 +50,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
   const [step, setStep] = useState<'select' | 'issues' | 'confirm' | 'terms'>('select');
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
+  const [hasReadTerms, setHasReadTerms] = useState(false);
 
   // モーダルがクローズされたときにステートをリセット
   useEffect(() => {
@@ -58,6 +59,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
       setSelectedIssues([]);
       setNotes('');
       setIsProcessing(false);
+      setHasReadTerms(false);
     }
   }, [isOpen]);
 
@@ -405,62 +407,101 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
           <div className="space-y-4 py-4">
             <div className="text-center mb-4">
               <h3 className="font-medium">デバイス交換規約</h3>
-            </div>
-
-            <div className="max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-4 text-sm space-y-3 border">
-              <div>
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                  交換対象について
-                </h4>
-                <ul className="space-y-1 pl-6 list-disc">
-                  <li>自然故障による不具合は無償で交換対応いたします</li>
-                  <li>製品の機能に支障をきたす不調は交換対象となります</li>
-                </ul>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  有償交換について
-                </h4>
-                <ul className="space-y-1 pl-6 list-disc">
-                  <li>外装の損傷や汚損による交換は実費をご負担いただきます</li>
-                  <li>故意による破損、改造痕跡がある場合は有償交換となります</li>
-                  <li>水没、落下による物理的損傷は有償交換の対象です</li>
-                  <li>コンセント端子の破損は使用状況により有償の場合があります</li>
-                </ul>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2">交換プロセス</h4>
-                <ul className="space-y-1 pl-6 list-disc">
-                  <li>交換リクエスト送信後、3営業日以内に対応方針をご連絡します</li>
-                  <li>交換品の配送は1週間程度お時間をいただきます</li>
-                  <li>不調デバイスは交換品到着後に回収いたします</li>
-                </ul>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2">注意事項</h4>
-                <ul className="space-y-1 pl-6 list-disc">
-                  <li>交換リクエストは取り消しできません</li>
-                  <li>虚偽の申告が判明した場合、交換費用をご請求する場合があります</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-sm text-yellow-800">
-                上記規約に同意の上、交換リクエストを送信してください。
+              <p className="text-xs text-muted-foreground mt-1">
+                最後までお読みください
               </p>
             </div>
+
+            <div 
+              className="max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-4 text-sm space-y-4 border"
+              onScroll={(e) => {
+                const element = e.target as HTMLDivElement;
+                const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5;
+                setHasReadTerms(isAtBottom);
+              }}
+            >
+              <div className="text-center font-medium text-base mb-4">
+                Revol One レボナイザー デバイス交換規約
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-blue-600" />
+                  第1条 交換対象について
+                </h4>
+                <ol className="space-y-2 pl-6 list-decimal">
+                  <li>自然故障による機能不具合は無償で交換対応いたします</li>
+                  <li>製品の正常な機能に支障をきたす不調は交換対象となります</li>
+                  <li>交換の判断は弊社の技術的判断に基づいて決定いたします</li>
+                </ol>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  第2条 有償交換について
+                </h4>
+                <ol className="space-y-2 pl-6 list-decimal">
+                  <li>外装の損傷、汚損、変色による交換は実費（10,000円～15,000円）をご負担いただきます</li>
+                  <li>故意による破損、改造痕跡がある場合は有償交換（実費全額）となります</li>
+                  <li>水没、落下による物理的損傷は有償交換の対象です</li>
+                  <li>コンセント端子の破損は使用状況により有償の場合があります</li>
+                  <li>紛失の場合は代替品費用（50,000円）をご請求いたします</li>
+                </ol>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="font-medium mb-3">第3条 交換プロセス</h4>
+                <ol className="space-y-2 pl-6 list-decimal">
+                  <li>交換リクエスト送信後、3営業日以内にリファービッシュ品を発送いたします</li>
+                  <li>到着後は必ず申請時と同じシリアル番号の機材を同梱の着払い送り状で返送してください</li>
+                  <li>代替品到着後1週間以内に返送いただけない場合、追加のサブスクリプション費用が発生する場合があります</li>
+                  <li>返送品の検証後、最終的な交換判定を行います</li>
+                </ol>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="font-medium mb-3">第4条 重要な注意事項</h4>
+                <ol className="space-y-2 pl-6 list-decimal">
+                  <li>交換リクエストは送信後取り消しできません</li>
+                  <li>虚偽の申告が判明した場合、交換費用および手数料をご請求いたします</li>
+                  <li>本規約は予告なく変更される場合があります</li>
+                  <li>代替品も同様にサブスクリプション契約の対象となります</li>
+                </ol>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="font-medium mb-3">第5条 免責事項</h4>
+                <ol className="space-y-2 pl-6 list-decimal">
+                  <li>交換による業務への影響について弊社は責任を負いません</li>
+                  <li>データの消失、設定の初期化について弊社は責任を負いません</li>
+                  <li>配送中の事故については配送業者の責任となります</li>
+                </ol>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-6">
+                <p className="text-sm font-medium text-center">
+                  以上の規約に同意いただける場合のみ、交換リクエストを送信してください。
+                </p>
+              </div>
+            </div>
+
+            {!hasReadTerms && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  規約を最後までお読みください
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-2 pt-4">
               <Button onClick={handleBack} variant="outline" className="flex-1">
@@ -470,7 +511,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
               <Button 
                 onClick={handleFinalExchange} 
                 className="flex-1"
-                disabled={isProcessing}
+                disabled={isProcessing || !hasReadTerms}
               >
                 {isProcessing ? (
                   <>
@@ -478,7 +519,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
                     送信中...
                   </>
                 ) : (
-                  '同意して交換リクエストを送信'
+                  '規約に同意して交換リクエストを送信'
                 )}
               </Button>
             </div>
