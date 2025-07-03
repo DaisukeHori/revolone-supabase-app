@@ -355,6 +355,7 @@ export default function StoreDevicesPage() {
               setSelectedDevice(null);
             }}
             device={selectedDevice}
+            stripeCustomerId={storeId!}
           />
         )}
     </AppLayout>
