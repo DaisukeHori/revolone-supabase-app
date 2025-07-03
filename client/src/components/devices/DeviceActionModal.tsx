@@ -200,7 +200,7 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
     try {
       const returnData = {
         serialNumber: device.serialNumber,
-        customerId: stripeCustomerId,
+        stripeCustomerId: stripeCustomerId,
       };
 
       const response = await fetch('/api/devices/return-request', {
