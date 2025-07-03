@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeftRight, Package, Loader2, ChevronLeft, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+import { DeviceReturnModal } from "./DeviceReturnModal";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { calculateTotalQuantityFromItems } from "@/lib/revonizerCalculation";
@@ -56,6 +57,7 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [hasReadTerms, setHasReadTerms] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
 
 
   // モーダルがクローズされたときにステートをリセット
@@ -196,48 +198,8 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
     }
   };
 
-  const handleReturn = async () => {
-    setIsProcessing(true);
-    try {
-      const returnData = {
-        serialNumber: device.serialNumber,
-        stripeSubscriptionId: device.stripeSubscriptionId,
-      };
-
-      const response = await fetch('/api/devices/return', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(returnData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '返却処理に失敗しました');
-      }
-
-      const result = await response.json();
-      console.log('返却処理成功:', result);
-
-      toast({
-        title: "返却処理完了",
-        description: `デバイス ${device.serialNumber} の返却処理が完了しました。台数が1台減算されました。`,
-      });
-
-      // モーダルを閉じる
-      onClose();
-    } catch (error) {
-      console.error('返却処理エラー:', error);
-      toast({
-        variant: "destructive",
-        title: "返却処理エラー",
-        description: error instanceof Error ? error.message : "返却処理中にエラーが発生しました",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleReturn = () => {
+    setIsReturnModalOpen(true);
   };
 
   if (device.deviceCategory !== 'サブスク') {
@@ -605,20 +567,45 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {step === 'select' && 'サブスクデバイス操作'}
-            {step === 'issues' && 'デバイス不調の詳細'}
-            {step === 'confirm' && '交換内容の確認'}
-            {step === 'terms' && 'デバイス交換規約'}
-            {step === 'success' && '交換リクエスト完了'}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {step === 'select' && 'サブスクデバイス操作'}
+              {step === 'issues' && 'デバイス不調の詳細'}
+              {step === 'confirm' && '交換内容の確認'}
+              {step === 'terms' && 'デバイス交換規約'}
+              {step === 'success' && '交換リクエスト完了'}
+            </DialogTitle>
+          </DialogHeader>
 
-        {renderStepContent()}
-      </DialogContent>
-    </Dialog>
+          {renderStepContent()}
+        </DialogContent>
+      </Dialog>
+      
+      {/* 返却モーダル */}
+      <DeviceReturnModal
+        device={{
+          serialNumber: device.serialNumber,
+          status: "出荷",
+          statusUpdatedAt: new Date().toISOString(),
+          stripeSubscriptionId: device.stripeSubscriptionId,
+          store: {
+            name: "店舗名",
+            address: "住所"
+          },
+          deviceCategory: device.deviceCategory,
+          isActionLocked: device.isActionLocked,
+          lockUntil: device.lockUntil ? new Date(device.lockUntil).toISOString() : undefined,
+          lastAction: device.lastActionType
+        }}
+        isOpen={isReturnModalOpen}
+        onClose={() => {
+          setIsReturnModalOpen(false);
+          onClose(); // 親モーダルも閉じる
+        }}
+      />
+    </>
   );
 }

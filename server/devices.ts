@@ -341,15 +341,15 @@ router.post("/api/devices/exchange-request", async (req, res) => {
 // デバイス返却リクエスト（台数減算 + メタデータ更新）
 router.post("/api/devices/return", async (req, res) => {
   try {
-    const { serialNumber, stripeSubscriptionId } = req.body;
+    const { serialNumber, stripeSubscriptionId, reason, additionalInfo } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ message: "認証が必要です" });
     }
 
-    if (!serialNumber || !stripeSubscriptionId) {
-      return res.status(400).json({ message: "製造番号とサブスクリプションIDが必要です" });
+    if (!serialNumber || !stripeSubscriptionId || !reason) {
+      return res.status(400).json({ message: "製造番号、サブスクリプションID、返却理由が必要です" });
     }
 
     console.log(`[Device Return] 返却処理開始: ${serialNumber} (サブスクリプション: ${stripeSubscriptionId})`);
@@ -410,6 +410,10 @@ router.post("/api/devices/return", async (req, res) => {
 
     // 新しい返却製造番号を追加
     updatedMetadata['返却製造番号'] = serialNumber;
+    updatedMetadata['返却理由'] = reason;
+    if (additionalInfo) {
+      updatedMetadata['返却詳細'] = additionalInfo;
+    }
 
     // 5. サブスクリプションの台数とメタデータを同時に更新
     const updatedSubscription = await stripe.subscriptions.update(stripeSubscriptionId, {
