@@ -18,7 +18,7 @@ interface KintoneDeviceRecord {
 
 interface KintoneDeviceInfoRecord {
   $id: { value: string };
-  製造番号: { value: string };
+  文字列__1行__1: { value: string }; // App 21の製造番号フィールド（ラベル: "製造番号"）
   サブスク貸出の可不可: { value: string };
 }
 
@@ -104,7 +104,7 @@ export async function getDeviceInfoBySerialNumbers(serialNumbers: string[]) {
     
     // IN句を使用して複数の製造番号を一度に検索
     const serialNumbersQuery = serialNumbers.map(sn => `"${sn}"`).join(', ');
-    const query = `製造番号 in (${serialNumbersQuery})`;
+    const query = `文字列__1行__1 in (${serialNumbersQuery})`;
     
     const response = await axios.get(
       `${KINTONE_BASE_URL}/records.json?app=${KINTONE_DEVICE_APP_ID}&query=${encodeURIComponent(query)}`,

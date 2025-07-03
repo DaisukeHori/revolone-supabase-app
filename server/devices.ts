@@ -123,7 +123,7 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
     // デバイス情報をマップに変換
     const deviceInfoMap = new Map();
     deviceInfoRecords.forEach(info => {
-      deviceInfoMap.set(info.製造番号.value, info.サブスク貸出の可不可.value);
+      deviceInfoMap.set(info.文字列__1行__1.value, info.サブスク貸出の可不可.value);
     });
 
     // 最終的なデバイス一覧を作成
@@ -137,7 +137,7 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
 
     console.log(`[Device API] Fetched ${devices.length} devices for store ${storeId}`);
     console.log(`[Device API] Device info from App 21:`, deviceInfoRecords.map(r => ({
-      serialNumber: r.製造番号.value,
+      serialNumber: r.文字列__1行__1.value,
       availability: r.サブスク貸出の可不可.value
     })));
 
