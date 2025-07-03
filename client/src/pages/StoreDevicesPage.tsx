@@ -12,6 +12,7 @@ import { useLocation } from "wouter";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+import { DeviceActionModal } from "@/components/devices/DeviceActionModal";
 import { toast } from "@/hooks/use-toast";
 
 interface Device {
@@ -86,6 +87,8 @@ export default function StoreDevicesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showDeviceActionModal, setShowDeviceActionModal] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>("");
   const [selectedSubscriptionItems, setSelectedSubscriptionItems] = useState<any[]>([]);
   const [updatedQuantities, setUpdatedQuantities] = useState<Record<string, number>>({});
@@ -93,6 +96,11 @@ export default function StoreDevicesPage() {
 
   const handleCreateSubscription = () => {
     setShowCreateModal(true);
+  };
+
+  const handleDeviceClick = (device: Device) => {
+    setSelectedDevice(device);
+    setShowDeviceActionModal(true);
   };
 
   const handleOpenUpdateModal = (subscriptionId: string) => {
@@ -207,10 +215,11 @@ export default function StoreDevicesPage() {
                   {devices.map((device, index) => (
                     <motion.div
                       key={device.serialNumber}
-                      className="p-6 rounded-lg border border-border/50 bg-gradient-to-r from-card/30 to-card/50 backdrop-blur-sm hover:shadow-md transition-all duration-200"
+                      className="p-6 rounded-lg border border-border/50 bg-gradient-to-r from-card/30 to-card/50 backdrop-blur-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
+                      onClick={() => handleDeviceClick(device)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-3 flex-1">
@@ -332,6 +341,17 @@ export default function StoreDevicesPage() {
             updatedQuantities={updatedQuantities}
             onConfirm={handleConfirmQuantityUpdate}
             isUpdating={isUpdating}
+          />
+        )}
+
+        {showDeviceActionModal && selectedDevice && (
+          <DeviceActionModal
+            isOpen={showDeviceActionModal}
+            onClose={() => {
+              setShowDeviceActionModal(false);
+              setSelectedDevice(null);
+            }}
+            device={selectedDevice}
           />
         )}
     </AppLayout>
