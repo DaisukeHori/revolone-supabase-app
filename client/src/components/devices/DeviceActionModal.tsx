@@ -56,7 +56,7 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [hasReadTerms, setHasReadTerms] = useState(false);
-  const [actionType, setActionType] = useState<'exchange' | 'return' | null>(null);
+
 
   // モーダルがクローズされたときにステートをリセット
   useEffect(() => {
@@ -66,7 +66,6 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
       setNotes('');
       setIsProcessing(false);
       setHasReadTerms(false);
-      setActionType(null);
     }
   }, [isOpen]);
 
@@ -198,39 +197,10 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
   };
 
   const handleReturn = async () => {
-    setIsProcessing(true);
-    try {
-      const returnData = {
-        serialNumber: device.serialNumber,
-        stripeCustomerId: stripeCustomerId,
-      };
-
-      const response = await fetch('/api/devices/return-request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(returnData),
-      });
-
-      if (!response.ok) {
-        throw new Error('返却リクエストの送信に失敗しました');
-      }
-
-      const result = await response.json();
-      console.log('返却リクエスト成功:', result);
-
-      setStep('success');
-    } catch (error) {
-      console.error('返却手続きエラー:', error);
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "返却リクエストの送信に失敗しました",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+    toast({
+      title: "返却機能について",
+      description: "返却機能は現在開発中です。実装完了までお待ちください。",
+    });
   };
 
   if (device.deviceCategory !== 'サブスク') {
@@ -310,12 +280,12 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
                 onClick={handleReturn}
                 className="h-16 text-left justify-start p-6"
                 variant="outline"
-                disabled={device.isActionLocked || isProcessing}
+                disabled={true}
               >
                 <div>
-                  <div className="font-semibold">返却する</div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    デバイスを返却する手続き
+                  <div className="font-semibold text-gray-400">返却する（開発中）</div>
+                  <div className="text-sm text-gray-400 mt-1">
+                    返却機能は現在開発中です
                   </div>
                 </div>
               </Button>

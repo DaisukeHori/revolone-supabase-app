@@ -338,73 +338,7 @@ router.post("/api/devices/exchange-request", async (req, res) => {
   }
 });
 
-// デバイス返却リクエスト
-router.post("/api/devices/return-request", async (req, res) => {
-  try {
-    const { serialNumber, stripeCustomerId } = req.body;
-    const userId = req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({ message: "認証が必要です" });
-    }
-
-    if (!stripeCustomerId) {
-      return res.status(400).json({ message: "顧客番号が必要です" });
-    }
-
-    // デバイス操作制限をチェック
-    const lockInfo = await checkDeviceActionLock(serialNumber, stripeCustomerId);
-    if (lockInfo.isLocked) {
-      return res.status(403).json({ 
-        message: `このデバイスは${lockInfo.lockUntil?.toLocaleDateString()}まで操作が制限されています（前回の操作: ${lockInfo.actionType === 'return' ? '返却' : '交換'}）`,
-        lockUntil: lockInfo.lockUntil,
-        lastActionType: lockInfo.actionType
-      });
-    }
-
-    // Zapier Webhookにリクエストを送信
-    const zapierUrl = 'https://hooks.zapier.com/hooks/catch/17071556/u3orkoq/';
-    const payload = {
-      serialNumber: serialNumber,
-      action: "return",
-      timestamp: new Date().toISOString(),
-      requestedBy: req.user?.email || "unknown",
-      stripeCustomerId: stripeCustomerId
-    };
-
-    const response = await fetch(zapierUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Zapier webhook failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    // 返却リクエスト成功時に操作履歴を記録（7日間の制限開始）
-    await recordDeviceAction(serialNumber, stripeCustomerId, "return", userId);
-
-    console.log(`[Device Return] シリアル番号 ${serialNumber} の返却リクエスト送信成功:`, result);
-    console.log(`[Device Return] 操作履歴記録完了: ${serialNumber} (顧客: ${stripeCustomerId}) - 7日間制限開始`);
-    
-    res.json({ 
-      success: true, 
-      message: "返却リクエストが正常に送信されました。このデバイスは7日間操作が制限されます。",
-      zapierResponse: result
-    });
-  } catch (error) {
-    console.error("デバイス返却リクエストの送信に失敗:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "返却リクエストの送信に失敗しました" 
-    });
-  }
-});
 
 // 旧エンドポイント（下位互換性のため残す）
 router.post("/api/devices/:serialNumber/exchange", async (req, res) => {
