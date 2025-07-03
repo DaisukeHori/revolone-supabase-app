@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeftRight, Package, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 
 interface DeviceActionModalProps {
   isOpen: boolean;
@@ -12,11 +13,60 @@ interface DeviceActionModalProps {
   device: {
     serialNumber: string;
     deviceCategory?: string;
+    stripeSubscriptionId?: string;
   };
 }
 
+type StripeSubscription = {
+  id: string;
+  status: string;
+  items: {
+    subscription_item_id: string;
+    quantity: number;
+    product: {
+      name: string;
+    };
+  }[];
+};
+
 export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [totalQuantity, setTotalQuantity] = useState<number>(0);
+
+  // Stripe顧客データを取得
+  const { data: stripeData } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch customer data');
+      }
+      return response.json();
+    },
+    enabled: isOpen && device.deviceCategory === 'サブスク'
+  });
+
+  // サブスクリプションの総台数を計算
+  useEffect(() => {
+    if (stripeData && device.stripeSubscriptionId) {
+      const customerData = stripeData.find((data: any) => 
+        data.subscriptions.some((sub: StripeSubscription) => sub.id === device.stripeSubscriptionId)
+      );
+      
+      if (customerData) {
+        const subscription = customerData.subscriptions.find(
+          (sub: StripeSubscription) => sub.id === device.stripeSubscriptionId
+        );
+        
+        if (subscription) {
+          const total = subscription.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+          setTotalQuantity(total);
+        }
+      }
+    }
+  }, [stripeData, device.stripeSubscriptionId]);
 
   const handleExchange = async () => {
     setIsProcessing(true);
@@ -121,7 +171,10 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
                     <div className="text-left">
                       <h3 className="font-medium text-foreground">返却</h3>
                       <p className="text-sm text-muted-foreground">
-                        サブスクの契約をxx台からxx台に変更
+                        {totalQuantity > 0 
+                          ? `サブスクの契約を${totalQuantity}台から${totalQuantity - 1}台に変更`
+                          : "サブスクの契約台数を1台減らす"
+                        }
                       </p>
                     </div>
                   </div>
