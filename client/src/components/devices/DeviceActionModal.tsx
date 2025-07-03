@@ -56,6 +56,7 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [hasReadTerms, setHasReadTerms] = useState(false);
+  const [actionType, setActionType] = useState<'exchange' | 'return' | null>(null);
 
   // モーダルがクローズされたときにステートをリセット
   useEffect(() => {
@@ -65,6 +66,7 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
       setNotes('');
       setIsProcessing(false);
       setHasReadTerms(false);
+      setActionType(null);
     }
   }, [isOpen]);
 
