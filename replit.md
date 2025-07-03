@@ -118,6 +118,9 @@ Changelog:
   - Updated device API endpoints to include subscription rental availability
   - Added UI display for "販売済" (sold/bought outright) vs subscription devices
   - API token configuration needed: Current token requires App 21 access permissions
+  - COMPLETED: Fixed field name mapping from "レボナイザー製造番号" to "文字列__1行__1" for App 21 queries
+  - COMPLETED: Successfully retrieving device rental availability data ("可", "販売済", "不可" etc.)
+  - COMPLETED: App 21 integration fully functional with correct API permissions and data display
 ```
 
 ## User Preferences
