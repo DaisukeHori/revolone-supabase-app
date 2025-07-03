@@ -20,6 +20,7 @@ interface Device {
   statusUpdatedAt: string;
   stripeSubscriptionId: string;
   subscriptionRentalAvailability?: string; // サブスク貸出の可不可
+  deviceCategory?: string; // 購入機材, 代替え機, サブスク
 }
 
 const container = {
@@ -240,27 +241,36 @@ export default function StoreDevicesPage() {
                             )}
                           </div>
                           
-                          {/* サブスク貸出の可不可情報を表示 */}
-                          {device.subscriptionRentalAvailability && (
+                          {/* デバイス区分情報を表示 */}
+                          {device.deviceCategory && (
                             <div className="mt-3 p-3 rounded-lg bg-muted/50">
                               <div className="flex items-center gap-2">
                                 <Package className="h-4 w-4" />
                                 <span className="text-sm font-medium">
-                                  販売区分: 
-                                  {device.subscriptionRentalAvailability === '販売済' ? (
+                                  デバイス区分: 
+                                  {device.deviceCategory === '購入機材' ? (
                                     <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800 border-orange-200">
-                                      買い切り（販売済）
+                                      購入機材
+                                    </Badge>
+                                  ) : device.deviceCategory === '代替え機' ? (
+                                    <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                                      代替え機
                                     </Badge>
                                   ) : (
                                     <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800 border-blue-200">
-                                      {device.subscriptionRentalAvailability}
+                                      サブスク
                                     </Badge>
                                   )}
                                 </span>
                               </div>
-                              {device.subscriptionRentalAvailability === '販売済' && (
+                              {device.deviceCategory === '購入機材' && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   このデバイスは買い切りで販売されたもので、サブスクリプション契約ではありません
+                                </p>
+                              )}
+                              {device.deviceCategory === '代替え機' && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  このデバイスは代替え機として登録されています
                                 </p>
                               )}
                             </div>

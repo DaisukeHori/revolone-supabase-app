@@ -20,6 +20,7 @@ interface KintoneDeviceInfoRecord {
   $id: { value: string };
   文字列__1行__1: { value: string }; // App 21の製造番号フィールド（ラベル: "製造番号"）
   サブスク貸出の可不可: { value: string };
+  代替え機の場合はチェック: { value: string[] }; // チェックボックス
 }
 
 export async function getDeviceRecords() {

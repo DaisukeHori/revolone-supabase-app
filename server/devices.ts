@@ -123,22 +123,42 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
     // デバイス情報をマップに変換
     const deviceInfoMap = new Map();
     deviceInfoRecords.forEach(info => {
-      deviceInfoMap.set(info.文字列__1行__1.value, info.サブスク貸出の可不可.value);
+      deviceInfoMap.set(info.文字列__1行__1.value, {
+        availability: info.サブスク貸出の可不可.value,
+        isSubstitute: info.代替え機の場合はチェック.value.length > 0
+      });
     });
 
     // 最終的なデバイス一覧を作成
-    const devices = shippedDevices.map(record => ({
-      serialNumber: record.レボナイザー引き当て製造番号.value,
-      status: record.入出荷.value,
-      statusUpdatedAt: record.隈部入出荷実行日付.value,
-      stripeSubscriptionId: record.Stripe_SubscriptionID.value,
-      subscriptionRentalAvailability: deviceInfoMap.get(record.レボナイザー引き当て製造番号.value) || null,
-    }));
+    const devices = shippedDevices.map(record => {
+      const deviceInfo = deviceInfoMap.get(record.レボナイザー引き当て製造番号.value);
+      let deviceCategory = null;
+      
+      if (deviceInfo) {
+        if (deviceInfo.availability === '販売済') {
+          deviceCategory = '購入機材';
+        } else if (deviceInfo.isSubstitute) {
+          deviceCategory = '代替え機';
+        } else {
+          deviceCategory = 'サブスク';
+        }
+      }
+      
+      return {
+        serialNumber: record.レボナイザー引き当て製造番号.value,
+        status: record.入出荷.value,
+        statusUpdatedAt: record.隈部入出荷実行日付.value,
+        stripeSubscriptionId: record.Stripe_SubscriptionID.value,
+        subscriptionRentalAvailability: deviceInfo?.availability || null,
+        deviceCategory: deviceCategory,
+      };
+    });
 
     console.log(`[Device API] Fetched ${devices.length} devices for store ${storeId}`);
     console.log(`[Device API] Device info from App 21:`, deviceInfoRecords.map(r => ({
       serialNumber: r.文字列__1行__1.value,
-      availability: r.サブスク貸出の可不可.value
+      availability: r.サブスク貸出の可不可.value,
+      isSubstitute: r.代替え機の場合はチェック.value.length > 0
     })));
 
     res.json(devices);
