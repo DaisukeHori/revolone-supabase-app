@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers } from "./services/kintone";
+import { db } from "../db";
+import { deviceExchangeRequests } from "../db/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const router = Router();
@@ -186,7 +189,76 @@ router.patch("/api/devices/:id/status", async (req, res) => {
   }
 });
 
-// デバイス交換リクエスト
+// デバイス交換リクエスト（詳細情報付き）
+router.post("/api/devices/exchange-request", async (req, res) => {
+  try {
+    const { serialNumber, issues, notes } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "認証が必要です" });
+    }
+
+    // DBに交換リクエストを保存（一時的にコメントアウト）
+    // const exchangeRequest = await db.insert(deviceExchangeRequests).values({
+    //   serialNumber,
+    //   userId,
+    //   issues,
+    //   notes,
+    // }).returning();
+    
+    // 一時的なモック
+    const exchangeRequest = [{ id: Date.now() }];
+
+    // Zapier Webhookにリクエストを送信
+    const zapierUrl = 'https://hooks.zapier.com/hooks/catch/17071556/u3orkoq/';
+    const payload = {
+      serialNumber,
+      action: "exchange",
+      issues,
+      notes,
+      requestId: exchangeRequest[0].id,
+      timestamp: new Date().toISOString(),
+      requestedBy: req.user?.email || "unknown"
+    };
+
+    const response = await fetch(zapierUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Zapier webhook failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // ZapierのレスポンスIDをDBに保存（一時的にコメントアウト）
+    // await db.update(deviceExchangeRequests)
+    //   .set({ zapierRequestId: result.id })
+    //   .where(eq(deviceExchangeRequests.id, exchangeRequest[0].id));
+
+    console.log(`[Device Exchange] シリアル番号 ${serialNumber} の交換リクエスト送信成功:`, result);
+    
+    res.json({ 
+      success: true, 
+      message: "交換リクエストが正常に送信されました",
+      requestId: exchangeRequest[0].id,
+      zapierResponse: result
+    });
+  } catch (error) {
+    console.error("デバイス交換リクエストの送信に失敗:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "交換リクエストの送信に失敗しました" 
+    });
+  }
+});
+
+// 旧エンドポイント（下位互換性のため残す）
 router.post("/api/devices/:serialNumber/exchange", async (req, res) => {
   try {
     const { serialNumber } = req.params;

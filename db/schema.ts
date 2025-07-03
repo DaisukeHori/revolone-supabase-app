@@ -46,9 +46,24 @@ export const devices = pgTable("devices", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// デバイス交換リクエストテーブル
+export const deviceExchangeRequests = pgTable("device_exchange_requests", {
+  id: serial("id").primaryKey(),
+  serialNumber: text("serial_number").notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  requestDate: timestamp("request_date").defaultNow().notNull(),
+  issues: jsonb("issues").$type<string[]>().notNull(), // 不調部分のリスト
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  zapierRequestId: text("zapier_request_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // リレーション定義の更新
 export const usersRelations = relations(users, ({ many }) => ({
   stores: many(stores),
+  deviceExchangeRequests: many(deviceExchangeRequests),
 }));
 
 export const storesRelations = relations(stores, ({ one, many }) => ({
@@ -63,6 +78,13 @@ export const devicesRelations = relations(devices, ({ one }) => ({
   store: one(stores, {
     fields: [devices.storeId],
     references: [stores.id],
+  }),
+}));
+
+export const deviceExchangeRequestsRelations = relations(deviceExchangeRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceExchangeRequests.userId],
+    references: [users.id],
   }),
 }));
 
@@ -102,12 +124,20 @@ export const insertDeviceSchema = createInsertSchema(devices, {
   metadata: z.record(z.unknown()).optional(),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
+export const insertDeviceExchangeRequestSchema = createInsertSchema(deviceExchangeRequests, {
+  serialNumber: z.string().min(1, "製造番号を入力してください"),
+  issues: z.array(z.string()).min(1, "不調部分を選択してください"),
+  notes: z.string().optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true, requestDate: true, status: true, zapierRequestId: true });
+
 export const updateStoreSchema = insertStoreSchema.partial();
 export const updateDeviceSchema = insertDeviceSchema.partial();
+export const updateDeviceExchangeRequestSchema = insertDeviceExchangeRequestSchema.partial();
 
 export const selectUserSchema = createSelectSchema(users);
 export const selectStoreSchema = createSelectSchema(stores);
 export const selectDeviceSchema = createSelectSchema(devices);
+export const selectDeviceExchangeRequestSchema = createSelectSchema(deviceExchangeRequests);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type SelectUser = typeof users.$inferSelect;
@@ -115,3 +145,5 @@ export type InsertStore = z.infer<typeof insertStoreSchema>;
 export type SelectStore = typeof stores.$inferSelect;
 export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type SelectDevice = typeof devices.$inferSelect;
+export type InsertDeviceExchangeRequest = z.infer<typeof insertDeviceExchangeRequestSchema>;
+export type SelectDeviceExchangeRequest = typeof deviceExchangeRequests.$inferSelect;
