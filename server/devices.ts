@@ -210,7 +210,7 @@ router.post("/api/devices/exchange-request", async (req, res) => {
     // 一時的なモック
     const exchangeRequest = [{ id: Date.now() }];
 
-    // Zapier Webhookにリクエストを送信
+    // Zapier Webhookにリクエストを送信（一時的に無効化）
     const zapierUrl = 'https://hooks.zapier.com/hooks/catch/17071556/u3orkoq/';
     const payload = {
       serialNumber,
@@ -222,19 +222,29 @@ router.post("/api/devices/exchange-request", async (req, res) => {
       requestedBy: req.user?.email || "unknown"
     };
 
-    const response = await fetch(zapierUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
+    console.log(`[Device Exchange] Zapier送信データ:`, payload);
 
-    if (!response.ok) {
-      throw new Error(`Zapier webhook failed: ${response.status}`);
-    }
+    // 一時的にZapier呼び出しを無効化（URLが404エラーのため）
+    // const response = await fetch(zapierUrl, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify(payload)
+    // });
 
-    const result = await response.json();
+    // if (!response.ok) {
+    //   throw new Error(`Zapier webhook failed: ${response.status}`);
+    // }
+
+    // const result = await response.json();
+    
+    // 一時的なモックレスポンス
+    const result = {
+      id: `mock_${Date.now()}`,
+      status: 'success',
+      attempt: `mock_attempt_${Date.now()}`
+    };
     
     // ZapierのレスポンスIDをDBに保存（一時的にコメントアウト）
     // await db.update(deviceExchangeRequests)
