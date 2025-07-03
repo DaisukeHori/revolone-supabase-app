@@ -47,7 +47,7 @@ const DEVICE_ISSUES = [
 export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [totalQuantity, setTotalQuantity] = useState<number>(0);
-  const [step, setStep] = useState<'select' | 'issues' | 'confirm' | 'terms'>('select');
+  const [step, setStep] = useState<'select' | 'issues' | 'confirm' | 'terms' | 'success'>('select');
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [hasReadTerms, setHasReadTerms] = useState(false);
@@ -154,12 +154,8 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
 
       const result = await response.json();
       console.log('交換リクエスト成功:', result);
-
-      toast({
-        description: `デバイス ${device.serialNumber} の交換リクエストを送信しました`,
-      });
-
-      onClose();
+      
+      setStep('success');
     } catch (error) {
       console.error('交換手続きエラー:', error);
       toast({
@@ -525,6 +521,57 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
           </div>
         );
 
+      case 'success':
+        return (
+          <div className="space-y-4 py-4">
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-green-800 mb-2">
+                交換リクエストを送信しました
+              </h3>
+              <p className="text-sm text-gray-600">
+                デバイス {device.serialNumber} の交換リクエストが正常に処理されました。
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-blue-900">次のステップ</h4>
+              <ul className="text-sm text-blue-800 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-medium">1.</span>
+                  <span>3営業日以内にリファービッシュ品を発送いたします</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium">2.</span>
+                  <span>到着後、同じシリアル番号の機材を着払い送り状で返送してください</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium">3.</span>
+                  <span>到着後1週間以内に返送いただけない場合、追加費用が発生する場合があります</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-800">
+                <strong>重要：</strong> 必ず申請時と同じシリアル番号（{device.serialNumber}）の機材を返送してください。
+              </p>
+            </div>
+
+            <div className="pt-4">
+              <Button onClick={onClose} className="w-full">
+                完了
+              </Button>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -539,6 +586,7 @@ export function DeviceActionModal({ isOpen, onClose, device }: DeviceActionModal
             {step === 'issues' && 'デバイス不調の詳細'}
             {step === 'confirm' && '交換内容の確認'}
             {step === 'terms' && 'デバイス交換規約'}
+            {step === 'success' && '交換リクエスト完了'}
           </DialogTitle>
         </DialogHeader>
         
