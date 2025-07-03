@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { calculateTotalQuantityFromItems } from "@/lib/revonizerCalculation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
@@ -84,6 +85,7 @@ export default function SubscriptionDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [totalQuantity, setTotalQuantity] = useState<number>(0);
 
   const { data: stripeData, isLoading, error, refetch } = useQuery<StripeCustomerData[]>({
     queryKey: ['/api/stripe/customer'],
@@ -104,6 +106,25 @@ export default function SubscriptionDetailPage() {
 
   const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
   const customer = customerData?.customer;
+
+  // Revonizerの正確な台数計算ロジックを使用
+  useEffect(() => {
+    const calculateCurrentQuantity = async () => {
+      if (subscription && subscription.items) {
+        try {
+          const total = await calculateTotalQuantityFromItems(subscription.items);
+          setTotalQuantity(total);
+        } catch (error) {
+          console.error('台数計算エラー:', error);
+          // フォールバック：通常の合計計算
+          const total = subscription.items.reduce((sum, item) => sum + item.quantity, 0);
+          setTotalQuantity(total);
+        }
+      }
+    };
+
+    calculateCurrentQuantity();
+  }, [subscription]);
 
   const handleUpdateStore = async (values: any) => {
     if (!customer) return;
@@ -384,6 +405,22 @@ export default function SubscriptionDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* 合計台数表示 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium text-blue-900">契約台数</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-900">
+                    {totalQuantity}台
+                  </div>
+                </div>
+                <p className="text-sm text-blue-700 mt-2">
+                  Revonizerの計算ロジックに基づく正確な台数
+                </p>
+              </div>
+
               {/* サブスクリプションステータス */}
               <div className="flex items-center gap-2">
                 <Badge
