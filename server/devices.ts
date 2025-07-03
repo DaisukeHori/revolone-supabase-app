@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDeviceRecords, getDevicesByCustomerId } from "./services/kintone";
+import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers } from "./services/kintone";
 import { z } from "zod";
 
 const router = Router();
@@ -26,6 +26,7 @@ interface GroupedDevices {
       status: string;
       statusUpdatedAt: string;
       stripeSubscriptionId: string;
+      subscriptionRentalAvailability?: string;
     }>;
   };
 }
@@ -36,9 +37,9 @@ router.get("/api/devices", async (req, res) => {
     const kintoneRecords = await getDeviceRecords();
 
     // 製造番号ごとに最新のステータスを持つレコードを抽出
-    const latestDeviceStatuses = new Map<string, DeviceRecord>();
+    const latestDeviceStatuses = new Map<string, any>();
 
-    kintoneRecords.forEach((record: DeviceRecord) => {
+    kintoneRecords.forEach((record: any) => {
       const serialNumber = record.レボナイザー引き当て製造番号.value;
       const currentDate = new Date(record.隈部入出荷実行日付.value);
 
@@ -89,9 +90,9 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
     const kintoneDevices = await getDevicesByCustomerId(storeId);
 
     // 製造番号ごとに最新のステータスを持つレコードを抽出
-    const latestDeviceStatuses = new Map<string, DeviceRecord>();
+    const latestDeviceStatuses = new Map<string, any>();
 
-    kintoneDevices.forEach((record: DeviceRecord) => {
+    kintoneDevices.forEach((record: any) => {
       const serialNumber = record.レボナイザー引き当て製造番号.value;
       const currentDate = new Date(record.隈部入出荷実行日付.value);
 
@@ -101,15 +102,44 @@ router.get("/api/stores/:storeId/devices", async (req, res) => {
       }
     });
 
-    // 出荷中のデバイスのみを配列に変換
-    const devices = Array.from(latestDeviceStatuses.values())
-      .filter(record => record.入出荷.value === "出荷")
-      .map(record => ({
-        serialNumber: record.レボナイザー引き当て製造番号.value,
-        status: record.入出荷.value,
-        statusUpdatedAt: record.隈部入出荷実行日付.value,
-        stripeSubscriptionId: record.Stripe_SubscriptionID.value,
-      }));
+    // 出荷中のデバイスのみを抽出
+    const shippedDevices = Array.from(latestDeviceStatuses.values())
+      .filter(record => record.入出荷.value === "出荷");
+
+    // 製造番号のリストを取得
+    const serialNumbers = shippedDevices.map(record => record.レボナイザー引き当て製造番号.value);
+
+    // App 21からデバイス情報を取得（サブスク貸出の可不可を含む）
+    let deviceInfoRecords: any[] = [];
+    try {
+      deviceInfoRecords = await getDeviceInfoBySerialNumbers(serialNumbers);
+      console.log(`[Device API] App 21から${deviceInfoRecords.length}件のデバイス情報を取得しました`);
+    } catch (error: any) {
+      console.warn('[Device API] App 21へのアクセスに失敗しました:', error.message);
+      // APIアクセスできない場合は空の配列で続行
+      deviceInfoRecords = [];
+    }
+    
+    // デバイス情報をマップに変換
+    const deviceInfoMap = new Map();
+    deviceInfoRecords.forEach(info => {
+      deviceInfoMap.set(info.製造番号.value, info.サブスク貸出の可不可.value);
+    });
+
+    // 最終的なデバイス一覧を作成
+    const devices = shippedDevices.map(record => ({
+      serialNumber: record.レボナイザー引き当て製造番号.value,
+      status: record.入出荷.value,
+      statusUpdatedAt: record.隈部入出荷実行日付.value,
+      stripeSubscriptionId: record.Stripe_SubscriptionID.value,
+      subscriptionRentalAvailability: deviceInfoMap.get(record.レボナイザー引き当て製造番号.value) || null,
+    }));
+
+    console.log(`[Device API] Fetched ${devices.length} devices for store ${storeId}`);
+    console.log(`[Device API] Device info from App 21:`, deviceInfoRecords.map(r => ({
+      serialNumber: r.製造番号.value,
+      availability: r.サブスク貸出の可不可.value
+    })));
 
     res.json(devices);
   } catch (error) {

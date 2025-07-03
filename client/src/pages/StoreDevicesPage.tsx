@@ -12,12 +12,14 @@ import { useLocation } from "wouter";
 import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscriptionModal";
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface Device {
   serialNumber: string;
   status: "出荷" | "返却";
   statusUpdatedAt: string;
   stripeSubscriptionId: string;
+  subscriptionRentalAvailability?: string; // サブスク貸出の可不可
 }
 
 const container = {
@@ -39,7 +41,7 @@ export default function StoreDevicesPage() {
   const { id: storeId } = useParams();
   const [, setLocation] = useLocation();
 
-  const { data: devices, isLoading, error } = useQuery({
+  const { data: devices, isLoading, error, refetch } = useQuery({
     queryKey: ['store-devices', storeId],
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/devices`, {
@@ -52,6 +54,22 @@ export default function StoreDevicesPage() {
     },
     enabled: !!storeId
   });
+
+  // Stripe customer data for subscription management
+  const { data: stripeData } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch customer data');
+      }
+      return response.json();
+    }
+  });
+
+  const customerId = storeId;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -77,8 +95,8 @@ export default function StoreDevicesPage() {
   };
 
   const handleOpenUpdateModal = (subscriptionId: string) => {
-    const customerData = stripeData?.find(data => data.customer.id === customerId);
-    const subscription = customerData?.subscriptions.find(sub => sub.id === subscriptionId);
+    const customerData = stripeData?.find((data: any) => data.customer.id === customerId);
+    const subscription = customerData?.subscriptions.find((sub: any) => sub.id === subscriptionId);
     if (subscription) {
       setSelectedSubscriptionId(subscriptionId);
       setSelectedSubscriptionItems(subscription.items);
@@ -221,6 +239,32 @@ export default function StoreDevicesPage() {
                               </div>
                             )}
                           </div>
+                          
+                          {/* サブスク貸出の可不可情報を表示 */}
+                          {device.subscriptionRentalAvailability && (
+                            <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                <span className="text-sm font-medium">
+                                  販売区分: 
+                                  {device.subscriptionRentalAvailability === '販売済' ? (
+                                    <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800 border-orange-200">
+                                      買い切り（販売済）
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800 border-blue-200">
+                                      {device.subscriptionRentalAvailability}
+                                    </Badge>
+                                  )}
+                                </span>
+                              </div>
+                              {device.subscriptionRentalAvailability === '販売済' && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  このデバイスは買い切りで販売されたもので、サブスクリプション契約ではありません
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="ml-4">
@@ -251,8 +295,8 @@ export default function StoreDevicesPage() {
           <CreateSubscriptionModal
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
-            customerId={customerId}
-            onSuccess={refetch}
+            customerId={storeId!}
+            onSuccess={async () => { void refetch(); }}
             onOpenUpdateModal={handleOpenUpdateModal}
           />
         )}

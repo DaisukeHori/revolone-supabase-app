@@ -87,7 +87,7 @@ This is a comprehensive device and subscription management system for Revonizer,
 - `SENDGRID_API_KEY`: SendGrid API key
 - `TWILIO_ACCOUNT_SID`: Twilio account identifier
 - `TWILIO_AUTH_TOKEN`: Twilio authentication token
-- `KINTONE_API_TOKEN`: Kintone API access token
+- `KINTONE_API_TOKEN`: Kintone API access token (requires access to both App 40 and App 21)
 
 ## Deployment Strategy
 
@@ -112,6 +112,12 @@ This is a comprehensive device and subscription management system for Revonizer,
 ```
 Changelog:
 - June 24, 2025. Initial setup
+- January 03, 2025. Added Kintone App 21 integration for device subscription rental availability data
+  - Extended Kintone service to query App 21 (https://e18p5.cybozu.com/k/21/)
+  - Added "サブスク貸出の可不可" field to device data structure
+  - Updated device API endpoints to include subscription rental availability
+  - Added UI display for "販売済" (sold/bought outright) vs subscription devices
+  - API token configuration needed: Current token requires App 21 access permissions
 ```
 
 ## User Preferences
