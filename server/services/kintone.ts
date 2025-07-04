@@ -183,45 +183,29 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   try {
     console.log(`App22から製造番号${serialNumber}の修理履歴を検索中...`);
     
-    // App22にはデフォルトで製造番号フィールドがない可能性があるため、
-    // 全レコードを検索して製造番号を含むレコードを探す
-    console.log('App22の全レコードから製造番号を検索...');
+    // Kintoneクエリを使用して製造番号で直接検索
+    // App22では製造番号フィールドのコードは「ルックアップ」
+    const query = `ルックアップ = "${serialNumber}"`;
     
-    const response = await axios.get(
-      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}`,
-      {
-        headers: {
-          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-        },
+    const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      params: {
+        app: KINTONE_REPAIR_HISTORY_APP_ID,
+        query: query,
+        totalCount: true
       }
-    );
-
-    console.log(`App22から全レコードを取得: ${response.data.records.length}件`);
-    
-    // 製造番号を含むレコードを検索
-    const matchingRecords = response.data.records.filter((record: any) => {
-      // 全てのフィールドで製造番号を検索
-      return Object.values(record).some((field: any) => 
-        field?.value && field.value.toString().includes(serialNumber)
-      );
     });
-
-    console.log(`製造番号${serialNumber}にマッチするレコード: ${matchingRecords.length}件`);
     
-    if (matchingRecords.length > 0) {
-      console.log('マッチしたレコードの詳細:', matchingRecords[0]);
-      
-      // 製造番号がどのフィールドに含まれているかを確認
-      for (const record of matchingRecords) {
-        for (const [fieldName, fieldValue] of Object.entries(record)) {
-          if (fieldValue?.value && fieldValue.value.toString().includes(serialNumber)) {
-            console.log(`製造番号が見つかったフィールド: ${fieldName} = ${fieldValue.value}`);
-          }
-        }
-      }
+    console.log(`App22クエリ検索結果: ${response.data.records.length}件`);
+    
+    if (response.data.records.length > 0) {
+      console.log('見つかった修理履歴レコード:', response.data.records[0]);
     }
     
-    return matchingRecords as KintoneRepairHistoryRecord[];
+    return response.data.records as KintoneRepairHistoryRecord[];
   } catch (error: any) {
     console.error('修理履歴取得エラー:', error);
     if (error.response?.status === 403) {
