@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber } from "./services/kintone";
+import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber, getAllRepairRecords } from "./services/kintone";
 import { db } from "../db";
 import { deviceExchangeRequests, deviceActionHistory } from "../db/schema";
 import { eq, and, gte } from "drizzle-orm";
@@ -585,6 +585,21 @@ router.get("/api/app22/schema", async (req, res) => {
   }
 });
 
+// App22のサンプルレコードを確認するエンドポイント
+router.get("/api/app22/sample", async (req, res) => {
+  try {
+    const records = await getAllRepairRecords();
+    res.json({
+      total: records.length,
+      sample: records.slice(0, 3),
+      availableFields: records.length > 0 ? Object.keys(records[0]) : []
+    });
+  } catch (error: any) {
+    console.error("App22サンプルレコード取得エラー:", error);
+    res.status(500).json({ message: "App22サンプルレコードの取得に失敗しました", error: error.message });
+  }
+});
+
 // 修理履歴を取得するエンドポイント
 router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
   try {
@@ -605,6 +620,55 @@ router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
   } catch (error: any) {
     console.error("修理履歴取得エラー:", error);
     res.status(500).json({ message: "修理履歴の取得に失敗しました", error: error.message });
+  }
+});
+
+// テスト用：認証なしで修理履歴を取得するエンドポイント  
+router.get("/api/test/repair-history/:serialNumber", async (req, res) => {
+  try {
+    const { serialNumber } = req.params;
+    
+    console.log(`[Test API] 修理履歴取得テスト - シリアル番号: ${serialNumber}`);
+    
+    // JSON レスポンスであることを明示的に設定
+    res.setHeader('Content-Type', 'application/json');
+    
+    const repairHistory = await getRepairHistoryBySerialNumber(serialNumber);
+    
+    console.log(`[Test API] 修理履歴取得完了 - 件数: ${repairHistory.length}`);
+    console.log(`[Test API] データサンプル:`, repairHistory.slice(0, 1));
+    
+    res.json({
+      serialNumber,
+      count: repairHistory.length,
+      data: repairHistory
+    });
+  } catch (error: any) {
+    console.error("テスト修理履歴取得エラー:", error);
+    res.status(500).json({ message: "修理履歴の取得に失敗しました", error: error.message });
+  }
+});
+
+// 特定の製造番号での迅速テスト
+router.get("/api/quick-test-2102145", async (req, res) => {
+  try {
+    console.log('2102145のテスト開始');
+    res.setHeader('Content-Type', 'application/json');
+    
+    const repairHistory = await getRepairHistoryBySerialNumber('2102145');
+    
+    res.json({
+      success: true,
+      serialNumber: '2102145',
+      records: repairHistory.length,
+      sampleData: repairHistory.length > 0 ? repairHistory[0] : null
+    });
+  } catch (error: any) {
+    console.error("2102145テストエラー:", error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

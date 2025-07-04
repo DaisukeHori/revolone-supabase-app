@@ -153,25 +153,90 @@ export async function getApp22Schema() {
 }
 
 // App22から修理履歴を取得する関数
+// App22から全てのレコードを取得して製造番号フィールドを特定
+export async function getAllRepairRecords() {
+  try {
+    const response = await axios.get(`${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}`, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+      },
+    });
+
+    console.log('App22 サンプルレコード:', response.data.records.slice(0, 2));
+    return response.data.records as KintoneRepairHistoryRecord[];
+  } catch (error: any) {
+    console.error('App22全レコード取得エラー:', error);
+    if (error.response?.status === 403) {
+      throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
+    }
+    throw new Error('App22レコードの取得に失敗しました');
+  }
+}
+
 export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   try {
     // まずスキーマを確認
     const schema = await getApp22Schema();
     
     // 製造番号フィールドを特定する（フィールド名が不明なため）
-    const serialNumberField = Object.keys(schema).find(key => 
+    let serialNumberField = Object.keys(schema).find(key => 
       schema[key].label?.includes('製造番号') || 
       schema[key].label?.includes('シリアル') ||
       key.includes('製造番号') ||
       key.includes('serial')
     );
 
+    // より広範囲でフィールドを検索
     if (!serialNumberField) {
-      console.warn('App22で製造番号フィールドが見つかりませんでした');
-      return [];
+      serialNumberField = Object.keys(schema).find(key => 
+        schema[key].label?.includes('番号') ||
+        key.toLowerCase().includes('number') ||
+        key.toLowerCase().includes('id') ||
+        key === '製造番号'
+      );
+    }
+
+    console.log('App22 検索可能フィールド:', Object.keys(schema).map(key => `${key}: ${schema[key].label}`).slice(0, 10));
+
+    // サンプルレコードを取得して実際のフィールド名を確認
+    const sampleRecords = await getAllRepairRecords();
+    if (sampleRecords.length > 0) {
+      console.log('App22 実際のフィールド名:', Object.keys(sampleRecords[0]));
+      // 実際のレコードから製造番号らしきフィールドを探す
+      if (!serialNumberField) {
+        serialNumberField = Object.keys(sampleRecords[0]).find(key => 
+          key.includes('製造') || 
+          key.includes('番号') ||
+          key.toLowerCase().includes('serial') ||
+          key === '製造番号'
+        );
+      }
+      console.log('見つかった製造番号フィールド:', serialNumberField);
+    }
+
+    if (!serialNumberField) {
+      console.warn('App22で製造番号フィールドが見つかりませんでした。全レコードを検索します');
+      // フィールドが特定できない場合は、すべてのレコードから検索
+      const allRecords = await getAllRepairRecords();
+      const matchingRecords = allRecords.filter(record => {
+        // 製造番号フィールドを直接確認
+        if (record.製造番号?.value === serialNumber) {
+          return true;
+        }
+        // その他のフィールドでも検索
+        return Object.values(record).some(field => 
+          field?.value && field.value.toString().includes(serialNumber)
+        );
+      });
+      console.log(`App22で${serialNumber}を含むレコード数:`, matchingRecords.length);
+      if (matchingRecords.length > 0) {
+        console.log('マッチしたレコードのサンプル:', matchingRecords[0]);
+      }
+      return matchingRecords;
     }
 
     const query = `${serialNumberField} = "${serialNumber}"`;
+    console.log('App22クエリ:', query);
     const response = await axios.get(
       `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`,
       {
