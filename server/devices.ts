@@ -672,6 +672,62 @@ router.get("/api/quick-test-2102145", async (req, res) => {
   }
 });
 
+// App22の全レコードから製造番号を含むレコードを直接検索するテスト
+router.get("/api/debug-search-2102145", async (req, res) => {
+  try {
+    console.log('App22全レコード検索デバッグ開始');
+    res.setHeader('Content-Type', 'application/json');
+    
+    // 全レコードを取得
+    const allRecords = await getApp22SampleRecords();
+    console.log(`App22から取得したレコード数: ${allRecords.length}`);
+    
+    // 製造番号2102145を含むレコードを検索
+    const matchingRecords = allRecords.filter((record: any) => {
+      // 全てのフィールドで製造番号を検索
+      return Object.values(record).some((field: any) => 
+        field?.value && field.value.toString().includes('2102145')
+      );
+    });
+    
+    console.log(`製造番号2102145にマッチするレコード数: ${matchingRecords.length}`);
+    
+    if (matchingRecords.length > 0) {
+      // どのフィールドに製造番号が含まれているかを確認
+      const fieldAnalysis = {};
+      for (const record of matchingRecords) {
+        for (const [fieldName, fieldValue] of Object.entries(record)) {
+          if (fieldValue?.value && fieldValue.value.toString().includes('2102145')) {
+            fieldAnalysis[fieldName] = fieldValue.value;
+            console.log(`製造番号が見つかったフィールド: ${fieldName} = ${fieldValue.value}`);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        totalRecords: allRecords.length,
+        matchingRecords: matchingRecords.length,
+        fieldsWithSerialNumber: fieldAnalysis,
+        sampleRecord: matchingRecords[0]
+      });
+    } else {
+      res.json({
+        success: false,
+        totalRecords: allRecords.length,
+        matchingRecords: 0,
+        message: '製造番号2102145を含むレコードが見つかりませんでした'
+      });
+    }
+  } catch (error: any) {
+    console.error('デバッグ検索エラー:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 export function setupDeviceRoutes(app: Router) {
   app.use(router);
 }
