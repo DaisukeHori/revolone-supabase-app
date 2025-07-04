@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Wrench, 
   FileText, 
@@ -88,6 +90,16 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+
+  // 修理履歴を取得するクエリ
+  const { data: repairHistory, isLoading: isLoadingHistory, error: historyError } = useQuery({
+    queryKey: ['repair-history', device.serialNumber],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/devices/${device.serialNumber}/repair-history`);
+      return response.json();
+    },
+    enabled: isOpen && activeTab === 'history',
+  });
 
   const handleClose = () => {
     setActiveTab('repair');
@@ -389,46 +401,80 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
           </p>
         </div>
 
-        <div className="space-y-3">
-          {REPAIR_HISTORY.map((record) => (
-            <div key={record.id} className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium">{record.date}</span>
-                </div>
-                <div className={`px-2 py-1 rounded text-xs font-medium ${
-                  record.status === '完了' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {record.status}
-                </div>
-              </div>
+        {isLoadingHistory ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : historyError ? (
+          <div className="text-center py-8">
+            <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-600 text-sm">修理履歴の取得に失敗しました</p>
+            <p className="text-gray-500 text-xs mt-1">{historyError.message}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {repairHistory && repairHistory.length > 0 ? (
+              repairHistory.map((record: any) => (
+                <div key={record.$id.value} className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium">
+                        {record.修理完了日?.value || record.修理受付日?.value || '日付不明'}
+                      </span>
+                    </div>
+                    <div className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                      {record.修理ステータス?.value || '完了'}
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Wrench className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm">不具合: {record.issue}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Wrench className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm">修理項目: {record.修理項目?.value || '不明'}</span>
+                    </div>
+                    
+                    {record.メインユニット交換故障項目?.value && record.メインユニット交換故障項目.value.length > 0 && (
+                      <div className="flex items-start gap-2">
+                        <FileText className="w-4 h-4 text-gray-600 mt-0.5" />
+                        <div className="text-sm">
+                          <div className="font-medium">故障項目:</div>
+                          <ul className="text-xs text-gray-600 mt-1 space-y-1">
+                            {record.メインユニット交換故障項目.value.map((item: string, index: number) => (
+                              <li key={index}>• {item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        修理費用: {record.確定修理金額?.value ? 
+                          `¥${parseInt(record.確定修理金額.value).toLocaleString()}` : 
+                          '未確定'
+                        }
+                      </span>
+                      {record.保証対象?.value === 'はい' && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          保証適用
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <FileText className="w-4 h-4 text-gray-600 mt-0.5" />
-                  <span className="text-sm">修理内容: {record.repairDetails}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    修理費用: ¥{record.cost.toLocaleString()}
-                  </span>
-                  {record.warranty && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                      保証適用
-                    </span>
-                  )}
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">修理履歴がありません</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  このデバイスの修理記録は見つかりませんでした
+                </p>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </div>
+        )}
 
         <div className="pt-4">
           <Button onClick={handleClose} className="w-full">

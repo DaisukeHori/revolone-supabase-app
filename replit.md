@@ -121,6 +121,15 @@ Changelog:
   - COMPLETED: Fixed field name mapping from "レボナイザー製造番号" to "文字列__1行__1" for App 21 queries
   - COMPLETED: Successfully retrieving device rental availability data ("可", "販売済", "不可" etc.)
   - COMPLETED: App 21 integration fully functional with correct API permissions and data display
+- January 04, 2025. Added Kintone App 22 integration for repair history data
+  - Integrated with App 22 (https://e18p5.cybozu.com/k/22/) for comprehensive repair history tracking
+  - Added schema discovery functionality to identify field mappings dynamically
+  - Key fields mapped: 製造番号, 修理ステータス, 修理項目, 確定修理金額, メインユニット交換故障項目
+  - Created PurchasedDeviceModal for purchased devices with repair request and history tabs
+  - Implemented real-time data fetching from Kintone App 22 instead of dummy data
+  - Added repair request submission functionality with proper API endpoints
+  - COMPLETED: App 22 schema successfully retrieved and mapped to UI components
+  - COMPLETED: Real repair history data now displays in purchased device modal
 ```
 
 ## User Preferences

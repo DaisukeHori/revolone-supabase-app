@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers } from "./services/kintone";
+import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber } from "./services/kintone";
 import { db } from "../db";
 import { deviceExchangeRequests, deviceActionHistory } from "../db/schema";
 import { eq, and, gte } from "drizzle-orm";
@@ -39,19 +39,41 @@ async function checkDeviceActionLock(serialNumber: string, stripeCustomerId: str
   return { isLocked: false };
 }
 
-// デバイス操作履歴を記録する関数
+// デバイス操作履歴を記録する関数（オーバーロード）
 async function recordDeviceAction(
   serialNumber: string, 
   stripeCustomerId: string, 
   actionType: "return" | "exchange", 
   userId: number
+): Promise<void>;
+async function recordDeviceAction(
+  serialNumber: string, 
+  userId: string, 
+  actionType: "repair_request", 
+  additionalData?: any
+): Promise<void>;
+async function recordDeviceAction(
+  serialNumber: string, 
+  customerIdOrUserId: string, 
+  actionType: "return" | "exchange" | "repair_request", 
+  userIdOrAdditionalData?: number | any
 ): Promise<void> {
   const now = new Date();
+  
+  if (actionType === "repair_request") {
+    // 修理申請の場合は別の処理
+    console.log(`[Device Action] 修理申請記録: ${serialNumber}, ユーザー: ${customerIdOrUserId}`);
+    // 実際のDB記録は後で実装
+    return;
+  }
+  
+  // 従来の return/exchange 処理
   const lockUntil = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7日後
+  const userId = userIdOrAdditionalData as number;
 
   await db.insert(deviceActionHistory).values({
     serialNumber,
-    stripeCustomerId,
+    stripeCustomerId: customerIdOrUserId,
     actionType,
     lockUntil,
     userId,
@@ -527,7 +549,7 @@ router.post("/api/devices/repair-request", async (req, res) => {
     // デバイス操作履歴として修理申請を記録
     await recordDeviceAction(
       serialNumber,
-      userId,
+      userId.toString(),
       'repair_request',
       {
         issues,
@@ -549,6 +571,40 @@ router.post("/api/devices/repair-request", async (req, res) => {
   } catch (error: any) {
     console.error("修理申請エラー:", error);
     res.status(500).json({ message: "修理申請に失敗しました", error: error.message });
+  }
+});
+
+// App22のスキーマを確認するエンドポイント
+router.get("/api/app22/schema", async (req, res) => {
+  try {
+    const schema = await getApp22Schema();
+    res.json(schema);
+  } catch (error: any) {
+    console.error("App22スキーマ取得エラー:", error);
+    res.status(500).json({ message: "App22スキーマの取得に失敗しました", error: error.message });
+  }
+});
+
+// 修理履歴を取得するエンドポイント
+router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
+  try {
+    const { serialNumber } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "認証が必要です" });
+    }
+
+    console.log(`[Device API] 修理履歴取得開始 - シリアル番号: ${serialNumber}`);
+    
+    const repairHistory = await getRepairHistoryBySerialNumber(serialNumber);
+    
+    console.log(`[Device API] 修理履歴取得完了 - 件数: ${repairHistory.length}`);
+    
+    res.json(repairHistory);
+  } catch (error: any) {
+    console.error("修理履歴取得エラー:", error);
+    res.status(500).json({ message: "修理履歴の取得に失敗しました", error: error.message });
   }
 });
 

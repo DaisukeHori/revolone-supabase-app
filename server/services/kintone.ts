@@ -3,6 +3,7 @@ import axios from 'axios';
 const KINTONE_BASE_URL = 'https://e18p5.cybozu.com/k/v1';
 const KINTONE_APP_ID = '40';
 const KINTONE_DEVICE_APP_ID = '21'; // レボナイザー情報用のアプリID
+const KINTONE_REPAIR_HISTORY_APP_ID = '22'; // 修理履歴用のアプリID
 
 interface KintoneDeviceRecord {
   $id: { value: string };
@@ -21,6 +22,11 @@ interface KintoneDeviceInfoRecord {
   文字列__1行__1: { value: string }; // App 21の製造番号フィールド（ラベル: "製造番号"）
   サブスク貸出の可不可: { value: string };
   代替え機の場合はチェック: { value: string[] }; // チェックボックス
+}
+
+interface KintoneRepairHistoryRecord {
+  $id: { value: string };
+  [key: string]: { value: any }; // 動的にフィールドを追加するため
 }
 
 export async function getDeviceRecords() {
@@ -123,5 +129,65 @@ export async function getDeviceInfoBySerialNumbers(serialNumbers: string[]) {
       throw new Error('App 21へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
     }
     throw new Error('デバイス情報の一括取得に失敗しました');
+  }
+}
+
+// App22のスキーマを確認するための関数
+export async function getApp22Schema() {
+  try {
+    const response = await axios.get(`${KINTONE_BASE_URL}/app/form/fields.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}`, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+      },
+    });
+
+    console.log('App22 Schema:', JSON.stringify(response.data.properties, null, 2));
+    return response.data.properties;
+  } catch (error: any) {
+    console.error('App22スキーマ取得エラー:', error);
+    if (error.response?.status === 403) {
+      throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
+    }
+    throw new Error('App22スキーマの取得に失敗しました');
+  }
+}
+
+// App22から修理履歴を取得する関数
+export async function getRepairHistoryBySerialNumber(serialNumber: string) {
+  try {
+    // まずスキーマを確認
+    const schema = await getApp22Schema();
+    
+    // 製造番号フィールドを特定する（フィールド名が不明なため）
+    const serialNumberField = Object.keys(schema).find(key => 
+      schema[key].label?.includes('製造番号') || 
+      schema[key].label?.includes('シリアル') ||
+      key.includes('製造番号') ||
+      key.includes('serial')
+    );
+
+    if (!serialNumberField) {
+      console.warn('App22で製造番号フィールドが見つかりませんでした');
+      return [];
+    }
+
+    const query = `${serialNumberField} = "${serialNumber}"`;
+    const response = await axios.get(
+      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        },
+      }
+    );
+
+    console.log(`App22から${serialNumber}の修理履歴を取得:`, response.data.records);
+    return response.data.records as KintoneRepairHistoryRecord[];
+  } catch (error: any) {
+    console.error('修理履歴取得エラー:', error);
+    if (error.response?.status === 403) {
+      throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
+    }
+    throw new Error('修理履歴の取得に失敗しました');
   }
 }
