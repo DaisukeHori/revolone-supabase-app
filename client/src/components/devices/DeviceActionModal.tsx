@@ -572,13 +572,32 @@ export function DeviceActionModal({ isOpen, onClose, device, stripeCustomerId }:
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {step === 'select' && 'サブスクデバイス操作'}
-              {step === 'issues' && 'デバイス不調の詳細'}
-              {step === 'confirm' && '交換内容の確認'}
-              {step === 'terms' && 'デバイス交換規約'}
-              {step === 'success' && '交換リクエスト完了'}
+              デバイス交換 - {
+                step === 'select' && 'サブスクデバイス操作' ||
+                step === 'issues' && 'デバイス不調の詳細' ||
+                step === 'confirm' && '交換内容の確認' ||
+                step === 'terms' && 'デバイス交換規約' ||
+                step === 'success' && '交換リクエスト完了'
+              }
             </DialogTitle>
           </DialogHeader>
+
+          {/* プログレスバー */}
+          {step !== 'success' && (
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${
+                    step === 'select' ? 20 :
+                    step === 'issues' ? 40 :
+                    step === 'confirm' ? 60 :
+                    step === 'terms' ? 80 : 100
+                  }%` 
+                }}
+              />
+            </div>
+          )}
 
           {renderStepContent()}
         </DialogContent>
