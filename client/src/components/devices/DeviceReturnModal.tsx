@@ -45,7 +45,6 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
   const [currentStep, setCurrentStep] = useState<ReturnStep>('reason');
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [additionalInfo, setAdditionalInfo] = useState<string>('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasReadTerms, setHasReadTerms] = useState(false);
   const { toast } = useToast();
@@ -72,8 +71,8 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
     setCurrentStep('reason');
     setSelectedReason('');
     setAdditionalInfo('');
-    setTermsAccepted(false);
     setIsProcessing(false);
+    setHasReadTerms(false);
     onClose();
   };
 
@@ -94,11 +93,11 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
         setCurrentStep('terms');
         break;
       case 'terms':
-        if (!termsAccepted) {
+        if (!hasReadTerms) {
           toast({
             variant: "destructive",
-            title: "規約に同意してください",
-            description: "返却規約への同意は必須です。",
+            title: "規約を最後までお読みください",
+            description: "返却規約を最後までお読みください。",
           });
           return;
         }
@@ -320,17 +319,6 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
                   </p>
                 </div>
               )}
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="terms-accepted"
-                  checked={termsAccepted}
-                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-                />
-                <Label htmlFor="terms-accepted" className="text-sm">
-                  上記の返却規約に同意します
-                </Label>
-              </div>
             </div>
           </div>
         );
@@ -547,7 +535,7 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
               
               <Button
                 onClick={handleNext}
-                disabled={isProcessing || (currentStep === 'terms' && (!termsAccepted || !hasReadTerms))}
+                disabled={isProcessing || (currentStep === 'terms' && !hasReadTerms)}
                 className="flex-1"
               >
                 {currentStep === 'terms' ? '規約に同意して配送手続きへ' : '次へ'}
