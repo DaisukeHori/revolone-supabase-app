@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { X, ArrowLeft, Package, CreditCard, Clock } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { X, ArrowLeft, Package, CreditCard, Clock, AlertTriangle, ChevronLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface Device {
   serialNumber: string;
@@ -29,7 +31,7 @@ interface DeviceReturnModalProps {
   onClose: () => void;
 }
 
-type ReturnStep = 'reason' | 'terms' | 'confirmation' | 'shipping' | 'complete';
+type ReturnStep = 'reason' | 'confirmation' | 'terms' | 'shipping' | 'complete';
 
 const RETURN_REASONS = [
   "故障・不具合",
@@ -45,7 +47,26 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
   const [additionalInfo, setAdditionalInfo] = useState<string>('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasReadTerms, setHasReadTerms] = useState(false);
   const { toast } = useToast();
+
+  // Stripeデータを取得
+  const { data: stripeData } = useQuery({
+    queryKey: ['stripe-customer'],
+    queryFn: async () => {
+      const response = await fetch('/api/stripe/customer', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch stripe data');
+      }
+      return response.json();
+    }
+  });
+
+  const subscription = stripeData?.find((customer: any) => 
+    customer.subscriptions?.some((sub: any) => sub.id === device.stripeSubscriptionId)
+  )?.subscriptions?.find((sub: any) => sub.id === device.stripeSubscriptionId);
 
   const handleClose = () => {
     setCurrentStep('reason');
@@ -67,6 +88,9 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
           });
           return;
         }
+        setCurrentStep('confirmation');
+        break;
+      case 'confirmation':
         setCurrentStep('terms');
         break;
       case 'terms':
@@ -78,9 +102,6 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
           });
           return;
         }
-        setCurrentStep('confirmation');
-        break;
-      case 'confirmation':
         setCurrentStep('shipping');
         break;
       case 'shipping':
@@ -91,14 +112,14 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
 
   const handleBack = () => {
     switch (currentStep) {
-      case 'terms':
+      case 'confirmation':
         setCurrentStep('reason');
         break;
-      case 'confirmation':
-        setCurrentStep('terms');
+      case 'terms':
+        setCurrentStep('confirmation');
         break;
       case 'shipping':
-        setCurrentStep('confirmation');
+        setCurrentStep('terms');
         break;
     }
   };
@@ -144,11 +165,47 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
   };
 
   const getCurrentPeriodEnd = () => {
-    // 実際の実装では、Stripeサブスクリプションの current_period_end を使用
+    if (subscription?.current_period_end) {
+      return new Date(subscription.current_period_end * 1000).toLocaleDateString('ja-JP');
+    }
     const currentDate = new Date();
     const endDate = new Date(currentDate);
     endDate.setMonth(endDate.getMonth() + 1);
     return endDate.toLocaleDateString('ja-JP');
+  };
+
+  const getCurrentTotal = () => {
+    if (!subscription?.items) return 0;
+    return subscription.items.reduce((total: number, item: any) => {
+      const amount = item.amount || 0;
+      return total + (amount * item.quantity);
+    }, 0);
+  };
+
+  const getNewTotal = () => {
+    if (!subscription?.items) return 0;
+    return subscription.items.reduce((total: number, item: any) => {
+      const amount = item.amount || 0;
+      // 1台減算後の数量で計算
+      const currentQuantity = item.quantity;
+      const newQuantity = currentQuantity > 0 ? currentQuantity - 1 : 0;
+      return total + (amount * newQuantity);
+    }, 0);
+  };
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat('ja-JP', {
+      style: 'currency',
+      currency: 'JPY'
+    }).format(amount);
+  };
+
+  const handleTermsScroll = (e: React.UIEvent) => {
+    const element = e.target as HTMLElement;
+    const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5;
+    if (isAtBottom) {
+      setHasReadTerms(true);
+    }
   };
 
   const renderStepContent = () => {
@@ -188,36 +245,92 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-4">返却規約</h3>
-              <div className="bg-gray-50 p-4 rounded-lg text-sm space-y-3 max-h-64 overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4">デバイス返却規約</h3>
+              <div 
+                className="bg-gray-50 p-4 rounded-lg text-sm space-y-4 max-h-64 overflow-y-auto"
+                onScroll={handleTermsScroll}
+              >
                 <div>
-                  <h4 className="font-semibold">1. 返却条件</h4>
-                  <p className="text-gray-700">デバイスは清掃・動作確認済みの状態で返却してください。</p>
+                  <h4 className="font-medium mb-3">第1条 返却条件</h4>
+                  <ol className="space-y-2 pl-6 list-decimal">
+                    <li>デバイスは清掃・動作確認済みの状態で返却してください</li>
+                    <li>付属品（電源ケーブル等）も同時に返却してください</li>
+                    <li>破損や故障がある場合は事前にご連絡ください</li>
+                  </ol>
                 </div>
+
+                <Separator />
+
                 <div>
-                  <h4 className="font-semibold">2. 料金について</h4>
-                  <p className="text-gray-700">返却により台数が減少しますが、既に支払済みの期間分の返金はございません。</p>
+                  <h4 className="font-medium mb-3">第2条 料金・返金について</h4>
+                  <ol className="space-y-2 pl-6 list-decimal">
+                    <li>返却により台数が減少し、次回請求分から減額されます</li>
+                    <li>既に支払済みの期間分の返金はございません</li>
+                    <li>日割り計算による返金は行いません</li>
+                    <li>支払済み期間中はサービスをご利用いただけます</li>
+                  </ol>
                 </div>
+
+                <Separator />
+
                 <div>
-                  <h4 className="font-semibold">3. 配送について</h4>
-                  <p className="text-gray-700">専用の返送箱をお送りします。同梱の着払い伝票をご利用ください。</p>
+                  <h4 className="font-medium mb-3">第3条 配送・返送について</h4>
+                  <ol className="space-y-2 pl-6 list-decimal">
+                    <li>専用の返送箱を無料でお送りします</li>
+                    <li>同梱の着払い伝票をご利用ください（送料無料）</li>
+                    <li>破損を防ぐため、しっかりと梱包してください</li>
+                    <li>配送中の事故については配送業者の責任となります</li>
+                  </ol>
                 </div>
+
+                <Separator />
+
                 <div>
-                  <h4 className="font-semibold">4. 返却完了</h4>
-                  <p className="text-gray-700">デバイス受領後、台数減算とメタデータ更新が完了します。</p>
+                  <h4 className="font-medium mb-3">第4条 返却完了</h4>
+                  <ol className="space-y-2 pl-6 list-decimal">
+                    <li>デバイス受領後、台数減算処理を実行します</li>
+                    <li>次回請求分から新しい料金が適用されます</li>
+                    <li>返却完了通知をメールでお送りします</li>
+                  </ol>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-medium mb-3">第5条 免責事項</h4>
+                  <ol className="space-y-2 pl-6 list-decimal">
+                    <li>返却による業務への影響について弊社は責任を負いません</li>
+                    <li>データの消失、設定の初期化について弊社は責任を負いません</li>
+                    <li>配送中の事故については配送業者の責任となります</li>
+                  </ol>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-6">
+                  <p className="text-sm font-medium text-center">
+                    以上の規約に同意いただける場合のみ、返却リクエストを送信してください。
+                  </p>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="terms-accepted"
-                checked={termsAccepted}
-                onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-              />
-              <Label htmlFor="terms-accepted" className="text-sm">
-                上記の返却規約に同意します
-              </Label>
+
+              {!hasReadTerms && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-amber-800 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    規約を最後までお読みください
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="terms-accepted"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                />
+                <Label htmlFor="terms-accepted" className="text-sm">
+                  上記の返却規約に同意します
+                </Label>
+              </div>
             </div>
           </div>
         );
@@ -247,12 +360,48 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
             <div className="bg-orange-50 p-4 rounded-lg">
               <div className="flex items-center mb-3">
                 <CreditCard className="w-5 h-5 text-orange-600 mr-2" />
-                <span className="font-semibold">料金について</span>
+                <span className="font-semibold">料金詳細</span>
               </div>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p>• 台数が1台減算されます</p>
-                <p>• 次回請求分から減額されます</p>
-                <p>• 既に支払済みの期間分の返金はございません</p>
+              <div className="space-y-4">
+                <div>
+                  <h5 className="text-sm font-medium text-gray-900 mb-2">現在の契約</h5>
+                  <div className="bg-white rounded p-3 text-xs space-y-1">
+                    {subscription?.items?.map((item: any, index: number) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{item.product?.name || 'Revonizer'} × {item.quantity}台</span>
+                        <span>{formatPrice(item.amount * item.quantity)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-1 flex justify-between font-medium">
+                      <span>合計</span>
+                      <span>{formatPrice(getCurrentTotal())}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="text-sm font-medium text-gray-900 mb-2">返却後の契約</h5>
+                  <div className="bg-white rounded p-3 text-xs space-y-1">
+                    {subscription?.items?.map((item: any, index: number) => {
+                      const newQuantity = item.quantity > 0 ? item.quantity - 1 : 0;
+                      return (
+                        <div key={index} className="flex justify-between">
+                          <span>{item.product?.name || 'Revonizer'} × {newQuantity}台</span>
+                          <span>{formatPrice(item.amount * newQuantity)}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="border-t pt-1 flex justify-between font-medium">
+                      <span>合計</span>
+                      <span>{formatPrice(getNewTotal())}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 rounded p-2 text-xs text-red-800">
+                  <p><strong>差額:</strong> {formatPrice(getCurrentTotal() - getNewTotal())}/月の減額</p>
+                  <p><strong>注意:</strong> 既に支払済みの期間分の返金はございません</p>
+                </div>
               </div>
             </div>
 
@@ -382,8 +531,8 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
               style={{ 
                 width: `${
                   currentStep === 'reason' ? 20 :
-                  currentStep === 'terms' ? 40 :
-                  currentStep === 'confirmation' ? 60 :
+                  currentStep === 'confirmation' ? 40 :
+                  currentStep === 'terms' ? 60 :
                   currentStep === 'shipping' ? 80 : 100
                 }%` 
               }}
@@ -395,22 +544,23 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
           {renderStepContent()}
           
           {currentStep !== 'complete' && currentStep !== 'shipping' && (
-            <div className="flex justify-between pt-4">
+            <div className="flex gap-2 pt-4">
               <Button
                 variant="outline"
                 onClick={handleBack}
                 disabled={currentStep === 'reason'}
-                className="flex items-center"
+                className="flex items-center flex-1"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ChevronLeft className="w-4 h-4 mr-2" />
                 戻る
               </Button>
               
               <Button
                 onClick={handleNext}
-                disabled={isProcessing}
+                disabled={isProcessing || (currentStep === 'terms' && (!termsAccepted || !hasReadTerms))}
+                className="flex-1"
               >
-                {currentStep === 'confirmation' ? '配送手続きへ' : '次へ'}
+                {currentStep === 'terms' ? '規約に同意して配送手続きへ' : '次へ'}
               </Button>
             </div>
           )}
