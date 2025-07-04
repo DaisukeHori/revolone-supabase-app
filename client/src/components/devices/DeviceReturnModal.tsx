@@ -200,11 +200,9 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
   };
 
   const handleTermsScroll = (e: React.UIEvent) => {
-    const element = e.target as HTMLElement;
+    const element = e.target as HTMLDivElement;
     const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5;
-    if (isAtBottom) {
-      setHasReadTerms(true);
-    }
+    setHasReadTerms(isAtBottom);
   };
 
   const renderStepContent = () => {
@@ -246,7 +244,7 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
             <div>
               <h3 className="text-lg font-semibold mb-4">デバイス返却規約</h3>
               <div 
-                className="bg-gray-50 p-4 rounded-lg text-sm space-y-4 max-h-64 overflow-y-auto"
+                className="max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-4 text-sm space-y-4 border"
                 onScroll={handleTermsScroll}
               >
                 <div>
