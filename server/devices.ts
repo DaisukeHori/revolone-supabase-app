@@ -510,6 +510,48 @@ router.post("/api/devices/:serialNumber/exchange", async (req, res) => {
   }
 });
 
+// 購入機材の修理申請
+router.post("/api/devices/repair-request", async (req, res) => {
+  try {
+    const { serialNumber, issues, additionalInfo, deviceType } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "認証が必要です" });
+    }
+
+    if (!serialNumber || !issues || issues.length === 0) {
+      return res.status(400).json({ message: "必要な情報が不足しています" });
+    }
+
+    // デバイス操作履歴として修理申請を記録
+    await recordDeviceAction(
+      serialNumber,
+      userId,
+      'repair_request',
+      {
+        issues,
+        additionalInfo,
+        deviceType,
+        requestDate: new Date().toISOString()
+      }
+    );
+
+    console.log(`[Device API] 修理申請を受け付けました - シリアル番号: ${serialNumber}, 不具合: ${issues.join(', ')}`);
+
+    res.json({ 
+      message: "修理申請を受け付けました",
+      serialNumber,
+      issues,
+      requestId: `REP-${Date.now()}`
+    });
+
+  } catch (error: any) {
+    console.error("修理申請エラー:", error);
+    res.status(500).json({ message: "修理申請に失敗しました", error: error.message });
+  }
+});
+
 export function setupDeviceRoutes(app: Router) {
   app.use(router);
 }

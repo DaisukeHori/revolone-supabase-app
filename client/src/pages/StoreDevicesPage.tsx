@@ -13,6 +13,7 @@ import { CreateSubscriptionModal } from "@/components/subscription/CreateSubscri
 import { UpdateQuantityModal } from "@/components/subscription/UpdateQuantityModal";
 import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDialog";
 import { DeviceActionModal } from "@/components/devices/DeviceActionModal";
+import { PurchasedDeviceModal } from "@/components/devices/PurchasedDeviceModal";
 import { toast } from "@/hooks/use-toast";
 
 interface Device {
@@ -91,6 +92,7 @@ export default function StoreDevicesPage() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showDeviceActionModal, setShowDeviceActionModal] = useState(false);
+  const [showPurchasedDeviceModal, setShowPurchasedDeviceModal] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>("");
   const [selectedSubscriptionItems, setSelectedSubscriptionItems] = useState<any[]>([]);
@@ -103,7 +105,14 @@ export default function StoreDevicesPage() {
 
   const handleDeviceClick = (device: Device) => {
     setSelectedDevice(device);
-    setShowDeviceActionModal(true);
+    
+    // 購入機材（販売済）の場合は購入機材用モーダルを開く
+    if (device.subscriptionRentalAvailability === '販売済') {
+      setShowPurchasedDeviceModal(true);
+    } else {
+      // サブスク機材の場合は従来のモーダルを開く
+      setShowDeviceActionModal(true);
+    }
   };
 
   const handleOpenUpdateModal = (subscriptionId: string) => {
@@ -356,6 +365,26 @@ export default function StoreDevicesPage() {
             }}
             device={selectedDevice}
             stripeCustomerId={storeId!}
+          />
+        )}
+
+        {showPurchasedDeviceModal && selectedDevice && (
+          <PurchasedDeviceModal
+            isOpen={showPurchasedDeviceModal}
+            onClose={() => {
+              setShowPurchasedDeviceModal(false);
+              setSelectedDevice(null);
+            }}
+            device={{
+              serialNumber: selectedDevice.serialNumber,
+              status: selectedDevice.status,
+              statusUpdatedAt: selectedDevice.statusUpdatedAt,
+              store: {
+                name: "店舗名", // 実際のデータに置き換え
+                address: "住所" // 実際のデータに置き換え
+              },
+              subscriptionRentalAvailability: selectedDevice.subscriptionRentalAvailability
+            }}
           />
         )}
     </AppLayout>
