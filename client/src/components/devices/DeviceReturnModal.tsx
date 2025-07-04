@@ -508,19 +508,9 @@ export function DeviceReturnModal({ device, isOpen, onClose }: DeviceReturnModal
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold">
-              デバイス返却 - {getStepTitle()}
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-bold">
+            デバイス返却 - {getStepTitle()}
+          </DialogTitle>
         </DialogHeader>
         
         {/* プログレスバー */}
