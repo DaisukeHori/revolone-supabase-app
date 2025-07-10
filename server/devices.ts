@@ -649,6 +649,29 @@ router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
   }
 });
 
+// App22のレコード番号を使用してApp23の作業レコードを取得するエンドポイント
+router.get("/api/app22/:recordNumber/work-records", async (req, res) => {
+  try {
+    const { recordNumber } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "認証が必要です" });
+    }
+
+    console.log(`[Device API] App22レコード番号 ${recordNumber} の作業レコードを取得中...`);
+    
+    const workRecords = await getWorkRecordsByRepairTicketNumber(recordNumber);
+    
+    console.log(`[Device API] 作業レコード取得完了 - 件数: ${workRecords.length}`);
+    
+    res.json(workRecords);
+  } catch (error: any) {
+    console.error("作業レコード取得エラー:", error);
+    res.status(500).json({ message: "作業レコードの取得に失敗しました", error: error.message });
+  }
+});
+
 // テスト用：認証なしで修理履歴を取得するエンドポイント  
 router.get("/api/test/repair-history/:serialNumber", async (req, res) => {
   try {

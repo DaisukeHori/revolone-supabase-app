@@ -32,7 +32,7 @@ interface KintoneRepairHistoryRecord {
 
 interface KintoneWorkRecord {
   $id: { value: string };
-  修理伝票番号: { value: string };
+  ルックアップ: { value: string };
   日時: { value: string };
   作業項目: { value: string };
   [key: string]: { value: any }; // 動的にフィールドを追加するため
@@ -229,95 +229,40 @@ export async function getApp23SampleRecords() {
 
 export async function getWorkRecordsByRepairTicketNumber(repairTicketNumber: string) {
   try {
-    console.log(`App23から修理伝票番号${repairTicketNumber}の作業レコードを検索中...`);
+    console.log(`App23からApp22レコード番号${repairTicketNumber}の作業レコードを検索中...`);
     
-    // まずApp23のスキーマを確認して実際のフィールド名を把握
+    // ルックアップフィールドでApp22のレコード番号を検索
     try {
-      const schema = await getApp23Schema();
-      console.log('App23の利用可能なフィールド:', Object.keys(schema));
+      console.log(`フィールド「ルックアップ」でApp22レコード番号での検索実行中...`);
       
-      // 修理伝票番号に関連するフィールドを探す
-      const possibleFields = Object.keys(schema).filter(field => 
-        field.includes('修理') || field.includes('伝票') || field.includes('番号') || field.includes('ID')
-      );
-      console.log('修理伝票番号に関連する可能性のあるフィールド:', possibleFields);
-    } catch (schemaError) {
-      console.warn('App23スキーマ取得に失敗、フィールド名を推測します');
-    }
-    
-    // 複数のフィールド名パターンを試行
-    const possibleFieldNames = [
-      '修理伝票番号',
-      'レコード番号',
-      '伝票番号',
-      '修理番号',
-      '文字列__1行__1',
-      '文字列__1行__2',
-      '文字列__1行__3',
-      '数値',
-      'レコード番号_1',
-      'ID'
-    ];
-    
-    for (const fieldName of possibleFieldNames) {
-      try {
-        console.log(`フィールド「${fieldName}」で検索試行中...`);
-        
-        const query = `${fieldName} = "${repairTicketNumber}"`;
-        console.log(`送信クエリ: ${query}`);
-        
-        const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-          headers: {
-            'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-            'Content-Type': 'application/json'
-          },
-          data: {
-            app: KINTONE_WORK_RECORD_APP_ID,
-            query: query,
-            totalCount: true
-          }
-        });
-        
-        console.log(`フィールド「${fieldName}」での検索結果: ${response.data.records.length}件`);
-        
-        if (response.data.records.length > 0) {
-          console.log(`修理伝票番号${repairTicketNumber}の作業レコードが見つかりました（フィールド: ${fieldName}）`);
-          console.log('見つかった作業レコード:', JSON.stringify(response.data.records[0], null, 2));
-          return response.data.records as KintoneWorkRecord[];
-        }
-        
-      } catch (fieldError: any) {
-        console.log(`フィールド「${fieldName}」での検索失敗:`, fieldError.response?.data?.message || fieldError.message);
-        continue; // 次のフィールド名を試行
-      }
-    }
-    
-    // すべてのフィールド名で失敗した場合、サンプルレコードを確認
-    console.log('すべてのフィールド名で失敗。App23のサンプルレコードを確認中...');
-    try {
-      const sampleRecords = await getApp23SampleRecords();
-      console.log(`App23サンプルレコード取得成功: ${sampleRecords.length}件`);
+      const query = `ルックアップ = "${repairTicketNumber}"`;
+      console.log(`送信クエリ: ${query}`);
       
-      if (sampleRecords.length > 0) {
-        console.log('App23の実際のフィールド構造:', Object.keys(sampleRecords[0]));
-        // 修理伝票番号1027に該当するレコードを探す
-        const matchingRecord = sampleRecords.find(record => 
-          Object.values(record).some(field => 
-            field && typeof field === 'object' && 
-            field.value && field.value.toString() === repairTicketNumber
-          )
-        );
-        
-        if (matchingRecord) {
-          console.log('該当するレコードが見つかりました:', JSON.stringify(matchingRecord, null, 2));
-          return [matchingRecord] as KintoneWorkRecord[];
+      const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          app: KINTONE_WORK_RECORD_APP_ID,
+          query: query,
+          totalCount: true
         }
+      });
+      
+      console.log(`ルックアップフィールドでの検索結果: ${response.data.records.length}件`);
+      
+      if (response.data.records.length > 0) {
+        console.log(`App22レコード番号${repairTicketNumber}の作業レコードが見つかりました`);
+        console.log('見つかった作業レコード:', JSON.stringify(response.data.records[0], null, 2));
+        return response.data.records as KintoneWorkRecord[];
       }
-    } catch (sampleError: any) {
-      console.error('サンプルレコード取得エラー:', sampleError.message);
+      
+    } catch (lookupError: any) {
+      console.error(`ルックアップフィールドでの検索失敗:`, lookupError.response?.data?.message || lookupError.message);
     }
     
-    console.log(`修理伝票番号${repairTicketNumber}の作業レコードが見つかりませんでした`);
+    console.log(`App22レコード番号${repairTicketNumber}の作業レコードが見つかりませんでした`);
     return [];
     
   } catch (error: any) {
