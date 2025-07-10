@@ -3,7 +3,8 @@ import axios from 'axios';
 const KINTONE_BASE_URL = 'https://e18p5.cybozu.com/k/v1';
 const KINTONE_APP_ID = '40';
 const KINTONE_DEVICE_APP_ID = '21'; // レボナイザー情報用のアプリID
-const KINTONE_REPAIR_HISTORY_APP_ID = '22'; // 修理履歴用のアプリID
+const KINTONE_REPAIR_HISTORY_APP_ID = '22';
+const KINTONE_WORK_RECORD_APP_ID = '23'; // 修理履歴用のアプリID
 
 interface KintoneDeviceRecord {
   $id: { value: string };
@@ -26,6 +27,14 @@ interface KintoneDeviceInfoRecord {
 
 interface KintoneRepairHistoryRecord {
   $id: { value: string };
+  [key: string]: { value: any }; // 動的にフィールドを追加するため
+}
+
+interface KintoneWorkRecord {
+  $id: { value: string };
+  修理伝票番号: { value: string };
+  日時: { value: string };
+  作業項目: { value: string };
   [key: string]: { value: any }; // 動的にフィールドを追加するため
 }
 
@@ -177,6 +186,48 @@ export async function getApp22SampleRecords() {
 export async function getAllRepairRecords() {
   console.warn('getAllRepairRecords は非推奨です。getApp22SampleRecords を使用してください。');
   return await getApp22SampleRecords();
+}
+
+export async function getWorkRecordsByRepairTicketNumber(repairTicketNumber: string) {
+  try {
+    console.log(`App23から修理伝票番号${repairTicketNumber}の作業レコードを検索中...`);
+    
+    // GETリクエストで修理伝票番号での検索を実行
+    const query = `修理伝票番号 = "${repairTicketNumber}"`;
+    console.log(`送信クエリ: ${query}`);
+    
+    const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        app: KINTONE_WORK_RECORD_APP_ID,
+        query: query,
+        totalCount: true
+      }
+    });
+    
+    console.log(`作業レコード検索結果: ${response.data.records.length}件`);
+    
+    if (response.data.records.length > 0) {
+      console.log(`修理伝票番号${repairTicketNumber}の作業レコードが見つかりました`);
+      console.log('見つかった作業レコード:', response.data.records[0]);
+      return response.data.records as KintoneWorkRecord[];
+    }
+    
+    console.log(`修理伝票番号${repairTicketNumber}の作業レコードが見つかりませんでした`);
+    return [];
+    
+  } catch (error: any) {
+    console.error('作業レコード取得エラー:', error);
+    console.error('エラーレスポンス:', error.response?.data);
+    
+    if (error.response?.status === 403) {
+      throw new Error('App 23へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
+    }
+    throw new Error('作業レコードの取得に失敗しました');
+  }
 }
 
 export async function getRepairHistoryBySerialNumber(serialNumber: string) {

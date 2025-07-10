@@ -19,7 +19,8 @@ import {
   Calendar,
   User,
   Phone,
-  Mail
+  Mail,
+  ChevronRight
 } from "lucide-react";
 
 interface PurchasedDevice {
@@ -89,6 +90,7 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedRepairRecord, setSelectedRepairRecord] = useState<any>(null);
   const { toast } = useToast();
 
   // 修理履歴を取得するクエリ
@@ -99,6 +101,16 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
       return response.json();
     },
     enabled: isOpen && activeTab === 'history',
+  });
+
+  // 選択された修理レコードの作業履歴を取得するクエリ
+  const { data: workRecords, isLoading: isLoadingWorkRecords, error: workRecordsError } = useQuery({
+    queryKey: ['work-records', selectedRepairRecord?.$id?.value],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/repair-history/${selectedRepairRecord.$id.value}/work-records`);
+      return response.json();
+    },
+    enabled: !!selectedRepairRecord,
   });
 
   const handleClose = () => {
@@ -392,6 +404,112 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
   };
 
   const renderHistoryContent = () => {
+    // 詳細表示中の場合
+    if (selectedRepairRecord) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedRepairRecord(null)}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              修理履歴に戻る
+            </Button>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium">
+                  {selectedRepairRecord.日時?.value ? new Date(selectedRepairRecord.日時.value).toLocaleDateString('ja-JP') : '日付不明'}
+                </span>
+              </div>
+              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                selectedRepairRecord.修理完了フラグ?.value === '1' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {selectedRepairRecord.修理完了フラグ?.value === '1' ? '完了' : '処理中'}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-gray-600" />
+                <span className="text-sm">修理項目: {selectedRepairRecord.修理項目?.value || '不明'}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  修理費用: {selectedRepairRecord.確定修理金額?.value ? 
+                    `¥${parseInt(selectedRepairRecord.確定修理金額.value).toLocaleString()}` : 
+                    '未確定'
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-md font-semibold mb-3">作業履歴</h4>
+            
+            {isLoadingWorkRecords ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : workRecordsError ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                <p className="text-red-600 text-sm">作業履歴の取得に失敗しました</p>
+                <p className="text-gray-500 text-xs mt-1">{workRecordsError.message}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {workRecords && workRecords.length > 0 ? (
+                  workRecords.map((work: any) => (
+                    <div key={work.$id.value} className="bg-white border rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm font-medium">
+                          {work.日時?.value ? new Date(work.日時.value).toLocaleDateString('ja-JP') : '日付不明'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-start gap-2">
+                        <Wrench className="w-4 h-4 text-gray-600 mt-0.5" />
+                        <div className="text-sm">
+                          <div className="font-medium">作業項目:</div>
+                          <p className="text-gray-700 mt-1">{work.作業項目?.value || '不明'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">作業履歴がありません</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      この修理記録に関連する作業履歴は見つかりませんでした
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4">
+            <Button onClick={handleClose} className="w-full">
+              閉じる
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // 修理履歴リスト表示
     return (
       <div className="space-y-4">
         <div>
@@ -415,7 +533,11 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
           <div className="space-y-3">
             {repairHistory && repairHistory.length > 0 ? (
               repairHistory.map((record: any) => (
-                <div key={record.$id.value} className="bg-gray-50 rounded-lg p-4">
+                <div 
+                  key={record.$id.value} 
+                  className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setSelectedRepairRecord(record)}
+                >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-600" />
@@ -423,12 +545,15 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
                         {record.日時?.value ? new Date(record.日時.value).toLocaleDateString('ja-JP') : '日付不明'}
                       </span>
                     </div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${
-                      record.修理完了フラグ?.value === '1' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {record.修理完了フラグ?.value === '1' ? '完了' : '処理中'}
+                    <div className="flex items-center gap-2">
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${
+                        record.修理完了フラグ?.value === '1' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {record.修理完了フラグ?.value === '1' ? '完了' : '処理中'}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
                   </div>
 
@@ -437,20 +562,6 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
                       <Wrench className="w-4 h-4 text-gray-600" />
                       <span className="text-sm">修理項目: {record.修理項目?.value || '不明'}</span>
                     </div>
-                    
-                    {record.メインユニット交換故障項目?.value && record.メインユニット交換故障項目.value.length > 0 && (
-                      <div className="flex items-start gap-2">
-                        <FileText className="w-4 h-4 text-gray-600 mt-0.5" />
-                        <div className="text-sm">
-                          <div className="font-medium">故障項目:</div>
-                          <ul className="text-xs text-gray-600 mt-1 space-y-1">
-                            {record.メインユニット交換故障項目.value.map((item: string, index: number) => (
-                              <li key={index}>• {item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
                     
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">

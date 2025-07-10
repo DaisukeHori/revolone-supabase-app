@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber, getAllRepairRecords } from "./services/kintone";
+import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber, getAllRepairRecords, getWorkRecordsByRepairTicketNumber } from "./services/kintone";
 import { db } from "../db";
 import { deviceExchangeRequests, deviceActionHistory } from "../db/schema";
 import { eq, and, gte } from "drizzle-orm";
@@ -649,7 +649,28 @@ router.get("/api/test/repair-history/:serialNumber", async (req, res) => {
   }
 });
 
+// 作業レコードを取得するエンドポイント
+router.get("/api/repair-history/:repairTicketNumber/work-records", async (req, res) => {
+  try {
+    const { repairTicketNumber } = req.params;
+    const userId = req.user?.id;
 
+    if (!userId) {
+      return res.status(401).json({ message: "認証が必要です" });
+    }
+
+    console.log(`[Device API] 作業レコード取得開始 - 修理伝票番号: ${repairTicketNumber}`);
+    
+    const workRecords = await getWorkRecordsByRepairTicketNumber(repairTicketNumber);
+    
+    console.log(`[Device API] 作業レコード取得完了 - 件数: ${workRecords.length}`);
+    
+    res.json(workRecords);
+  } catch (error: any) {
+    console.error("作業レコード取得エラー:", error);
+    res.status(500).json({ message: "作業レコードの取得に失敗しました", error: error.message });
+  }
+});
 
 export function setupDeviceRoutes(app: Router) {
   app.use(router);
