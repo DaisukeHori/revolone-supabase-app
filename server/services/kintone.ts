@@ -193,27 +193,50 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
       try {
         console.log(`フィールド名「${fieldName}」で検索を試行中...`);
         
-        // Kintoneクエリを使用して特定の製造番号のみを検索
-        const query = `${fieldName} = "${serialNumber}"`;
+        // 複数のクエリパターンを試行
+        const queryPatterns = [];
         
-        const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-          headers: {
-            'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-            'Content-Type': 'application/json'
-          },
-          params: {
-            app: KINTONE_REPAIR_HISTORY_APP_ID,
-            query: query,
-            totalCount: true
+        if (fieldName === 'ルックアップ') {
+          // ルックアップフィールドの場合、複数のパターンを試行
+          queryPatterns.push(`"${fieldName}" = "${serialNumber}"`);
+          queryPatterns.push(`"${fieldName}" like "${serialNumber}"`);
+          queryPatterns.push(`${fieldName} = "${serialNumber}"`);
+          queryPatterns.push(`${fieldName} like "${serialNumber}"`);
+        } else {
+          // その他のフィールドの場合
+          queryPatterns.push(`${fieldName} = "${serialNumber}"`);
+          queryPatterns.push(`${fieldName} like "${serialNumber}"`);
+        }
+        
+        for (const query of queryPatterns) {
+          try {
+            console.log(`クエリ「${query}」で検索を試行中...`);
+            
+            const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+              headers: {
+                'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+                'Content-Type': 'application/json'
+              },
+              params: {
+                app: KINTONE_REPAIR_HISTORY_APP_ID,
+                query: query,
+                totalCount: true
+              }
+            });
+            
+            console.log(`クエリ「${query}」での検索結果: ${response.data.records.length}件`);
+            
+            if (response.data.records.length > 0) {
+              console.log(`製造番号${serialNumber}の修理履歴が見つかりました（クエリ: ${query}）`);
+              console.log('見つかった修理履歴レコード:', response.data.records[0]);
+              return response.data.records as KintoneRepairHistoryRecord[];
+            }
+            
+          } catch (queryError: any) {
+            console.log(`クエリ「${query}」での検索に失敗: ${queryError.message}`);
+            // 次のクエリパターンを試行
+            continue;
           }
-        });
-        
-        console.log(`フィールド名「${fieldName}」での検索結果: ${response.data.records.length}件`);
-        
-        if (response.data.records.length > 0) {
-          console.log(`製造番号${serialNumber}の修理履歴が見つかりました（フィールド名: ${fieldName}）`);
-          console.log('見つかった修理履歴レコード:', response.data.records[0]);
-          return response.data.records as KintoneRepairHistoryRecord[];
         }
         
       } catch (queryError: any) {
