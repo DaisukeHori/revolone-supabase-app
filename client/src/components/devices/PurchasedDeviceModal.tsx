@@ -420,11 +420,15 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-600" />
                       <span className="text-sm font-medium">
-                        {record.修理完了日?.value || record.修理受付日?.value || '日付不明'}
+                        {record.日時?.value ? new Date(record.日時.value).toLocaleDateString('ja-JP') : '日付不明'}
                       </span>
                     </div>
-                    <div className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                      {record.修理ステータス?.value || '完了'}
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${
+                      record.修理完了フラグ?.value === '完了' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {record.修理完了フラグ?.value === '完了' ? '完了' : '処理中'}
                     </div>
                   </div>
 
