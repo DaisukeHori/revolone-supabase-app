@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber, getAllRepairRecords, getWorkRecordsByRepairTicketNumber } from "./services/kintone";
+import { getDeviceRecords, getDevicesByCustomerId, getDeviceInfoBySerialNumbers, getApp22Schema, getRepairHistoryBySerialNumber, getAllRepairRecords, getWorkRecordsByRepairTicketNumber, getApp23Schema, getApp23SampleRecords } from "./services/kintone";
 import { db } from "../db";
 import { deviceExchangeRequests, deviceActionHistory } from "../db/schema";
 import { eq, and, gte } from "drizzle-orm";
@@ -597,6 +597,32 @@ router.get("/api/app22/sample", async (req, res) => {
   } catch (error: any) {
     console.error("App22サンプルレコード取得エラー:", error);
     res.status(500).json({ message: "App22サンプルレコードの取得に失敗しました", error: error.message });
+  }
+});
+
+// App23のスキーマを確認するエンドポイント
+router.get("/api/app23/schema", async (req, res) => {
+  try {
+    const schema = await getApp23Schema();
+    res.json(schema);
+  } catch (error: any) {
+    console.error("App23スキーマ取得エラー:", error);
+    res.status(500).json({ message: "App23スキーマの取得に失敗しました", error: error.message });
+  }
+});
+
+// App23のサンプルレコードを確認するエンドポイント
+router.get("/api/app23/sample", async (req, res) => {
+  try {
+    const records = await getApp23SampleRecords();
+    res.json({
+      total: records.length,
+      sample: records.slice(0, 3),
+      availableFields: records.length > 0 ? Object.keys(records[0]) : []
+    });
+  } catch (error: any) {
+    console.error("App23サンプルレコード取得エラー:", error);
+    res.status(500).json({ message: "App23サンプルレコードの取得に失敗しました", error: error.message });
   }
 });
 
