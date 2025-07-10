@@ -34,7 +34,7 @@ interface KintoneWorkRecord {
   $id: { value: string };
   ルックアップ: { value: string };
   日時: { value: string };
-  作業項目: { value: string };
+  ドロップダウン: { value: string };
   [key: string]: { value: any }; // 動的にフィールドを追加するため
 }
 

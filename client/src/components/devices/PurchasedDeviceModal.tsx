@@ -482,7 +482,7 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
                         <Wrench className="w-4 h-4 text-gray-600 mt-0.5" />
                         <div className="text-sm">
                           <div className="font-medium">作業項目:</div>
-                          <p className="text-gray-700 mt-1">{work.作業項目?.value || '不明'}</p>
+                          <p className="text-gray-700 mt-1">{work.ドロップダウン?.value || '不明'}</p>
                         </div>
                       </div>
                     </div>
