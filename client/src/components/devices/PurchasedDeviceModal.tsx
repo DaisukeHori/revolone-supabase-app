@@ -424,11 +424,11 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
                       </span>
                     </div>
                     <div className={`px-2 py-1 rounded text-xs font-medium ${
-                      record.修理完了フラグ?.value === '完了' 
+                      record.修理完了フラグ?.value === '1' 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {record.修理完了フラグ?.value === '完了' ? '完了' : '処理中'}
+                      {record.修理完了フラグ?.value === '1' ? '完了' : '処理中'}
                     </div>
                   </div>
 
