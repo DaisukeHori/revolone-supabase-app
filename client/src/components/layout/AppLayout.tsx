@@ -126,25 +126,57 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* ナビゲーションメニュー */}
           <nav className="flex-1 space-y-2 p-6 overflow-y-auto">
-            {menuItems.map((item) => {
+            {/* 店舗詳細ページの場合は店舗用メニュー、それ以外は通常メニュー */}
+            {(storeId ? storeMenuItems : menuItems).map((item) => {
               const Icon = item.icon;
+              const isActive = location === item.href;
+              
               return (
                 <Button
                   key={item.href}
                   variant="ghost"
-                  className="w-full justify-start gap-4 h-12 px-4 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 group"
+                  className={cn(
+                    "w-full justify-start gap-4 h-12 px-4 rounded-xl transition-all duration-200 group",
+                    isActive 
+                      ? "bg-gray-100 text-gray-900 shadow-sm" 
+                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  )}
                   onClick={() => {
                     setLocation(item.href);
                     isMobile && setIsSidebarOpen(false);
                   }}
                 >
-                  <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-colors">
+                  <div className={cn(
+                    "p-2 rounded-lg transition-colors",
+                    isActive 
+                      ? "bg-gray-200 text-gray-900" 
+                      : "bg-gray-100 group-hover:bg-gray-200"
+                  )}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <span className="font-medium">{item.label}</span>
                 </Button>
               );
             })}
+            
+            {/* 店舗詳細ページの場合は戻るボタンを追加 */}
+            {storeId && (
+              <div className="pt-4 border-t border-gray-200">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-4 h-12 px-4 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 group"
+                  onClick={() => {
+                    setLocation("/");
+                    isMobile && setIsSidebarOpen(false);
+                  }}
+                >
+                  <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-colors">
+                    <Home className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">店舗一覧に戻る</span>
+                </Button>
+              </div>
+            )}
           </nav>
 
           {/* ユーザー情報とログアウト */}
