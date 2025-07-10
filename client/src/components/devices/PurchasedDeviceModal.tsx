@@ -467,26 +467,55 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
                 <p className="text-gray-500 text-xs mt-1">{workRecordsError.message}</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="relative">
                 {workRecords && workRecords.length > 0 ? (
-                  workRecords.map((work: any) => (
-                    <div key={work.$id.value} className="bg-white border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm font-medium">
-                          {work.日時?.value ? new Date(work.日時.value).toLocaleDateString('ja-JP') : '日付不明'}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-start gap-2">
-                        <Wrench className="w-4 h-4 text-gray-600 mt-0.5" />
-                        <div className="text-sm">
-                          <div className="font-medium">作業項目:</div>
-                          <p className="text-gray-700 mt-1">{work.ドロップダウン?.value || '不明'}</p>
+                  <div className="space-y-0">
+                    {workRecords
+                      .sort((a: any, b: any) => {
+                        const dateA = new Date(a.日時?.value || '1970-01-01');
+                        const dateB = new Date(b.日時?.value || '1970-01-01');
+                        return dateA.getTime() - dateB.getTime();
+                      })
+                      .map((work: any, index: number) => (
+                        <div key={work.$id.value} className="relative flex items-start">
+                          {/* タイムライン線 */}
+                          {index < workRecords.length - 1 && (
+                            <div className="absolute left-4 top-8 w-0.5 h-16 bg-gray-200"></div>
+                          )}
+                          
+                          {/* タイムライン点 */}
+                          <div className="relative z-10 flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-4 mt-1">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                          
+                          {/* 作業内容 */}
+                          <div className="flex-1 bg-white border rounded-lg p-4 mb-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Calendar className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm font-medium text-gray-900">
+                                {work.日時?.value ? new Date(work.日時.value).toLocaleDateString('ja-JP', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : '日付不明'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-start gap-2">
+                              <Wrench className="w-4 h-4 text-blue-600 mt-0.5" />
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900 mb-1">作業項目</div>
+                                <p className="text-gray-700 bg-gray-50 rounded px-2 py-1">
+                                  {work.ドロップダウン?.value || '不明'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))
+                      ))}
+                  </div>
                 ) : (
                   <div className="text-center py-8">
                     <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
