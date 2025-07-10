@@ -183,70 +183,98 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   try {
     console.log(`App22から製造番号${serialNumber}の修理履歴を検索中...`);
     
-    // App22スキーマから確認された正確なフィールド名
-    const possibleFieldNames = [
-      'ルックアップ',
-      '代替機の製造番号'
-    ];
+    // まず「ルックアップ」フィールドで部分一致検索を試行
+    console.log('「ルックアップ」フィールドで部分一致検索を試行中...');
     
-    for (const fieldName of possibleFieldNames) {
+    try {
+      const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          app: KINTONE_REPAIR_HISTORY_APP_ID,
+          query: `ルックアップ like "${serialNumber}"`,
+          totalCount: true
+        }
+      });
+      
+      console.log(`部分一致検索結果: ${response.data.records.length}件`);
+      
+      if (response.data.records.length > 0) {
+        console.log(`製造番号${serialNumber}の修理履歴が見つかりました`);
+        console.log('見つかった修理履歴レコード:', response.data.records[0]);
+        return response.data.records as KintoneRepairHistoryRecord[];
+      }
+      
+    } catch (error: any) {
+      console.error('部分一致検索でエラー:', error.response?.data || error.message);
+      
+      // 部分一致検索に失敗した場合、完全一致検索を試行
+      console.log('完全一致検索を試行中...');
+      
       try {
-        console.log(`フィールド名「${fieldName}」で検索を試行中...`);
-        
-        // 複数のクエリパターンを試行
-        const queryPatterns = [];
-        
-        if (fieldName === 'ルックアップ') {
-          // ルックアップフィールドの場合、複数のパターンを試行
-          queryPatterns.push(`"${fieldName}" = "${serialNumber}"`);
-          queryPatterns.push(`"${fieldName}" like "${serialNumber}"`);
-          queryPatterns.push(`${fieldName} = "${serialNumber}"`);
-          queryPatterns.push(`${fieldName} like "${serialNumber}"`);
-        } else {
-          // その他のフィールドの場合
-          queryPatterns.push(`${fieldName} = "${serialNumber}"`);
-          queryPatterns.push(`${fieldName} like "${serialNumber}"`);
-        }
-        
-        for (const query of queryPatterns) {
-          try {
-            console.log(`クエリ「${query}」で検索を試行中...`);
-            
-            const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-              headers: {
-                'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-                'Content-Type': 'application/json'
-              },
-              params: {
-                app: KINTONE_REPAIR_HISTORY_APP_ID,
-                query: query,
-                totalCount: true
-              }
-            });
-            
-            console.log(`クエリ「${query}」での検索結果: ${response.data.records.length}件`);
-            
-            if (response.data.records.length > 0) {
-              console.log(`製造番号${serialNumber}の修理履歴が見つかりました（クエリ: ${query}）`);
-              console.log('見つかった修理履歴レコード:', response.data.records[0]);
-              return response.data.records as KintoneRepairHistoryRecord[];
-            }
-            
-          } catch (queryError: any) {
-            console.log(`クエリ「${query}」での検索に失敗: ${queryError.message}`);
-            // 次のクエリパターンを試行
-            continue;
+        const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+          headers: {
+            'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            app: KINTONE_REPAIR_HISTORY_APP_ID,
+            query: `ルックアップ = "${serialNumber}"`,
+            totalCount: true
           }
+        });
+        
+        console.log(`完全一致検索結果: ${response.data.records.length}件`);
+        
+        if (response.data.records.length > 0) {
+          console.log(`製造番号${serialNumber}の修理履歴が見つかりました`);
+          console.log('見つかった修理履歴レコード:', response.data.records[0]);
+          return response.data.records as KintoneRepairHistoryRecord[];
         }
         
-      } catch (queryError: any) {
-        console.log(`フィールド名「${fieldName}」での検索に失敗: ${queryError.message}`);
-        // 次のフィールド名を試行
-        continue;
+      } catch (error2: any) {
+        console.error('完全一致検索でもエラー:', error2.response?.data || error2.message);
+        
+        // 最後の手段：限定的な検索でサンプルデータを取得し、実際の構造を確認
+        console.log('サンプルデータで実際の構造を確認中...');
+        
+        try {
+          const sampleResponse = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
+            headers: {
+              'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+              'Content-Type': 'application/json'
+            },
+            params: {
+              app: KINTONE_REPAIR_HISTORY_APP_ID,
+              query: `レコード番号 > 0`,
+              totalCount: true,
+              fields: ['レコード番号', 'ルックアップ', '代替機の製造番号'],
+              limit: 5
+            }
+          });
+          
+          console.log(`サンプルデータ取得結果: ${sampleResponse.data.records.length}件`);
+          
+          if (sampleResponse.data.records.length > 0) {
+            console.log('App22のサンプルデータ構造:');
+            sampleResponse.data.records.forEach((record, index) => {
+              console.log(`レコード${index + 1}:`, {
+                レコード番号: record.レコード番号?.value,
+                ルックアップ: record.ルックアップ?.value,
+                代替機の製造番号: record.代替機の製造番号?.value
+              });
+            });
+          }
+          
+        } catch (error3: any) {
+          console.error('サンプルデータ取得でもエラー:', error3.response?.data || error3.message);
+        }
       }
     }
     
-    // すべてのフィールド名で検索に失敗した場合
+    // すべての検索に失敗した場合
     console.log(`製造番号${serialNumber}の修理履歴が見つかりませんでした`);
     return [];
     
