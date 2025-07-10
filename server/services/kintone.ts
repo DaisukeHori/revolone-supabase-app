@@ -183,107 +183,64 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   try {
     console.log(`App22から製造番号${serialNumber}の修理履歴を検索中...`);
     
-    // まず「ルックアップ」フィールドで部分一致検索を試行
-    console.log('「ルックアップ」フィールドで部分一致検索を試行中...');
+    // POSTリクエストで完全一致検索を実行
+    console.log('POSTリクエストで完全一致検索を実行中...');
     
-    try {
-      const query = `ルックアップ like "${serialNumber}"`;
-      console.log(`送信クエリ: ${query}`);
-      console.log(`リクエストURL: ${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`);
-      
-      const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-        headers: {
-          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          app: KINTONE_REPAIR_HISTORY_APP_ID,
-          query: query,
-          totalCount: true
-        }
-      });
-      
-      console.log(`部分一致検索結果: ${response.data.records.length}件`);
-      
-      if (response.data.records.length > 0) {
-        console.log(`製造番号${serialNumber}の修理履歴が見つかりました`);
-        console.log('見つかった修理履歴レコード:', response.data.records[0]);
-        return response.data.records as KintoneRepairHistoryRecord[];
+    const query = `ルックアップ = "${serialNumber}"`;
+    console.log(`送信クエリ: ${query}`);
+    
+    const response = await axios.post(`${KINTONE_BASE_URL}/records.json`, {
+      app: KINTONE_REPAIR_HISTORY_APP_ID,
+      query: query,
+      totalCount: true
+    }, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        'Content-Type': 'application/json'
       }
-      
-    } catch (error: any) {
-      console.error('部分一致検索でエラー:', error.response?.data || error.message);
-      
-      // 部分一致検索に失敗した場合、完全一致検索を試行
-      console.log('完全一致検索を試行中...');
-      
-      try {
-        const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-          headers: {
-            'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-            'Content-Type': 'application/json'
-          },
-          params: {
-            app: KINTONE_REPAIR_HISTORY_APP_ID,
-            query: `ルックアップ = "${serialNumber}"`,
-            totalCount: true
-          }
-        });
-        
-        console.log(`完全一致検索結果: ${response.data.records.length}件`);
-        
-        if (response.data.records.length > 0) {
-          console.log(`製造番号${serialNumber}の修理履歴が見つかりました`);
-          console.log('見つかった修理履歴レコード:', response.data.records[0]);
-          return response.data.records as KintoneRepairHistoryRecord[];
-        }
-        
-      } catch (error2: any) {
-        console.error('完全一致検索でもエラー:', error2.response?.data || error2.message);
-        
-        // 最後の手段：限定的な検索でサンプルデータを取得し、実際の構造を確認
-        console.log('サンプルデータで実際の構造を確認中...');
-        
-        try {
-          const sampleResponse = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-            headers: {
-              'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-              'Content-Type': 'application/json'
-            },
-            params: {
-              app: KINTONE_REPAIR_HISTORY_APP_ID,
-              query: `レコード番号 > 0`,
-              totalCount: true,
-              fields: ['レコード番号', 'ルックアップ', '代替機の製造番号'],
-              limit: 5
-            }
-          });
-          
-          console.log(`サンプルデータ取得結果: ${sampleResponse.data.records.length}件`);
-          
-          if (sampleResponse.data.records.length > 0) {
-            console.log('App22のサンプルデータ構造:');
-            sampleResponse.data.records.forEach((record, index) => {
-              console.log(`レコード${index + 1}:`, {
-                レコード番号: record.レコード番号?.value,
-                ルックアップ: record.ルックアップ?.value,
-                代替機の製造番号: record.代替機の製造番号?.value
-              });
-            });
-          }
-          
-        } catch (error3: any) {
-          console.error('サンプルデータ取得でもエラー:', error3.response?.data || error3.message);
-        }
-      }
+    });
+    
+    console.log(`検索結果: ${response.data.records.length}件`);
+    
+    if (response.data.records.length > 0) {
+      console.log(`製造番号${serialNumber}の修理履歴が見つかりました`);
+      console.log('見つかった修理履歴レコード:', response.data.records[0]);
+      return response.data.records as KintoneRepairHistoryRecord[];
     }
     
-    // すべての検索に失敗した場合
+    // 完全一致で見つからない場合、部分一致検索を試行
+    console.log('部分一致検索を試行中...');
+    
+    const likeQuery = `ルックアップ like "${serialNumber}"`;
+    console.log(`送信クエリ: ${likeQuery}`);
+    
+    const likeResponse = await axios.post(`${KINTONE_BASE_URL}/records.json`, {
+      app: KINTONE_REPAIR_HISTORY_APP_ID,
+      query: likeQuery,
+      totalCount: true
+    }, {
+      headers: {
+        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log(`部分一致検索結果: ${likeResponse.data.records.length}件`);
+    
+    if (likeResponse.data.records.length > 0) {
+      console.log(`製造番号${serialNumber}の修理履歴が見つかりました（部分一致）`);
+      console.log('見つかった修理履歴レコード:', likeResponse.data.records[0]);
+      return likeResponse.data.records as KintoneRepairHistoryRecord[];
+    }
+    
+    // 両方で見つからない場合、データが存在しない
     console.log(`製造番号${serialNumber}の修理履歴が見つかりませんでした`);
     return [];
     
   } catch (error: any) {
     console.error('修理履歴取得エラー:', error);
+    console.error('エラーレスポンス:', error.response?.data);
+    
     if (error.response?.status === 403) {
       throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
     }
