@@ -130,6 +130,13 @@ Changelog:
   - Added repair request submission functionality with proper API endpoints
   - COMPLETED: App 22 schema successfully retrieved and mapped to UI components
   - COMPLETED: Real repair history data now displays in purchased device modal
+- January 10, 2025. Enhanced repair request flow with duplicate prevention
+  - Added App 23 integration for detailed work records linked to App 22 via "ルックアップ" field
+  - Implemented timeline UI for work records with chronological sorting
+  - Added duplicate repair request prevention: blocks new requests when repair is in progress
+  - Created interactive pending repair display that navigates to repair history details
+  - Work records now display using "ドロップダウン" field for work items
+  - COMPLETED: Timeline visualization shows repair process progression chronologically
 ```
 
 ## User Preferences

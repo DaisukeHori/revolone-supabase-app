@@ -93,14 +93,14 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
   const [selectedRepairRecord, setSelectedRepairRecord] = useState<any>(null);
   const { toast } = useToast();
 
-  // 修理履歴を取得するクエリ
+  // 修理履歴を取得するクエリ（修理申請タブでも使用）
   const { data: repairHistory, isLoading: isLoadingHistory, error: historyError } = useQuery({
     queryKey: ['repair-history', device.serialNumber],
     queryFn: async () => {
       const response = await apiRequest('GET', `/api/devices/${device.serialNumber}/repair-history`);
       return response.json();
     },
-    enabled: isOpen && activeTab === 'history',
+    enabled: isOpen,
   });
 
   // 選択された修理レコードの作業履歴を取得するクエリ
@@ -202,6 +202,9 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
   };
 
   const renderRepairContent = () => {
+    // 処理中の修理レコードがあるかチェック
+    const pendingRepair = repairHistory?.find((record: any) => record.修理完了フラグ?.value !== '1');
+    
     switch (repairStep) {
       case 'select':
         return (
@@ -216,23 +219,74 @@ export function PurchasedDeviceModal({ device, isOpen, onClose }: PurchasedDevic
               </p>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-amber-900">修理について</h4>
-                  <ul className="text-sm text-amber-800 mt-2 space-y-1">
-                    <li>• 保証期間内の自然故障は無償修理</li>
-                    <li>• 保証期間外、または人為的な破損は有償修理</li>
-                    <li>• 修理費用は事前にお見積もりします</li>
-                  </ul>
+            {isLoadingHistory ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : pendingRepair ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                  <h4 className="font-medium text-yellow-900">修理申請中</h4>
+                </div>
+                <p className="text-sm text-yellow-800 mb-3">
+                  このデバイスは既に修理申請済みです。新しい修理申請を行う前に、現在の修理を完了させてください。
+                </p>
+                
+                <div 
+                  className="bg-white border border-yellow-200 rounded-lg p-3 cursor-pointer hover:bg-yellow-50 transition-colors"
+                  onClick={() => {
+                    setSelectedRepairRecord(pendingRepair);
+                    setActiveTab('history');
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium">
+                        {pendingRepair.日時?.value ? new Date(pendingRepair.日時.value).toLocaleDateString('ja-JP') : '日付不明'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        処理中
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <div className="text-sm text-gray-700">
+                      修理項目: {pendingRepair.修理項目?.value || '不明'}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      タップして詳細を確認
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-amber-900">修理について</h4>
+                    <ul className="text-sm text-amber-800 mt-2 space-y-1">
+                      <li>• 保証期間内の自然故障は無償修理</li>
+                      <li>• 保証期間外、または人為的な破損は有償修理</li>
+                      <li>• 修理費用は事前にお見積もりします</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleNext} className="flex-1">
-                修理申請を開始
+              <Button 
+                onClick={handleNext} 
+                className="flex-1"
+                disabled={!!pendingRepair || isLoadingHistory}
+              >
+                {pendingRepair ? '修理申請中' : '修理申請を開始'}
               </Button>
             </div>
           </div>
