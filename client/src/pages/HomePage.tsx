@@ -3,8 +3,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useUser } from "@/hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Building2, Clock, Loader2 } from "lucide-react";
+import { CreditCard, Building2, Clock, Loader2, Plus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
 type StripeSubscription = {
@@ -134,10 +135,17 @@ export default function HomePage() {
                   <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Building2 className="h-6 w-6 text-gray-600" />
                   </div>
-                  <div className="text-center sm:text-left">
+                  <div className="text-center sm:text-left flex-1">
                     <CardTitle className="text-xl sm:text-2xl text-gray-800">店舗一覧</CardTitle>
                     <p className="text-gray-600 text-sm sm:text-base">管理中の店舗とサービス状況</p>
                   </div>
+                  <Button 
+                    onClick={() => setLocation('/stores/new')}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    新規追加
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4 sm:p-6">
