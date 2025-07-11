@@ -41,8 +41,6 @@ const storeSchema = z.object({
   revonizerQuantity: z.number().min(1, "1台以上選択してください").max(20, "20台まで選択可能です"),
   
   // オプション
-  enableTrial: z.boolean().default(false),
-  trialDays: z.number().min(1).max(365).default(35),
   promoCode: z.string().optional(),
 });
 
@@ -85,13 +83,25 @@ function AddStoreForm() {
       billingLine1: '',
       billingLine2: '',
       revonizerQuantity: 1,
-      enableTrial: true,
-      trialDays: 35,
       promoCode: '',
     },
   });
 
   const watchedValues = form.watch();
+
+  // Check for stored form data on component mount
+  useEffect(() => {
+    const storedFormData = localStorage.getItem('storeFormData');
+    if (storedFormData) {
+      try {
+        const parsedData = JSON.parse(storedFormData);
+        form.reset(parsedData);
+        localStorage.removeItem('storeFormData');
+      } catch (error) {
+        console.error('Error parsing stored form data:', error);
+      }
+    }
+  }, [form]);
 
   // 価格計算
   const calculatePricing = async (quantity: number, promoCode?: string) => {
@@ -155,6 +165,17 @@ function AddStoreForm() {
 
   // 確認画面表示
   const handleShowConfirmation = () => {
+    // Check if terms and privacy policy have been accepted
+    const termsAccepted = localStorage.getItem('termsAccepted');
+    const privacyAccepted = localStorage.getItem('privacyAccepted');
+    
+    if (!termsAccepted || !privacyAccepted) {
+      // Store form data in localStorage for after acceptance
+      localStorage.setItem('storeFormData', JSON.stringify(form.getValues()));
+      setLocation('/stores/new/terms-of-service');
+      return;
+    }
+    
     setShowConfirmation(true);
   };
 
@@ -209,8 +230,6 @@ function AddStoreForm() {
         },
         subscriptionData: {
           revonizerQuantity: data.revonizerQuantity,
-          enableTrial: data.enableTrial,
-          trialDays: data.trialDays,
           promoCode: data.promoCode,
         },
       });
@@ -344,14 +363,12 @@ function AddStoreForm() {
                     </div>
                   )}
 
-                  {watchedValues.enableTrial && (
-                    <Alert>
-                      <Clock className="h-4 w-4" />
-                      <AlertDescription>
-                        {watchedValues.trialDays}日間の無料期間が適用されます
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  <Alert>
+                    <Clock className="h-4 w-4" />
+                    <AlertDescription>
+                      35日間の無料期間が適用されます
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </CardContent>
             </Card>
@@ -654,40 +671,13 @@ function AddStoreForm() {
                 </div>
               )}
 
-              {/* 無料期間設定 */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="enableTrial"
-                    checked={watchedValues.enableTrial}
-                    onCheckedChange={(checked) => 
-                      form.setValue('enableTrial', checked as boolean)
-                    }
-                  />
-                  <Label htmlFor="enableTrial">無料期間を適用</Label>
-                </div>
-
-                {watchedValues.enableTrial && (
-                  <div>
-                    <Label htmlFor="trialDays">無料期間（日数）</Label>
-                    <Select 
-                      onValueChange={(value) => form.setValue('trialDays', parseInt(value))}
-                      defaultValue="35"
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="日数を選択" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="7">7日間</SelectItem>
-                        <SelectItem value="14">14日間</SelectItem>
-                        <SelectItem value="30">30日間</SelectItem>
-                        <SelectItem value="35">35日間</SelectItem>
-                        <SelectItem value="60">60日間</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
+              {/* 無料期間表示 */}
+              <Alert>
+                <Clock className="h-4 w-4" />
+                <AlertDescription>
+                  35日間の無料期間が適用されます
+                </AlertDescription>
+              </Alert>
 
               {/* プロモーションコード */}
               <div className="space-y-2">

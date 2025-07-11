@@ -87,7 +87,7 @@ export function registerRoutes(app: Express): Server {
       // 1台目
       if (quantity >= 1) {
         const firstPrice = await stripe.prices.retrieve('price_1NwwacAPdno01lSPWH92pzrl');
-        const amount = firstPrice.unit_amount! / 100;
+        const amount = firstPrice.unit_amount!;
         priceBreakdown.push({
           name: 'Revol Oneサブスクリプション',
           quantity: 1,
@@ -101,7 +101,7 @@ export function registerRoutes(app: Express): Server {
       if (quantity >= 2) {
         const secondToFourthCount = Math.min(quantity - 1, 3);
         const secondPrice = await stripe.prices.retrieve('price_1OCCkvAPdno01lSP44FyPiZ3');
-        const amount = (secondPrice.unit_amount! / 100) * secondToFourthCount;
+        const amount = secondPrice.unit_amount! * secondToFourthCount;
         priceBreakdown.push({
           name: 'レボナイザー追加利用ライセンス（2-4台目）',
           quantity: secondToFourthCount,
@@ -115,7 +115,7 @@ export function registerRoutes(app: Express): Server {
       if (quantity >= 5) {
         const fifthAndMoreCount = quantity - 4;
         const fifthPrice = await stripe.prices.retrieve('price_1OED1uAPdno01lSP3UESyV7C');
-        const amount = (fifthPrice.unit_amount! / 100) * fifthAndMoreCount;
+        const amount = fifthPrice.unit_amount! * fifthAndMoreCount;
         priceBreakdown.push({
           name: 'レボナイザー追加利用ライセンス（5台目以降）',
           quantity: fifthAndMoreCount,
@@ -133,7 +133,7 @@ export function registerRoutes(app: Express): Server {
             if (coupon.percent_off) {
               discount = Math.floor(totalAmount * (coupon.percent_off / 100));
             } else if (coupon.amount_off) {
-              discount = coupon.amount_off / 100;
+              discount = coupon.amount_off;
             }
           }
         } catch (error) {
@@ -184,7 +184,7 @@ export function registerRoutes(app: Express): Server {
 
       res.json({
         valid: true,
-        amount: coupon.percent_off || (coupon.amount_off! / 100),
+        amount: coupon.percent_off || coupon.amount_off!,
         type: coupon.percent_off ? 'percent' : 'amount',
         name: coupon.name || 'プロモーション割引'
       });
@@ -270,10 +270,8 @@ export function registerRoutes(app: Express): Server {
         expand: ['latest_invoice.payment_intent']
       };
 
-      // 無料期間の設定
-      if (subscriptionData.enableTrial && subscriptionData.trialDays > 0) {
-        subscriptionOptions.trial_period_days = subscriptionData.trialDays;
-      }
+      // 無料期間の設定（35日固定）
+      subscriptionOptions.trial_period_days = 35;
 
       // プロモーションコードの適用
       if (subscriptionData.promoCode) {

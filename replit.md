@@ -145,6 +145,15 @@ Changelog:
   - Email change process: Request → Verification → Database Update → Stripe Sync
   - Enhanced error handling: distinguishes between "no customers" vs "API failure"
   - COMPLETED: Full email change flow with Stripe synchronization and rollback protection
+- January 11, 2025. Store addition system enhancements and legal compliance
+  - Fixed JPY currency handling in pricing calculations (removed incorrect USD conversion)
+  - Set free trial period to fixed 35 days for all new subscriptions
+  - Created comprehensive Terms of Service and Privacy Policy pages
+  - Implemented scroll-to-bottom confirmation requirement for legal documents
+  - Added legal document acceptance flow integrated with store creation process
+  - Enhanced form data persistence during legal document acceptance flow
+  - Updated subscription creation to always use 35-day trial period
+  - COMPLETED: Legal compliance framework with user-friendly document acceptance flow
 ```
 
 ## User Preferences
