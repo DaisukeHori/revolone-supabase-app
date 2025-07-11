@@ -16,14 +16,7 @@ export default function TermsOfServicePage() {
     const remaining = scrollHeight - (scrollTop + clientHeight);
     const scrolledToBottom = remaining <= 5;
     
-    console.log('Scroll debug:', {
-      scrollTop: Math.round(scrollTop),
-      clientHeight: Math.round(clientHeight),
-      scrollHeight: Math.round(scrollHeight),
-      totalScrolled: Math.round(scrollTop + clientHeight),
-      remaining: Math.round(scrollHeight - (scrollTop + clientHeight)),
-      isAtBottom: scrolledToBottom
-    });
+
     
     setHasScrolledToBottom(scrolledToBottom);
   };

@@ -16,14 +16,7 @@ export default function PrivacyPolicyPage() {
     const remaining = scrollHeight - (scrollTop + clientHeight);
     const scrolledToBottom = remaining <= 5;
     
-    console.log('Privacy scroll debug:', {
-      scrollTop: Math.round(scrollTop),
-      clientHeight: Math.round(clientHeight),
-      scrollHeight: Math.round(scrollHeight),
-      totalScrolled: Math.round(scrollTop + clientHeight),
-      remaining: Math.round(scrollHeight - (scrollTop + clientHeight)),
-      isAtBottom: scrolledToBottom
-    });
+
     
     setHasScrolledToBottom(scrolledToBottom);
   };

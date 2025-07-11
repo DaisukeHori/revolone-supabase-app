@@ -21,7 +21,9 @@ import { loadStripe } from "@stripe/stripe-js";
 
 const storeSchema = z.object({
   storeName: z.string().min(1, "店舗名は必須です"),
-  dealerCode: z.string().min(1, "取引先代理店コードは必須です"),
+  dealerCode: z.string()
+    .min(1, "取引先代理店コードは必須です")
+    .regex(/^\d{6}$/, "半角数字6桁で入力してください"),
   
   // 配送先住所
   shippingPostalCode: z.string().min(1, "郵便番号は必須です"),
@@ -64,6 +66,7 @@ function AddStoreForm() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [promoDiscount, setPromoDiscount] = useState<{ amount: number; type: string } | null>(null);
   const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
+  const [isAddressLoading, setIsAddressLoading] = useState(false);
   const stripe = useStripe();
   const elements = useElements();
 
@@ -89,6 +92,33 @@ function AddStoreForm() {
 
   const watchedValues = form.watch();
 
+  // 郵便番号による住所自動補完
+  const fetchAddressFromPostalCode = async (postalCode: string) => {
+    if (!postalCode || postalCode.length !== 7) return;
+    
+    setIsAddressLoading(true);
+    try {
+      const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${postalCode}`);
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        const result = data.results[0];
+        form.setValue('shippingState', result.address1);
+        form.setValue('shippingLine1', result.address2 + result.address3);
+        
+        // 同じ住所を使用する場合は請求先も更新
+        if (watchedValues.useSameAddress) {
+          form.setValue('billingState', result.address1);
+          form.setValue('billingLine1', result.address2 + result.address3);
+        }
+      }
+    } catch (error) {
+      console.error('住所取得エラー:', error);
+    } finally {
+      setIsAddressLoading(false);
+    }
+  };
+
   // Check for legal document acceptance on component mount
   useEffect(() => {
     const termsAccepted = localStorage.getItem('termsAccepted');
@@ -100,6 +130,13 @@ function AddStoreForm() {
       return;
     }
   }, [setLocation]);
+
+  // 郵便番号変更時の住所自動補完
+  useEffect(() => {
+    if (watchedValues.shippingPostalCode && watchedValues.shippingPostalCode.length === 7) {
+      fetchAddressFromPostalCode(watchedValues.shippingPostalCode);
+    }
+  }, [watchedValues.shippingPostalCode]);
 
   // 価格計算
   const calculatePricing = async (quantity: number, promoCode?: string) => {
@@ -431,8 +468,11 @@ function AddStoreForm() {
                 <Input
                   id="dealerCode"
                   {...form.register('dealerCode')}
-                  placeholder="取引先代理店コードを入力"
+                  placeholder="123456"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
                 />
+                <p className="text-sm text-gray-500 mt-1">半角数字6桁で入力してください</p>
                 {form.formState.errors.dealerCode && (
                   <p className="text-sm text-red-600 mt-1">
                     {form.formState.errors.dealerCode.message}
@@ -454,11 +494,21 @@ function AddStoreForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="shippingPostalCode">郵便番号 *</Label>
-                  <Input
-                    id="shippingPostalCode"
-                    {...form.register('shippingPostalCode')}
-                    placeholder="123-4567"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="shippingPostalCode"
+                      {...form.register('shippingPostalCode')}
+                      placeholder="1234567"
+                      maxLength={7}
+                      pattern="[0-9]{7}"
+                    />
+                    {isAddressLoading && (
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">ハイフンなし7桁で入力してください（住所が自動入力されます）</p>
                   {form.formState.errors.shippingPostalCode && (
                     <p className="text-sm text-red-600 mt-1">
                       {form.formState.errors.shippingPostalCode.message}
@@ -468,7 +518,10 @@ function AddStoreForm() {
                 
                 <div>
                   <Label htmlFor="shippingState">都道府県 *</Label>
-                  <Select onValueChange={(value) => form.setValue('shippingState', value)}>
+                  <Select 
+                    onValueChange={(value) => form.setValue('shippingState', value)}
+                    value={watchedValues.shippingState}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="都道府県を選択" />
                     </SelectTrigger>
