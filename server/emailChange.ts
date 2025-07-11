@@ -55,35 +55,85 @@ async function sendVerificationEmail(email: string, code: string) {
   });
 }
 
-// Stripeの顧客メールアドレス更新
-async function updateStripeCustomerEmails(oldEmail: string, newEmail: string) {
+// Stripeの顧客情報チェック
+async function checkStripeCustomers(email: string): Promise<{ hasCustomers: boolean; customerCount: number; customerIds: string[] }> {
   try {
-    // 古いメールアドレスで顧客を検索
-    const customers = await getCustomersByEmail(oldEmail);
-    
-    console.log(`[Email Change] Found ${customers.length} Stripe customers with email ${oldEmail}`);
-    
+    const customers = await getCustomersByEmail(email);
+    return {
+      hasCustomers: customers.length > 0,
+      customerCount: customers.length,
+      customerIds: customers.map(c => c.id)
+    };
+  } catch (error) {
+    console.error("[Email Change] Error checking Stripe customers:", error);
+    // Stripe接続エラーの場合でもプロセスを続行
+    return {
+      hasCustomers: false,
+      customerCount: 0,
+      customerIds: []
+    };
+  }
+}
+
+// Stripeの顧客メールアドレス更新（ロールバック対応）
+async function updateStripeCustomerEmails(oldEmail: string, newEmail: string, expectedCustomerIds: string[] = []) {
+  // 期待する顧客がいない場合はスキップ
+  if (expectedCustomerIds.length === 0) {
+    console.log(`[Email Change] No Stripe customers expected for ${oldEmail}, skipping update`);
+    return { success: true, updatedCount: 0 };
+  }
+
+  const updatedCustomers: string[] = [];
+  
+  try {
     // 各顧客のメールアドレスを更新
-    const updatePromises = customers.map(async (customer) => {
+    for (const customerId of expectedCustomerIds) {
       try {
-        await stripe.customers.update(customer.id, {
+        await stripe.customers.update(customerId, {
           email: newEmail,
         });
-        console.log(`[Email Change] Updated Stripe customer ${customer.id} email to ${newEmail}`);
+        updatedCustomers.push(customerId);
+        console.log(`[Email Change] Updated Stripe customer ${customerId} email to ${newEmail}`);
       } catch (error) {
-        console.error(`[Email Change] Failed to update Stripe customer ${customer.id}:`, error);
-        throw error;
+        console.error(`[Email Change] Failed to update Stripe customer ${customerId}:`, error);
+        
+        // 部分的失敗の場合、成功した更新をロールバック
+        if (updatedCustomers.length > 0) {
+          console.log(`[Email Change] Rolling back ${updatedCustomers.length} successful updates`);
+          await rollbackStripeUpdates(updatedCustomers, oldEmail);
+        }
+        
+        throw new Error(`Stripe customer update failed: ${error}`);
       }
-    });
+    }
 
-    await Promise.all(updatePromises);
-    console.log(`[Email Change] Successfully updated ${customers.length} Stripe customers`);
+    console.log(`[Email Change] Successfully updated ${updatedCustomers.length} Stripe customers`);
+    return { success: true, updatedCount: updatedCustomers.length };
     
-    return customers.length;
   } catch (error) {
     console.error("[Email Change] Error updating Stripe customers:", error);
     throw error;
   }
+}
+
+// Stripeの更新をロールバック
+async function rollbackStripeUpdates(customerIds: string[], originalEmail: string) {
+  console.log(`[Email Change] Rolling back Stripe updates for ${customerIds.length} customers`);
+  
+  const rollbackPromises = customerIds.map(async (customerId) => {
+    try {
+      await stripe.customers.update(customerId, {
+        email: originalEmail,
+      });
+      console.log(`[Email Change] Rolled back customer ${customerId} to ${originalEmail}`);
+    } catch (error) {
+      console.error(`[Email Change] Failed to rollback customer ${customerId}:`, error);
+      // ロールバックに失敗してもプロセスを続行（ログのみ）
+    }
+  });
+
+  await Promise.allSettled(rollbackPromises);
+  console.log(`[Email Change] Rollback completed for ${customerIds.length} customers`);
 }
 
 interface AuthenticatedRequest extends Request {
@@ -126,12 +176,19 @@ export function setupEmailChangeRoutes(app: Express) {
       const verificationCode = generateVerificationCode();
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30分後
 
+      // 現在のメールアドレスでStripe顧客をチェック
+      const stripeCustomerInfo = await checkStripeCustomers(req.user.email);
+      console.log(`[Email Change] Stripe customer check for ${req.user.email}:`, stripeCustomerInfo);
+
       // 認証レコードを保存
       await db.insert(emailVerifications).values({
         userId: req.user.id,
         newEmail,
         verificationCode,
         expiresAt,
+        hasStripeCustomers: stripeCustomerInfo.hasCustomers,
+        stripeCustomerCount: stripeCustomerInfo.customerCount,
+        stripeCustomerIds: stripeCustomerInfo.customerIds,
       });
 
       // 認証メールを送信
@@ -187,12 +244,36 @@ export function setupEmailChangeRoutes(app: Express) {
 
       // Stripeの顧客メールアドレスを更新
       try {
-        const updatedCustomers = await updateStripeCustomerEmails(req.user.email, verification.newEmail);
-        console.log(`[Email Change] Updated ${updatedCustomers} Stripe customers for user ${req.user.id}`);
+        const stripeResult = await updateStripeCustomerEmails(
+          req.user.email, 
+          verification.newEmail,
+          verification.stripeCustomerIds || []
+        );
+        
+        console.log(`[Email Change] Stripe update result for user ${req.user.id}:`, stripeResult);
+        
+        if (!stripeResult.success) {
+          throw new Error("Stripe update failed");
+        }
       } catch (stripeError) {
-        console.error("[Email Change] Stripe update failed:", stripeError);
-        // Stripeの更新が失敗してもユーザーには成功を返す（データベースは更新済み）
-        // 後で手動でStripeを更新する必要がある場合もある
+        console.error("[Email Change] Stripe update failed, rolling back database changes:", stripeError);
+        
+        // Stripeの更新が失敗した場合、データベースの変更をロールバック
+        await db.transaction(async (tx) => {
+          // ユーザーのメールアドレスを元に戻す
+          await tx.update(users)
+            .set({ email: req.user!.email })
+            .where(eq(users.id, req.user!.id));
+          
+          // 認証レコードを未認証に戻す
+          await tx.update(emailVerifications)
+            .set({ verified: false })
+            .where(eq(emailVerifications.id, verification.id));
+        });
+        
+        return res.status(500).json({ 
+          message: "Stripeの顧客情報更新に失敗しました。メールアドレスは変更されていません。" 
+        });
       }
 
       res.json({ message: "メールアドレスが正常に変更されました" });
@@ -233,11 +314,18 @@ export function setupEmailChangeRoutes(app: Express) {
       const verificationCode = generateVerificationCode();
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30分後
 
+      // 現在のメールアドレスでStripe顧客をチェック（再送信時にも最新情報を取得）
+      const stripeCustomerInfo = await checkStripeCustomers(req.user.email);
+      console.log(`[Email Change] Stripe customer check for resend ${req.user.email}:`, stripeCustomerInfo);
+
       // 認証レコードを更新
       await db.update(emailVerifications)
         .set({ 
           verificationCode,
           expiresAt,
+          hasStripeCustomers: stripeCustomerInfo.hasCustomers,
+          stripeCustomerCount: stripeCustomerInfo.customerCount,
+          stripeCustomerIds: stripeCustomerInfo.customerIds,
         })
         .where(eq(emailVerifications.id, existingVerification.id));
 

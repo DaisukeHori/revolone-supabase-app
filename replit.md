@@ -137,6 +137,14 @@ Changelog:
   - Created interactive pending repair display that navigates to repair history details
   - Work records now display using "ドロップダウン" field for work items
   - COMPLETED: Timeline visualization shows repair process progression chronologically
+- January 11, 2025. Implemented comprehensive email address change system
+  - Added ProfilePage (/profile) with email change functionality
+  - Integrated SendGrid for verification email delivery with 6-digit codes
+  - Implemented pre-verification Stripe customer checking to prevent orphaned updates
+  - Added rollback mechanism for partial Stripe update failures
+  - Email change process: Request → Verification → Database Update → Stripe Sync
+  - Enhanced error handling: distinguishes between "no customers" vs "API failure"
+  - COMPLETED: Full email change flow with Stripe synchronization and rollback protection
 ```
 
 ## User Preferences

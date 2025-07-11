@@ -80,6 +80,9 @@ export const emailVerifications = pgTable("email_verifications", {
   verificationCode: text("verification_code").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   verified: boolean("verified").default(false),
+  hasStripeCustomers: boolean("has_stripe_customers").default(false),
+  stripeCustomerCount: integer("stripe_customer_count").default(0),
+  stripeCustomerIds: jsonb("stripe_customer_ids").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
