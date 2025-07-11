@@ -26,6 +26,7 @@ const storeSchema = z.object({
     .regex(/^\d{6}$/, "半角数字6桁で入力してください"),
   
   // 配送先住所
+  shippingName: z.string().min(1, "配送先名前は必須です"),
   shippingPostalCode: z.string().min(1, "郵便番号は必須です"),
   shippingState: z.string().min(1, "都道府県は必須です"),
   shippingLine1: z.string().min(1, "住所は必須です"),
@@ -34,10 +35,14 @@ const storeSchema = z.object({
   
   // 請求先住所
   useSameAddress: z.boolean().default(false),
+  billingName: z.string().optional(),
   billingPostalCode: z.string().optional(),
   billingState: z.string().optional(),
   billingLine1: z.string().optional(),
   billingLine2: z.string().optional(),
+  
+  // カード名義人
+  cardholderName: z.string().min(1, "カード名義人名は必須です"),
   
   // サブスクリプション
   revonizerQuantity: z.number().min(1, "1台以上選択してください").max(20, "20台まで選択可能です"),
@@ -75,16 +80,19 @@ function AddStoreForm() {
     defaultValues: {
       storeName: '',
       dealerCode: '',
+      shippingName: '',
       shippingPostalCode: '',
       shippingState: '',
       shippingLine1: '',
       shippingLine2: '',
       shippingPhone: '',
       useSameAddress: true,
+      billingName: '',
       billingPostalCode: '',
       billingState: '',
       billingLine1: '',
       billingLine2: '',
+      cardholderName: '',
       revonizerQuantity: 1,
       promoCode: '',
     },
@@ -344,6 +352,7 @@ function AddStoreForm() {
               </CardHeader>
               <CardContent>
                 <p className="text-lg">
+                  {watchedValues.shippingName}<br />
                   〒{watchedValues.shippingPostalCode}<br />
                   {watchedValues.shippingState} {watchedValues.shippingLine1}<br />
                   {watchedValues.shippingLine2 && <>{watchedValues.shippingLine2}<br /></>}
@@ -394,6 +403,17 @@ function AddStoreForm() {
                     </AlertDescription>
                   </Alert>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>支払い情報</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  カード名義人: {watchedValues.cardholderName}
+                </p>
               </CardContent>
             </Card>
 
@@ -491,6 +511,20 @@ function AddStoreForm() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="shippingName">氏名 *</Label>
+                <Input
+                  id="shippingName"
+                  {...form.register('shippingName')}
+                  placeholder="配送先の氏名を入力"
+                />
+                {form.formState.errors.shippingName && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.shippingName.message}
+                  </p>
+                )}
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="shippingPostalCode">郵便番号 *</Label>
@@ -593,22 +627,46 @@ function AddStoreForm() {
                 <Checkbox
                   id="useSameAddress"
                   checked={watchedValues.useSameAddress}
-                  onCheckedChange={(checked) => 
-                    form.setValue('useSameAddress', checked as boolean)
-                  }
+                  onCheckedChange={(checked) => {
+                    form.setValue('useSameAddress', checked as boolean);
+                    if (checked) {
+                      // 配送先の情報を請求先にコピー
+                      form.setValue('billingName', watchedValues.shippingName);
+                      form.setValue('billingPostalCode', watchedValues.shippingPostalCode);
+                      form.setValue('billingState', watchedValues.shippingState);
+                      form.setValue('billingLine1', watchedValues.shippingLine1);
+                      form.setValue('billingLine2', watchedValues.shippingLine2);
+                    }
+                  }}
                 />
                 <Label htmlFor="useSameAddress">配送先と同じ住所を使用</Label>
               </div>
 
               {!watchedValues.useSameAddress && (
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="billingName">氏名 *</Label>
+                    <Input
+                      id="billingName"
+                      {...form.register('billingName')}
+                      placeholder="請求先の氏名を入力"
+                    />
+                    {form.formState.errors.billingName && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.billingName.message}
+                      </p>
+                    )}
+                  </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="billingPostalCode">郵便番号 *</Label>
                       <Input
                         id="billingPostalCode"
                         {...form.register('billingPostalCode')}
-                        placeholder="123-4567"
+                        placeholder="1234567"
+                        maxLength={7}
+                        pattern="[0-9]{7}"
                       />
                     </div>
                     
@@ -749,21 +807,38 @@ function AddStoreForm() {
                 支払い方法
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="p-4 border rounded-lg">
-                <CardElement
-                  options={{
-                    style: {
-                      base: {
-                        fontSize: '16px',
-                        color: '#424770',
-                        '::placeholder': {
-                          color: '#aab7c4',
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="cardholderName">カード名義人（ローマ字）*</Label>
+                <Input
+                  id="cardholderName"
+                  {...form.register('cardholderName')}
+                  placeholder="YAMADA TARO"
+                />
+                {form.formState.errors.cardholderName && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.cardholderName.message}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <Label>カード情報</Label>
+                <div className="p-4 border rounded-lg">
+                  <CardElement
+                    options={{
+                      style: {
+                        base: {
+                          fontSize: '16px',
+                          color: '#424770',
+                          '::placeholder': {
+                            color: '#aab7c4',
+                          },
                         },
                       },
-                    },
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
