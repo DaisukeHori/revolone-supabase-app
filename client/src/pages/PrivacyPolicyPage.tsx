@@ -12,8 +12,19 @@ export default function PrivacyPolicyPage() {
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-    // より厳密に最後まで到達したかをチェック（許容範囲を1pxに縮小）
-    const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 1;
+    // 残り5px以下の場合のみアクティブ
+    const remaining = scrollHeight - (scrollTop + clientHeight);
+    const scrolledToBottom = remaining <= 5;
+    
+    console.log('Privacy scroll debug:', {
+      scrollTop: Math.round(scrollTop),
+      clientHeight: Math.round(clientHeight),
+      scrollHeight: Math.round(scrollHeight),
+      totalScrolled: Math.round(scrollTop + clientHeight),
+      remaining: Math.round(scrollHeight - (scrollTop + clientHeight)),
+      isAtBottom: scrolledToBottom
+    });
+    
     setHasScrolledToBottom(scrolledToBottom);
   };
 
@@ -52,7 +63,7 @@ export default function PrivacyPolicyPage() {
           </CardHeader>
           <CardContent>
             <ScrollArea 
-              className="h-96 pr-4"
+              className="h-64 pr-4"
               onScrollCapture={handleScroll}
             >
               <div className="text-sm leading-relaxed space-y-4">
