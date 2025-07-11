@@ -9,9 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { ArrowLeft, User, Mail, Edit2, Check, X, AlertCircle, CheckCircle } from "lucide-react";
+import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 const profileSchema = z.object({
   username: z.string().min(1, "名前は必須です"),
@@ -219,16 +219,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
-      {/* ヘッダー */}
-      <div className="mb-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4">
-          <ArrowLeft className="w-4 h-4" />
-          戻る
-        </Link>
-        <h1 className="text-2xl font-bold mb-2">プロフィール</h1>
-        <p className="text-gray-600">アカウント情報を管理できます</p>
-      </div>
+    <AppLayout>
+      <div className="container mx-auto p-4 max-w-2xl">
+        {/* ヘッダー */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-2">プロフィール</h1>
+          <p className="text-gray-600">アカウント情報を管理できます</p>
+        </div>
 
       {/* プロフィール情報 */}
       <Card>
@@ -383,6 +380,7 @@ export default function ProfilePage() {
 
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
