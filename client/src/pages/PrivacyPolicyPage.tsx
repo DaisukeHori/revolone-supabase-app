@@ -20,11 +20,11 @@ export default function PrivacyPolicyPage() {
     // Store consent in localStorage
     localStorage.setItem('termsAccepted', 'true');
     localStorage.setItem('privacyAccepted', 'true');
-    setLocation('/stores/new');
+    setLocation('/stores/new/form');
   };
 
   const handleBack = () => {
-    setLocation('/stores/new/terms-of-service');
+    setLocation('/stores/new');
   };
 
   return (

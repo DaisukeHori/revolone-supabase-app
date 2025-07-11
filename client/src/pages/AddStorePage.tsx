@@ -89,19 +89,17 @@ function AddStoreForm() {
 
   const watchedValues = form.watch();
 
-  // Check for stored form data on component mount
+  // Check for legal document acceptance on component mount
   useEffect(() => {
-    const storedFormData = localStorage.getItem('storeFormData');
-    if (storedFormData) {
-      try {
-        const parsedData = JSON.parse(storedFormData);
-        form.reset(parsedData);
-        localStorage.removeItem('storeFormData');
-      } catch (error) {
-        console.error('Error parsing stored form data:', error);
-      }
+    const termsAccepted = localStorage.getItem('termsAccepted');
+    const privacyAccepted = localStorage.getItem('privacyAccepted');
+    
+    if (!termsAccepted || !privacyAccepted) {
+      // Redirect to terms of service if not accepted
+      setLocation('/stores/new');
+      return;
     }
-  }, [form]);
+  }, [setLocation]);
 
   // 価格計算
   const calculatePricing = async (quantity: number, promoCode?: string) => {
@@ -165,17 +163,6 @@ function AddStoreForm() {
 
   // 確認画面表示
   const handleShowConfirmation = () => {
-    // Check if terms and privacy policy have been accepted
-    const termsAccepted = localStorage.getItem('termsAccepted');
-    const privacyAccepted = localStorage.getItem('privacyAccepted');
-    
-    if (!termsAccepted || !privacyAccepted) {
-      // Store form data in localStorage for after acceptance
-      localStorage.setItem('storeFormData', JSON.stringify(form.getValues()));
-      setLocation('/stores/new/terms-of-service');
-      return;
-    }
-    
     setShowConfirmation(true);
   };
 

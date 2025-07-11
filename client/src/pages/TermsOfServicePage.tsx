@@ -21,7 +21,7 @@ export default function TermsOfServicePage() {
   };
 
   const handleBack = () => {
-    setLocation('/stores/new');
+    setLocation('/');
   };
 
   return (

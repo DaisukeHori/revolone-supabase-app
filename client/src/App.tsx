@@ -52,9 +52,9 @@ function App() {
   return (
     <Switch>
       <Route path="/profile" component={ProfilePage} />
-      <Route path="/stores/new/terms-of-service" component={TermsOfServicePage} />
+      <Route path="/stores/new/form" component={AddStorePage} />
       <Route path="/stores/new/privacy-policy" component={PrivacyPolicyPage} />
-      <Route path="/stores/new" component={AddStorePage} />
+      <Route path="/stores/new" component={TermsOfServicePage} />
       <Route path="/settings/security" component={SecuritySettingsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/store/:id/services" component={StoreServicesPage} />
