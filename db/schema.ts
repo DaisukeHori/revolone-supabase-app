@@ -73,6 +73,16 @@ export const deviceActionHistory = pgTable("device_action_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const emailVerifications = pgTable("email_verifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  newEmail: text("new_email").notNull(),
+  verificationCode: text("verification_code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // リレーション定義の更新
 export const usersRelations = relations(users, ({ many }) => ({
   stores: many(stores),
@@ -104,6 +114,13 @@ export const deviceExchangeRequestsRelations = relations(deviceExchangeRequests,
 export const deviceActionHistoryRelations = relations(deviceActionHistory, ({ one }) => ({
   user: one(users, {
     fields: [deviceActionHistory.userId],
+    references: [users.id],
+  }),
+}));
+
+export const emailVerificationsRelations = relations(emailVerifications, ({ one }) => ({
+  user: one(users, {
+    fields: [emailVerifications.userId],
     references: [users.id],
   }),
 }));
@@ -159,6 +176,13 @@ export const insertDeviceActionHistorySchema = createInsertSchema(deviceActionHi
   metadata: z.record(z.unknown()).optional(),
 }).omit({ id: true, createdAt: true, actionDate: true, lockUntil: true });
 
+export const insertEmailVerificationSchema = createInsertSchema(emailVerifications, {
+  newEmail: z.string().email("メールアドレスの形式が正しくありません"),
+  verificationCode: z.string().length(6),
+  expiresAt: z.date(),
+  verified: z.boolean().optional(),
+}).omit({ id: true, createdAt: true });
+
 export const updateStoreSchema = insertStoreSchema.partial();
 export const updateDeviceSchema = insertDeviceSchema.partial();
 export const updateDeviceExchangeRequestSchema = insertDeviceExchangeRequestSchema.partial();
@@ -178,3 +202,5 @@ export type InsertDeviceExchangeRequest = z.infer<typeof insertDeviceExchangeReq
 export type SelectDeviceExchangeRequest = typeof deviceExchangeRequests.$inferSelect;
 export type InsertDeviceActionHistory = z.infer<typeof insertDeviceActionHistorySchema>;
 export type SelectDeviceActionHistory = typeof deviceActionHistory.$inferSelect;
+export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
+export type SelectEmailVerification = typeof emailVerifications.$inferSelect;

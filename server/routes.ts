@@ -5,6 +5,7 @@ import { setupStripeRoutes } from "./stripe";
 import { setupStoreRoutes } from "./stores";
 import { setupMFARoutes } from "./mfa";
 import { setupDeviceRoutes } from "./devices";
+import { setupEmailChangeRoutes } from "./emailChange";
 
 export function registerRoutes(app: Express): Server {
   // 認証関連のルートを設定
@@ -21,6 +22,9 @@ export function registerRoutes(app: Express): Server {
 
   // デバイス管理関連のルートを設定
   setupDeviceRoutes(app);
+
+  // メールアドレス変更関連のルートを設定
+  setupEmailChangeRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
