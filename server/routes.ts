@@ -6,6 +6,9 @@ import { setupStoreRoutes } from "./stores";
 import { setupMFARoutes } from "./mfa";
 import { setupDeviceRoutes } from "./devices";
 import { setupEmailChangeRoutes } from "./emailChange";
+import { db } from "@db";
+import { users } from "@db/schema";
+import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // 認証関連のルートを設定
@@ -25,6 +28,36 @@ export function registerRoutes(app: Express): Server {
 
   // メールアドレス変更関連のルートを設定
   setupEmailChangeRoutes(app);
+
+  // プロフィール編集のAPIエンドポイント
+  app.put('/api/profile', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'ログインが必要です' });
+    }
+
+    try {
+      const { username } = req.body;
+      
+      if (!username || typeof username !== 'string') {
+        return res.status(400).json({ message: '名前は必須です' });
+      }
+
+      if (username.trim().length === 0) {
+        return res.status(400).json({ message: '名前を入力してください' });
+      }
+
+      // データベースのユーザー名を更新
+      await db
+        .update(users)
+        .set({ username: username.trim() })
+        .where(eq(users.id, req.user!.id));
+
+      res.json({ message: '名前が更新されました' });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: '名前の更新に失敗しました' });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

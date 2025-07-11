@@ -9,14 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { User, Mail, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, User, Mail, Edit2, Check, X, AlertCircle, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 
-const emailChangeSchema = z.object({
-  newEmail: z.string().email("有効なメールアドレスを入力してください"),
+const profileSchema = z.object({
+  username: z.string().min(1, "名前は必須です"),
+  email: z.string().email("有効なメールアドレスを入力してください"),
 });
 
-type EmailChangeForm = z.infer<typeof emailChangeSchema>;
+type ProfileForm = z.infer<typeof profileSchema>;
 
 const verificationCodeSchema = z.object({
   verificationCode: z.string().length(6, "認証コードは6桁です"),
@@ -27,14 +29,16 @@ type VerificationCodeForm = z.infer<typeof verificationCodeSchema>;
 export default function ProfilePage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const [editingField, setEditingField] = useState<'username' | 'email' | null>(null);
   const [emailChangeStep, setEmailChangeStep] = useState<'form' | 'verification' | 'success'>('form');
   const [pendingEmail, setPendingEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const emailForm = useForm<EmailChangeForm>({
-    resolver: zodResolver(emailChangeSchema),
+  const profileForm = useForm<ProfileForm>({
+    resolver: zodResolver(profileSchema),
     defaultValues: {
-      newEmail: '',
+      username: user?.username || '',
+      email: user?.email || '',
     },
   });
 
@@ -45,19 +49,80 @@ export default function ProfilePage() {
     },
   });
 
-  const handleEmailChangeSubmit = async (data: EmailChangeForm) => {
+  const handleUsernameEdit = () => {
+    setEditingField('username');
+    profileForm.setValue('username', user?.username || '');
+  };
+
+  const handleEmailEdit = () => {
+    setEditingField('email');
+    setEmailChangeStep('form');
+    profileForm.setValue('email', user?.email || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEmailChangeStep('form');
+    setPendingEmail('');
+    profileForm.reset({
+      username: user?.username || '',
+      email: user?.email || '',
+    });
+    verificationForm.reset();
+  };
+
+  const handleUsernameSubmit = async (data: ProfileForm) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/email-change/request', {
-        newEmail: data.newEmail,
+      const response = await apiRequest('PUT', '/api/profile', {
+        username: data.username,
       });
 
       if (response.ok) {
-        setPendingEmail(data.newEmail);
+        toast({
+          title: "更新完了",
+          description: "名前が更新されました",
+        });
+        setEditingField(null);
+        // ユーザー情報を再取得
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast({
+          variant: "destructive",
+          title: "エラー",
+          description: error.message || "名前の更新に失敗しました",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: "名前の更新に失敗しました",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailChangeSubmit = async (data: ProfileForm) => {
+    if (data.email === user?.email) {
+      handleCancelEdit();
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/email-change/request', {
+        newEmail: data.email,
+      });
+
+      if (response.ok) {
+        setPendingEmail(data.email);
         setEmailChangeStep('verification');
         toast({
           title: "認証メールを送信しました",
-          description: `${data.newEmail} に認証コードを送信しました。`,
+          description: `${data.email} に認証コードを送信しました`,
         });
       } else {
         const error = await response.json();
@@ -89,10 +154,12 @@ export default function ProfilePage() {
         setEmailChangeStep('success');
         toast({
           title: "メールアドレスが変更されました",
-          description: "Stripeの顧客情報も更新されました。",
+          description: "アカウント情報が正常に更新されました",
         });
         // ユーザー情報を再取得
-        window.location.reload();
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       } else {
         const error = await response.json();
         toast({
@@ -122,7 +189,7 @@ export default function ProfilePage() {
       if (response.ok) {
         toast({
           title: "認証メールを再送信しました",
-          description: `${pendingEmail} に認証コードを再送信しました。`,
+          description: `${pendingEmail} に認証コードを再送信しました`,
         });
       } else {
         const error = await response.json();
@@ -143,13 +210,6 @@ export default function ProfilePage() {
     }
   };
 
-  const resetEmailChange = () => {
-    setEmailChangeStep('form');
-    setPendingEmail('');
-    emailForm.reset();
-    verificationForm.reset();
-  };
-
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -160,144 +220,169 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
+      {/* ヘッダー */}
       <div className="mb-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4">
+          <ArrowLeft className="w-4 h-4" />
+          戻る
+        </Link>
         <h1 className="text-2xl font-bold mb-2">プロフィール</h1>
-        <p className="text-gray-600">アカウント情報を管理します</p>
+        <p className="text-gray-600">アカウント情報を管理できます</p>
       </div>
 
-      <div className="space-y-6">
-        {/* 基本情報 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              基本情報
-            </CardTitle>
-            <CardDescription>
-              アカウントの基本情報です
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="username">ユーザー名</Label>
-                <Input
-                  id="username"
-                  value={user.username}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-              <div>
-                <Label htmlFor="current-email">現在のメールアドレス</Label>
-                <Input
-                  id="current-email"
-                  value={user.email}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* メールアドレス変更 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              メールアドレス変更
-            </CardTitle>
-            <CardDescription>
-              メールアドレスを変更します。Stripeの顧客情報も自動的に更新されます。
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {emailChangeStep === 'form' && (
-              <form onSubmit={emailForm.handleSubmit(handleEmailChangeSubmit)} className="space-y-4">
-                <div>
-                  <Label htmlFor="newEmail">新しいメールアドレス</Label>
-                  <Input
-                    id="newEmail"
-                    type="email"
-                    placeholder="新しいメールアドレスを入力"
-                    {...emailForm.register('newEmail')}
-                  />
-                  {emailForm.formState.errors.newEmail && (
+      {/* プロフィール情報 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            アカウント情報
+          </CardTitle>
+          <CardDescription>
+            基本的な情報を編集できます
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          
+          {/* 名前の編集 */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex-1">
+              <Label className="text-sm font-medium text-gray-700">名前</Label>
+              {editingField === 'username' ? (
+                <form onSubmit={profileForm.handleSubmit(handleUsernameSubmit)} className="mt-2">
+                  <div className="flex gap-2">
+                    <Input
+                      {...profileForm.register('username')}
+                      placeholder="名前を入力"
+                      className="flex-1"
+                    />
+                    <Button type="submit" size="sm" disabled={isLoading}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={handleCancelEdit}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {profileForm.formState.errors.username && (
                     <p className="text-sm text-red-600 mt-1">
-                      {emailForm.formState.errors.newEmail.message}
+                      {profileForm.formState.errors.username.message}
                     </p>
                   )}
-                </div>
-
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    新しいメールアドレスに認証コードが送信されます。
-                    認証が完了すると、Stripeの顧客情報も自動的に更新されます。
-                  </AlertDescription>
-                </Alert>
-
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? '送信中...' : '認証メールを送信'}
-                </Button>
-              </form>
-            )}
-
-            {emailChangeStep === 'verification' && (
-              <div className="space-y-4">
-                <Alert>
-                  <Mail className="h-4 w-4" />
-                  <AlertDescription>
-                    {pendingEmail} に認証コードを送信しました。
-                    メールを確認して、6桁の認証コードを入力してください。
-                  </AlertDescription>
-                </Alert>
-
-                <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)} className="space-y-4">
-                  <div>
-                    <Label htmlFor="verificationCode">認証コード</Label>
-                    <Input
-                      id="verificationCode"
-                      type="text"
-                      placeholder="6桁の認証コードを入力"
-                      maxLength={6}
-                      {...verificationForm.register('verificationCode')}
-                    />
-                    {verificationForm.formState.errors.verificationCode && (
-                      <p className="text-sm text-red-600 mt-1">
-                        {verificationForm.formState.errors.verificationCode.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? '認証中...' : '認証'}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleResendCode} disabled={isLoading}>
-                      再送信
-                    </Button>
-                    <Button type="button" variant="outline" onClick={resetEmailChange}>
-                      キャンセル
-                    </Button>
-                  </div>
                 </form>
-              </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-lg">{user.username}</p>
+                </div>
+              )}
+            </div>
+            {editingField !== 'username' && (
+              <Button variant="outline" size="sm" onClick={handleUsernameEdit}>
+                <Edit2 className="w-4 h-4" />
+              </Button>
             )}
+          </div>
 
-            {emailChangeStep === 'success' && (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  メールアドレスが正常に変更されました。
-                  Stripeの顧客情報も更新されました。
-                </AlertDescription>
-              </Alert>
+          {/* メールアドレスの編集 */}
+          <div className="flex items-start justify-between p-4 border rounded-lg">
+            <div className="flex-1">
+              <Label className="text-sm font-medium text-gray-700">メールアドレス</Label>
+              
+              {editingField === 'email' ? (
+                <div className="mt-2">
+                  {emailChangeStep === 'form' && (
+                    <form onSubmit={profileForm.handleSubmit(handleEmailChangeSubmit)} className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          {...profileForm.register('email')}
+                          type="email"
+                          placeholder="新しいメールアドレス"
+                          className="flex-1"
+                        />
+                        <Button type="submit" size="sm" disabled={isLoading}>
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={handleCancelEdit}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {profileForm.formState.errors.email && (
+                        <p className="text-sm text-red-600">
+                          {profileForm.formState.errors.email.message}
+                        </p>
+                      )}
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          新しいメールアドレスに認証コードが送信されます。認証完了後、アカウント情報が更新されます。
+                        </AlertDescription>
+                      </Alert>
+                    </form>
+                  )}
+
+                  {emailChangeStep === 'verification' && (
+                    <div className="space-y-3">
+                      <Alert>
+                        <Mail className="h-4 w-4" />
+                        <AlertDescription>
+                          {pendingEmail} に認証コードを送信しました。メールを確認して6桁のコードを入力してください。
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)} className="space-y-3">
+                        <div>
+                          <Input
+                            {...verificationForm.register('verificationCode')}
+                            type="text"
+                            placeholder="認証コード (6桁)"
+                            maxLength={6}
+                            className="text-center text-lg tracking-wider"
+                          />
+                          {verificationForm.formState.errors.verificationCode && (
+                            <p className="text-sm text-red-600 mt-1">
+                              {verificationForm.formState.errors.verificationCode.message}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" disabled={isLoading}>
+                            {isLoading ? '認証中...' : '認証'}
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={handleResendCode} disabled={isLoading}>
+                            再送信
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={handleCancelEdit}>
+                            キャンセル
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {emailChangeStep === 'success' && (
+                    <Alert className="mt-2">
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        メールアドレスが正常に変更されました。ページを更新しています...
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-lg">{user.email}</p>
+                </div>
+              )}
+            </div>
+            
+            {editingField !== 'email' && (
+              <Button variant="outline" size="sm" onClick={handleEmailEdit}>
+                <Edit2 className="w-4 h-4" />
+              </Button>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+
+        </CardContent>
+      </Card>
     </div>
   );
 }
