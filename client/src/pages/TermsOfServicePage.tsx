@@ -12,7 +12,8 @@ export default function TermsOfServicePage() {
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-    const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 10;
+    // より厳密に最後まで到達したかをチェック（許容範囲を1pxに縮小）
+    const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 1;
     setHasScrolledToBottom(scrolledToBottom);
   };
 
