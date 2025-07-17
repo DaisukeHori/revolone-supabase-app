@@ -515,6 +515,10 @@ export function CreateSubscriptionModal({
             <Elements stripe={stripePromise} options={{
               mode: 'setup',
               currency: 'jpy',
+              automatic_payment_methods: {
+                enabled: true,
+                allow_redirects: 'always'
+              },
               appearance: {
                 theme: 'stripe',
               },

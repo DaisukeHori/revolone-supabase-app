@@ -202,17 +202,10 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/stripe/setup-intent', async (req, res) => {
     try {
       const setupIntent = await stripe.setupIntents.create({
-        payment_method_types: [
-          'card',
-          'apple_pay',
-          'google_pay',
-          'paypal',
-          'bank_transfer'
-        ],
         usage: 'off_session',
         automatic_payment_methods: {
           enabled: true,
-          allow_redirects: 'never'
+          allow_redirects: 'always'
         }
       });
 
@@ -297,13 +290,6 @@ export function registerRoutes(app: Express): Server {
         payment_behavior: 'default_incomplete',
         expand: ['latest_invoice.payment_intent'],
         payment_settings: {
-          payment_method_types: [
-            'card',
-            'apple_pay',
-            'google_pay',
-            'paypal',
-            'bank_transfer'
-          ],
           save_default_payment_method: 'on_subscription'
         }
       };
