@@ -16,7 +16,7 @@ import { Building2, CreditCard, MapPin, Truck, Calculator, Gift, Clock } from "l
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
 const storeSchema = z.object({
@@ -224,9 +224,10 @@ function AddStoreForm() {
 
     setIsLoading(true);
     try {
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        throw new Error('カード情報が入力されていません');
+      // PaymentElementを使用した決済確認
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        throw new Error(submitError.message);
       }
 
       // 請求先住所の処理
@@ -250,6 +251,7 @@ function AddStoreForm() {
           storeName: data.storeName,
           dealerCode: data.dealerCode,
           email: user?.email,
+          shippingName: data.shippingName,
           shippingAddress: {
             postal_code: data.shippingPostalCode,
             state: data.shippingState,
@@ -257,8 +259,10 @@ function AddStoreForm() {
             line2: data.shippingLine2,
             country: 'JP',
           },
+          billingName: data.useSameAddress ? data.shippingName : data.billingName,
           billingAddress,
           shippingPhone: data.shippingPhone,
+          cardholderName: data.cardholderName,
         },
         subscriptionData: {
           revonizerQuantity: data.revonizerQuantity,
@@ -269,14 +273,22 @@ function AddStoreForm() {
       if (response.ok) {
         const result = await response.json();
         
-        // 支払い確認
-        const { error } = await stripe.confirmCardPayment(result.clientSecret, {
-          payment_method: {
-            card: cardElement,
-            billing_details: {
-              name: data.storeName,
-              email: user?.email,
-              address: billingAddress,
+        // 複数決済方法対応の支払い確認
+        const { error } = await stripe.confirmPayment({
+          elements,
+          clientSecret: result.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/payment-success`,
+            shipping: {
+              name: data.shippingName,
+              address: {
+                postal_code: data.shippingPostalCode,
+                state: data.shippingState,
+                line1: data.shippingLine1,
+                line2: data.shippingLine2,
+                country: 'JP',
+              },
+              phone: data.shippingPhone,
             },
           },
         });
@@ -823,18 +835,14 @@ function AddStoreForm() {
               </div>
               
               <div>
-                <Label>カード情報</Label>
+                <Label>支払い情報</Label>
                 <div className="p-4 border rounded-lg">
-                  <CardElement
+                  <PaymentElement
                     options={{
-                      style: {
-                        base: {
-                          fontSize: '16px',
-                          color: '#424770',
-                          '::placeholder': {
-                            color: '#aab7c4',
-                          },
-                        },
+                      layout: 'tabs',
+                      paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'paypal', 'bank_transfer'],
+                      business: {
+                        name: 'Revonizer',
                       },
                     }}
                   />
@@ -864,6 +872,8 @@ function AddStoreForm() {
 export default function AddStorePage() {
   const [stripePromise, setStripePromise] = useState<any>(null);
 
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+
   useEffect(() => {
     async function initializeStripe() {
       try {
@@ -872,6 +882,7 @@ export default function AddStorePage() {
         if (response.ok) {
           const data = await response.json();
           setStripePromise(loadStripe(data.publishableKey));
+          setClientSecret(data.clientSecret);
         }
       } catch (error) {
         console.error('Stripe初期化エラー:', error);
@@ -881,7 +892,7 @@ export default function AddStorePage() {
     initializeStripe();
   }, []);
 
-  if (!stripePromise) {
+  if (!stripePromise || !clientSecret) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-screen">
@@ -893,7 +904,18 @@ export default function AddStorePage() {
   }
 
   return (
-    <Elements stripe={stripePromise}>
+    <Elements 
+      stripe={stripePromise} 
+      options={{
+        clientSecret: clientSecret,
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#0070f3',
+          }
+        }
+      }}
+    >
       <AddStoreForm />
     </Elements>
   );

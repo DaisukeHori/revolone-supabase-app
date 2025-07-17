@@ -154,6 +154,15 @@ Changelog:
   - Enhanced form data persistence during legal document acceptance flow
   - Updated subscription creation to always use 35-day trial period
   - COMPLETED: Legal compliance framework with user-friendly document acceptance flow
+- January 16, 2025. Multiple payment methods integration for subscription billing
+  - Replaced CardElement with PaymentElement for expanded payment options
+  - Added support for: card, Apple Pay, Google Pay, PayPal, bank transfer
+  - Enhanced SetupIntent creation with automatic payment method detection
+  - Updated subscription payment_settings to support multiple methods
+  - Modified AddStorePage and BillingSettingsPage for unified payment UI
+  - Implemented Stripe-compliant payment flow with proper authentication
+  - Payment method priority: card → digital wallets → bank transfers
+  - COMPLETED: Full multi-payment method support for subscription billing
 ```
 
 ## User Preferences

@@ -198,6 +198,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // 複数決済方法対応のSetupIntent作成エンドポイント
+  app.post('/api/stripe/setup-intent', async (req, res) => {
+    try {
+      const setupIntent = await stripe.setupIntents.create({
+        payment_method_types: [
+          'card',
+          'apple_pay',
+          'google_pay',
+          'paypal',
+          'bank_transfer'
+        ],
+        usage: 'off_session',
+        automatic_payment_methods: {
+          enabled: true,
+          allow_redirects: 'never'
+        }
+      });
+
+      res.json({
+        clientSecret: setupIntent.client_secret,
+        publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY
+      });
+    } catch (error) {
+      console.error('SetupIntent作成エラー:', error);
+      res.status(500).json({ message: 'SetupIntent作成中にエラーが発生しました' });
+    }
+  });
+
   // 店舗とサブスクリプションの作成APIエンドポイント
   app.post('/api/stores/create-with-subscription', async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -267,7 +295,17 @@ export function registerRoutes(app: Express): Server {
         customer: customer.id,
         items: subscriptionItems,
         payment_behavior: 'default_incomplete',
-        expand: ['latest_invoice.payment_intent']
+        expand: ['latest_invoice.payment_intent'],
+        payment_settings: {
+          payment_method_types: [
+            'card',
+            'apple_pay',
+            'google_pay',
+            'paypal',
+            'bank_transfer'
+          ],
+          save_default_payment_method: 'on_subscription'
+        }
       };
 
       // 無料期間の設定（35日固定）
