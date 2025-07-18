@@ -181,6 +181,17 @@ Changelog:
   - Integrated SendGrid for verification email delivery
   - Added registration success message with email verification instructions
   - COMPLETED: New users must verify email address before accessing the system
+- January 18, 2025. Unified 6-digit verification code system implementation
+  - Replaced email link verification with 6-digit code system for new user registration
+  - Created new registration_verifications table for temporary registration data storage
+  - Implemented 3-step registration flow: register → verify → success
+  - Added dedicated RegisterPage with step-by-step user interface
+  - Unified verification code system: both registration and email changes use 6-digit codes
+  - Set consistent 30-minute expiry for all verification codes
+  - Added resend functionality for registration verification codes
+  - Updated authentication system to support new registration flow
+  - Removed old registration form from login page, replaced with redirect to RegisterPage
+  - COMPLETED: Consistent 6-digit code verification system across all features
 ```
 
 ## User Preferences
