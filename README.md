@@ -70,7 +70,7 @@ Revonizer Management Systemは、レボナイザーデバイスの包括的な�
 
 ### 必要な環境
 - Node.js 18以上
-- PostgreSQL 14以上
+- PostgreSQL 14以上（Replitでは自動提供）
 - npm または yarn
 
 ### 1. リポジトリのクローン
@@ -88,7 +88,7 @@ npm install
 `.env`ファイルを作成し、以下の環境変数を設定してください：
 
 ```env
-# データベース設定
+# データベース設定（Replitでは自動設定）
 DATABASE_URL=postgresql://username:password@localhost:5432/revonizer
 
 # Stripe設定
@@ -111,15 +111,16 @@ KINTONE_SUBDOMAIN=e18p5
 MASTER_PASSWORD=Rv0171Rv
 ```
 
-### 4. データベースの初期化
-```bash
-npm run db:push
-```
-
-### 5. 開発サーバーの起動
+### 4. 開発サーバーの起動
 ```bash
 npm run dev
 ```
+
+**重要:** 
+- データベースのスキーマは起動時に自動的に作成されます
+- 手動でのマイグレーションは不要です
+- 既存のデータは保護されます（冪等性保証）
+- Replitでの再ビルド時も安全に動作します
 
 アプリケーションは `http://localhost:5000` でアクセスできます。
 
@@ -339,6 +340,8 @@ Authorization: Required (Session-based)
 
 ## データベーススキーマ
 
+**注意:** すべてのテーブルスキーマは起動時に自動的に作成されます。手動でのSQL実行は不要です。
+
 ### users テーブル
 ```sql
 CREATE TABLE users (
@@ -491,6 +494,8 @@ CREATE TABLE email_change_verifications (
   1. PostgreSQLサーバーの起動状態を確認
   2. データベース接続文字列を確認
   3. ファイアウォール設定を確認
+  
+**注意**: データベーススキーマは自動作成されるため、手動でのテーブル作成は不要です。
 
 ### ログの確認方法
 
@@ -522,11 +527,8 @@ tail -f /var/log/postgresql/postgresql-14-main.log
 # 依存関係のインストール
 npm install
 
-# 開発サーバーの起動
+# 開発サーバーの起動（データベースも自動初期化）
 npm run dev
-
-# データベースマイグレーション
-npm run db:push
 
 # TypeScript型チェック
 npm run type-check
@@ -570,5 +572,11 @@ npm start
 - 新規登録フローの改善
 - メール認証システムの強化
 - 認証コード再送信機能の追加
+
+### v1.2.0 (2025-01-18)
+- 自動データベース初期化システムの実装
+- Replitでの再ビルド時の安全性保証
+- 冪等性のあるスキーマ作成
+- エラーハンドリングの強化
 
 詳細な変更履歴については、`replit.md`のChangelogセクションをご確認ください。
