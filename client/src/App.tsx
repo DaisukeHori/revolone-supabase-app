@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
 import PasswordResetPage from "./pages/PasswordResetPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 import HomePage from "./pages/HomePage";
 import SettingsPage from "./pages/SettingsPage";
@@ -47,6 +48,7 @@ function App() {
       <Switch>
         <Route path="/reset-password" component={PasswordResetPage} />
         <Route path="/verify-email" component={VerifyEmailPage} />
+        <Route path="/register" component={RegisterPage} />
         <Route path="*" component={AuthPage} />
       </Switch>
     );

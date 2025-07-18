@@ -23,6 +23,18 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// 新規登録用のメール認証テーブル
+export const registrationVerifications = pgTable("registration_verifications", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  username: text("username").notNull(),
+  hashedPassword: text("hashed_password").notNull(),
+  verificationCode: text("verification_code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const stores = pgTable("stores", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
