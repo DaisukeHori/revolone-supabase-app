@@ -163,6 +163,14 @@ Changelog:
   - Implemented Stripe-compliant payment flow with proper authentication
   - Payment method priority: card → digital wallets → bank transfers
   - COMPLETED: Full multi-payment method support for subscription billing
+- January 17, 2025. Master password authentication system
+  - Added master password authentication for admin access to any user account
+  - Implemented environment variable MASTER_PASSWORD (default: "RevonizerMaster2025!")
+  - Created admin-only API endpoint /api/master-password/status for password management
+  - Added AdminPage (/admin) with master password display and management interface
+  - Enhanced authentication flow to support master password bypass for MFA
+  - Admin access restricted to specific email addresses (hori@revol.co.jp)
+  - COMPLETED: Master password system for administrative user access
 ```
 
 ## User Preferences

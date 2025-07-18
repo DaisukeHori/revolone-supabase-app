@@ -7,6 +7,7 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
+  MASTER_PASSWORD: z.string().optional(),
   KINTONE_API_TOKEN_DEV: z.string().optional(),
   STRIPE_SECRET_KEY_DEV: z.string().optional(),
   STRIPE_PUBLISHABLE_KEY_DEV: z.string().optional(),

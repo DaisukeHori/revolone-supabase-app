@@ -16,6 +16,7 @@ import DeviceManagementPage from "./pages/DeviceManagement";
 import AddStorePage from "./pages/AddStorePage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import AdminPage from "./pages/AdminPage";
 import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 import { useTheme } from "./hooks/use-theme";
@@ -51,6 +52,7 @@ function App() {
 
   return (
     <Switch>
+      <Route path="/admin" component={AdminPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/stores/new/form" component={AddStorePage} />
       <Route path="/stores/new/privacy-policy" component={PrivacyPolicyPage} />
