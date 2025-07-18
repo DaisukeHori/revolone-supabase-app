@@ -30,6 +30,7 @@ type FormData = z.infer<typeof authSchema>;
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { register } = useUser();
   const [, setLocation] = useLocation();
 
@@ -60,7 +61,9 @@ export function AuthForm() {
           setError(result.message);
           return;
         }
-        // 登録成功後は自動的にログインページに遷移
+        // 登録成功後はメール確認メッセージを表示
+        setError(null);
+        setSuccessMessage("登録が完了しました。確認メールを送信しましたので、メールを確認してアカウントを有効化してください。");
         setIsLogin(true);
         form.reset();
         return;
@@ -74,6 +77,11 @@ export function AuthForm() {
   if (isLogin) {
     return (
       <div className="space-y-4">
+        {successMessage && (
+          <Alert className="bg-green-50 border-green-200">
+            <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+          </Alert>
+        )}
         <LoginForm onComplete={onLoginComplete} />
         <Button
           type="button"
@@ -81,6 +89,7 @@ export function AuthForm() {
           className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
           onClick={() => {
             setError(null);
+            setSuccessMessage(null);
             setIsLogin(false);
             form.reset();
           }}

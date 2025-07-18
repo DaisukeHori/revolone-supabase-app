@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import { Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
 import PasswordResetPage from "./pages/PasswordResetPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ProfilePage from "./pages/ProfilePage";
 import HomePage from "./pages/HomePage";
 import SettingsPage from "./pages/SettingsPage";
@@ -45,6 +46,7 @@ function App() {
     return (
       <Switch>
         <Route path="/reset-password" component={PasswordResetPage} />
+        <Route path="/verify-email" component={VerifyEmailPage} />
         <Route path="*" component={AuthPage} />
       </Switch>
     );

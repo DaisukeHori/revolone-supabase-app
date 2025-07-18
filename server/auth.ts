@@ -123,6 +123,12 @@ export function setupAuth(app: Express) {
           if (!user) {
             return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
           }
+          
+          // メールアドレスが確認されていない場合
+          if (!user.emailVerified) {
+            return done(null, false, { message: "メールアドレスの確認が完了していません。確認メールをご確認ください。" });
+          }
+          
           const isMatch = await crypto.compare(password, user.password);
           if (!isMatch) {
             return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
@@ -179,6 +185,10 @@ export function setupAuth(app: Express) {
       }
 
       const hashedPassword = await crypto.hash(password);
+      
+      // メールアドレス確認トークンを生成
+      const verificationToken = randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24時間後
 
       const [newUser] = await db
         .insert(users)
@@ -186,18 +196,150 @@ export function setupAuth(app: Express) {
           email,
           username,
           password: hashedPassword,
+          emailVerified: false,
+          emailVerificationToken: verificationToken,
+          emailVerificationExpiry: verificationExpiry,
         })
         .returning();
 
-      req.login(newUser, (err) => {
-        if (err) {
-          return next(err);
+      // 確認メールを送信
+      if (process.env.SENDGRID_API_KEY) {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        
+        const verificationUrl = `${req.protocol}://${req.get('host')}/verify-email?token=${verificationToken}`;
+        
+        const msg = {
+          to: email,
+          from: 'noreply@revol.co.jp',
+          subject: 'メールアドレス確認のお願い',
+          html: `
+            <h2>メールアドレス確認のお願い</h2>
+            <p>Revonizer Management Systemへのご登録ありがとうございます。</p>
+            <p>以下のリンクをクリックして、メールアドレス確認を完了してください：</p>
+            <p><a href="${verificationUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">メールアドレスを確認する</a></p>
+            <p>このリンクは24時間後に無効になります。</p>
+            <p>もしこのメールに心当たりがない場合は、このメールを無視してください。</p>
+          `
+        };
+
+        try {
+          await sgMail.send(msg);
+        } catch (error) {
+          console.error('Email送信エラー:', error);
         }
-        return res.json({
-          message: "登録が完了しました",
-          user: { id: newUser.id, username: newUser.username, email: newUser.email },
-        });
+      }
+
+      return res.json({
+        message: "登録が完了しました。確認メールを送信しました。メールを確認してアカウントを有効化してください。",
+        requiresEmailVerification: true,
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // メールアドレス確認エンドポイント
+  app.get("/api/verify-email", async (req, res, next) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "確認トークンが無効です" });
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.emailVerificationToken, token))
+        .limit(1);
+
+      if (!user) {
+        return res.status(400).json({ message: "確認トークンが無効です" });
+      }
+
+      // トークンの有効期限をチェック
+      if (user.emailVerificationExpiry && new Date() > user.emailVerificationExpiry) {
+        return res.status(400).json({ message: "確認トークンの有効期限が切れています" });
+      }
+
+      // メールアドレス確認を完了
+      await db
+        .update(users)
+        .set({
+          emailVerified: true,
+          emailVerificationToken: null,
+          emailVerificationExpiry: null,
+        })
+        .where(eq(users.id, user.id));
+
+      return res.json({ message: "メールアドレスの確認が完了しました。ログインできます。" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // 確認メール再送信エンドポイント
+  app.post("/api/resend-verification", async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "メールアドレスが必要です" });
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (!user) {
+        return res.status(400).json({ message: "このメールアドレスは登録されていません" });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "このメールアドレスは既に確認済みです" });
+      }
+
+      // 新しい確認トークンを生成
+      const verificationToken = randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24時間後
+
+      await db
+        .update(users)
+        .set({
+          emailVerificationToken: verificationToken,
+          emailVerificationExpiry: verificationExpiry,
+        })
+        .where(eq(users.id, user.id));
+
+      // 確認メールを再送信
+      if (process.env.SENDGRID_API_KEY) {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        
+        const verificationUrl = `${req.protocol}://${req.get('host')}/verify-email?token=${verificationToken}`;
+        
+        const msg = {
+          to: email,
+          from: 'noreply@revol.co.jp',
+          subject: 'メールアドレス確認のお願い（再送信）',
+          html: `
+            <h2>メールアドレス確認のお願い</h2>
+            <p>Revonizer Management Systemのメールアドレス確認を完了してください。</p>
+            <p>以下のリンクをクリックして、メールアドレス確認を完了してください：</p>
+            <p><a href="${verificationUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">メールアドレスを確認する</a></p>
+            <p>このリンクは24時間後に無効になります。</p>
+          `
+        };
+
+        try {
+          await sgMail.send(msg);
+        } catch (error) {
+          console.error('Email送信エラー:', error);
+        }
+      }
+
+      return res.json({ message: "確認メールを再送信しました" });
     } catch (error) {
       next(error);
     }

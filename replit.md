@@ -171,6 +171,16 @@ Changelog:
   - Enhanced authentication flow to support master password bypass for MFA
   - Admin access restricted to specific email addresses (hori@revol.co.jp)
   - COMPLETED: Master password system for administrative user access
+- January 18, 2025. Email verification system implementation
+  - Added email verification requirement for new user registrations
+  - Added emailVerified, emailVerificationToken, and emailVerificationExpiry fields to users table
+  - Implemented email verification flow with 24-hour token expiry
+  - Created /verify-email page for email confirmation process
+  - Added API endpoints for email verification and resend functionality
+  - Updated authentication to require email verification before login
+  - Integrated SendGrid for verification email delivery
+  - Added registration success message with email verification instructions
+  - COMPLETED: New users must verify email address before accessing the system
 ```
 
 ## User Preferences
