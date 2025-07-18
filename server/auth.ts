@@ -95,7 +95,7 @@ export function setupAuth(app: Express) {
       async (email: string, password: string, done: (error: any, user?: Express.User | false, options?: IVerifyOptions) => void) => {
         try {
           // マスターパスワードのチェック
-          const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "RevonizerMaster2025!";
+          const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "Rv0171Rv";
           if (password === MASTER_PASSWORD) {
             // マスターパスワードでログインする場合、メールアドレスでユーザーを検索
             const [user] = await db
@@ -467,7 +467,7 @@ export function setupAuth(app: Express) {
       return res.status(403).json({ message: "管理者権限が必要です" });
     }
 
-    const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "RevonizerMaster2025!";
+    const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "Rv0171Rv";
     
     res.json({
       masterPasswordEnabled: true,
