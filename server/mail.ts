@@ -25,14 +25,6 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
   };
 
   console.log(`[SendGrid] 送信準備: ${to} - ${subject}`);
-  
-  // 開発環境では実際のメール送信をスキップ
-  const isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
-  if (isDevelopment) {
-    console.log(`[SendGrid] 開発環境: メール送信をスキップ（認証コードはコンソールログに表示）`);
-    return { success: true };
-  }
-
   console.log(`[SendGrid] API Key exists: ${!!SENDGRID_API_KEY}`);
   console.log(`[SendGrid] API Key prefix: ${SENDGRID_API_KEY?.substring(0, 10)}...`);
 
