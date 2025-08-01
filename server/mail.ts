@@ -1,11 +1,12 @@
 import mail from "@sendgrid/mail";
-import { currentConfig } from './config';
 
-if (!currentConfig.sendgrid.apiKey) {
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+
+if (!SENDGRID_API_KEY) {
   throw new Error("SENDGRID_API_KEY環境変数が設定されていません");
 }
 
-mail.setApiKey(currentConfig.sendgrid.apiKey);
+mail.setApiKey(SENDGRID_API_KEY);
 
 type SendMailOptions = {
   to: string;
@@ -24,8 +25,16 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
   };
 
   console.log(`[SendGrid] 送信準備: ${to} - ${subject}`);
-  console.log(`[SendGrid] API Key exists: ${!!currentConfig.sendgrid.apiKey}`);
-  console.log(`[SendGrid] API Key prefix: ${currentConfig.sendgrid.apiKey?.substring(0, 10)}...`);
+  
+  // 開発環境では実際のメール送信をスキップ
+  const isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+  if (isDevelopment) {
+    console.log(`[SendGrid] 開発環境: メール送信をスキップ（認証コードはコンソールログに表示）`);
+    return { success: true };
+  }
+
+  console.log(`[SendGrid] API Key exists: ${!!SENDGRID_API_KEY}`);
+  console.log(`[SendGrid] API Key prefix: ${SENDGRID_API_KEY?.substring(0, 10)}...`);
 
   try {
     await mail.send(msg);
