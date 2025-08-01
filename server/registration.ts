@@ -27,9 +27,9 @@ const resendCodeSchema = z.object({
 const scrypt = promisify(crypto.scrypt);
 
 async function hashPassword(password: string): Promise<string> {
-  const salt = crypto.randomBytes(16);
+  const salt = crypto.randomBytes(16).toString("hex");
   const hash = (await scrypt(password, salt, 64)) as Buffer;
-  return salt.toString("hex") + ":" + hash.toString("hex");
+  return `${hash.toString("hex")}.${salt}`;
 }
 
 // 認証コード生成
@@ -99,10 +99,41 @@ export function setupRegistrationRoutes(app: Express) {
         expiresAt,
       });
 
-      // 認証メールを送信
-      await sendRegistrationVerificationEmail(email, username, verificationCode);
+      // 開発環境では認証コードをログに表示
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`\n=== 認証コード（開発環境のみ） ===`);
+        console.log(`メールアドレス: ${email}`);
+        console.log(`認証コード: ${verificationCode}`);
+        console.log(`有効期限: ${expiresAt.toLocaleString('ja-JP')}`);
+        console.log(`===============================\n`);
+      }
 
-      res.json({ message: "認証メールを送信しました" });
+      // 認証メールを送信
+      try {
+        await sendRegistrationVerificationEmail(email, username, verificationCode);
+        res.json({ 
+          message: "認証メールを送信しました",
+          debugInfo: process.env.NODE_ENV === 'development' ? { 
+            verificationCode,
+            note: "開発環境では上記コンソールログでも確認できます" 
+          } : undefined
+        });
+      } catch (emailError) {
+        console.error("[Registration] Email送信失敗:", emailError);
+        
+        // 開発環境ではコンソールに表示しているので、それを案内
+        if (process.env.NODE_ENV === 'development') {
+          res.json({ 
+            message: "メール送信に失敗しましたが、認証コードはコンソールログに表示されています",
+            verificationCode,
+            note: "開発環境では認証コードを直接使用できます"
+          });
+        } else {
+          res.status(500).json({ 
+            message: "認証メールの送信に失敗しました。しばらく時間をおいてから再度お試しください。"
+          });
+        }
+      }
     } catch (error) {
       console.error("[Registration] Request error:", error);
       
@@ -190,10 +221,40 @@ export function setupRegistrationRoutes(app: Express) {
         })
         .where(eq(registrationVerifications.id, existingVerification.id));
 
-      // 認証メールを再送信
-      await sendRegistrationVerificationEmail(email, existingVerification.username, verificationCode);
+      // 開発環境では認証コードをログに表示
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`\n=== 認証コード再送信（開発環境のみ） ===`);
+        console.log(`メールアドレス: ${email}`);
+        console.log(`認証コード: ${verificationCode}`);
+        console.log(`有効期限: ${expiresAt.toLocaleString('ja-JP')}`);
+        console.log(`===============================\n`);
+      }
 
-      res.json({ message: "認証コードを再送信しました" });
+      // 認証メールを再送信
+      try {
+        await sendRegistrationVerificationEmail(email, existingVerification.username, verificationCode);
+        res.json({ 
+          message: "認証コードを再送信しました",
+          debugInfo: process.env.NODE_ENV === 'development' ? { 
+            verificationCode,
+            note: "開発環境では上記コンソールログでも確認できます" 
+          } : undefined
+        });
+      } catch (emailError) {
+        console.error("[Registration] 再送信Email送信失敗:", emailError);
+        
+        if (process.env.NODE_ENV === 'development') {
+          res.json({ 
+            message: "メール送信に失敗しましたが、認証コードはコンソールログに表示されています",
+            verificationCode,
+            note: "開発環境では認証コードを直接使用できます"
+          });
+        } else {
+          res.status(500).json({ 
+            message: "認証メールの再送信に失敗しました。しばらく時間をおいてから再度お試しください。"
+          });
+        }
+      }
     } catch (error) {
       console.error("[Registration] Resend error:", error);
       
