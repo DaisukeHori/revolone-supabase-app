@@ -39,24 +39,7 @@ const crypto = {
     return `${buf.toString("hex")}.${salt}`;
   },
   compare: async (suppliedPassword: string, storedPassword: string) => {
-    // 新しい形式 (hash.salt) と古い形式 (salt:hash) の両方に対応
-    let hashedPassword: string;
-    let salt: string;
-    
-    if (storedPassword.includes(".")) {
-      // 新しい形式: hash.salt
-      [hashedPassword, salt] = storedPassword.split(".");
-    } else if (storedPassword.includes(":")) {
-      // 古い形式: salt:hash
-      [salt, hashedPassword] = storedPassword.split(":");
-    } else {
-      throw new Error("Invalid password hash format");
-    }
-    
-    if (!salt || !hashedPassword) {
-      throw new Error("Invalid password hash format");
-    }
-    
+    const [hashedPassword, salt] = storedPassword.split(".");
     const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
     const suppliedPasswordBuf = (await scryptAsync(
       suppliedPassword,

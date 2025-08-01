@@ -1,12 +1,11 @@
 import mail from "@sendgrid/mail";
+import { currentConfig } from './config';
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-
-if (!SENDGRID_API_KEY) {
+if (!currentConfig.sendgrid.apiKey) {
   throw new Error("SENDGRID_API_KEY環境変数が設定されていません");
 }
 
-mail.setApiKey(SENDGRID_API_KEY);
+mail.setApiKey(currentConfig.sendgrid.apiKey);
 
 type SendMailOptions = {
   to: string;
@@ -24,21 +23,11 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions) {
     html,
   };
 
-  console.log(`[SendGrid] 送信準備: ${to} - ${subject}`);
-  console.log(`[SendGrid] API Key exists: ${!!SENDGRID_API_KEY}`);
-  console.log(`[SendGrid] API Key prefix: ${SENDGRID_API_KEY?.substring(0, 10)}...`);
-
   try {
     await mail.send(msg);
-    console.log(`[SendGrid] メール送信成功: ${to}`);
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("メール送信エラー:", error);
-    
-    if (error.response?.body?.errors) {
-      console.error("SendGrid詳細エラー:", error.response.body.errors);
-    }
-    
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "不明なエラーが発生しました" 
