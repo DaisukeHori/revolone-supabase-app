@@ -23,19 +23,9 @@ html, body {
     min-height: calc(100vh - env(safe-area-inset-bottom, 0px));
   }
   
-  /* コンテンツエリアに固定の下余白を確保 - モバイルバー対応 */
+  /* コンテンツエリアに適切な下余白を確保 - ヘッダー固定対応で減らす */
   main {
-    padding-bottom: calc(2rem + 150px) !important;
-  }
-  
-  /* より確実にスクロール領域を確保 */
-  body {
-    padding-bottom: 150px;
-  }
-  
-  /* 全ページに下余白を追加 */
-  .container, .max-w-4xl, .space-y-8 {
-    margin-bottom: 150px;
+    padding-bottom: calc(1rem + 80px) !important; /* 150px → 80px に減量 */
   }
 }
 

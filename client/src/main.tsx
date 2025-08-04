@@ -6,21 +6,18 @@ import { Toaster } from "@/components/ui/toaster";
 import App from './App';
 import "./index.css";
 
-// モバイル用の固定余白を設定（シンプル版）
+// モバイル用の適切な余白を設定（ヘッダー固定対応版）
 function setupMobileBarPadding() {
   const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
   if (isMobile) {
-    console.log('[Mobile] Fixed 150px bottom padding applied');
+    console.log('[Mobile] Fixed 80px bottom padding applied (header-aware)');
     
-    // メインコンテンツエリアに固定余白を追加
+    // メインコンテンツエリアに適切な固定余白を追加
     const mainElement = document.querySelector('main');
     if (mainElement) {
-      mainElement.style.paddingBottom = 'calc(2rem + 150px)';
+      mainElement.style.paddingBottom = 'calc(1rem + 80px)'; // 150px → 80px に調整
     }
-    
-    // ボディにも固定余白
-    document.body.style.paddingBottom = '150px';
   }
 }
 
