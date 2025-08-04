@@ -61,6 +61,10 @@ export default function HomePage() {
         credentials: 'include'
       });
       if (!response.ok) {
+        if (response.status === 404) {
+          // 店舗がない場合は null を返す（エラーではない）
+          return null;
+        }
         throw new Error('Failed to fetch customer data');
       }
       return response.json() as Promise<StripeCustomerData>;
@@ -103,7 +107,7 @@ export default function HomePage() {
           <motion.div variants={item}>
             <Alert variant="destructive">
               <AlertDescription>
-                店舗情報の取得に失敗しました
+                サーバーとの通信に失敗しました。しばらく時間を置いてから再度お試しください。
               </AlertDescription>
             </Alert>
           </motion.div>
@@ -124,6 +128,40 @@ export default function HomePage() {
               <CardContent className="flex flex-col items-center justify-center p-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
                 <p className="text-gray-500 text-sm">店舗情報を読み込み中...</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : stripeData === null || (Array.isArray(stripeData) && stripeData.length === 0) ? (
+          <motion.div variants={item}>
+            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-6 w-6 text-gray-600" />
+                  </div>
+                  <div className="text-center sm:text-left flex-1">
+                    <CardTitle className="text-xl sm:text-2xl text-gray-800">店舗一覧</CardTitle>
+                    <p className="text-gray-600 text-sm sm:text-base">まだ店舗が登録されていません</p>
+                  </div>
+                  <Button 
+                    onClick={() => setLocation('/stores/new')}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    最初の店舗を登録
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center p-12">
+                <Building2 className="h-16 w-16 text-gray-300 mb-4" />
+                <p className="text-gray-500 text-base mb-6">店舗を登録してサービスを開始しましょう</p>
+                <Button 
+                  onClick={() => setLocation('/stores/new')}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  店舗を登録する
+                </Button>
               </CardContent>
             </Card>
           </motion.div>
