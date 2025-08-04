@@ -11,7 +11,8 @@ import {
   Settings,
   Home,
   Building2,
-  Smartphone
+  Smartphone,
+  ArrowLeft
 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
@@ -215,6 +216,29 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
           <div className="flex h-20 items-center gap-4 px-6">
+            {/* ハンバーガーメニューボタン（モバイル） */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            
+            {/* 戻るボタン（店舗詳細ページの場合） */}
+            {storeId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation('/')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                店舗一覧
+              </Button>
+            )}
+            
             {storeId && (
               <div className="flex-1">
                 <h1 className="text-lg font-semibold text-gray-800">
