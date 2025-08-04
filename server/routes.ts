@@ -37,6 +37,86 @@ export function registerRoutes(app: Express): Server {
   // メールアドレス変更関連のルートを設定
   setupEmailChangeRoutes(app);
 
+  // Stripe顧客作成のAPIエンドポイント
+  app.post('/api/stores/create-stripe-customer', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'ログインが必要です' });
+    }
+
+    try {
+      const {
+        storeName,
+        agencyCode,
+        shippingName,
+        shippingPostalCode,
+        shippingState,
+        shippingAddress1,
+        shippingAddress2,
+        billingName,
+        billingPostalCode,
+        billingState,
+        billingAddress1,
+        billingAddress2,
+        phoneNumber
+      } = req.body;
+
+      // 入力値の検証
+      if (!storeName || !agencyCode || !shippingName || !phoneNumber) {
+        return res.status(400).json({ message: '必須項目が入力されていません' });
+      }
+
+      if (!/^[A-Za-z0-9]{6}$/.test(agencyCode)) {
+        return res.status(400).json({ message: '代理店コードは6文字の英数字で入力してください' });
+      }
+
+      if (!/^\d{7}$/.test(shippingPostalCode) || !/^\d{7}$/.test(billingPostalCode)) {
+        return res.status(400).json({ message: '郵便番号は7桁の数字で入力してください' });
+      }
+
+      if (!/^0\d{9,10}$/.test(phoneNumber)) {
+        return res.status(400).json({ message: '日本の電話番号形式で入力してください' });
+      }
+
+      // Stripe顧客を作成
+      const customer = await stripe.customers.create({
+        name: billingName,
+        email: req.user!.email,
+        phone: phoneNumber.startsWith('0') ? '+81' + phoneNumber.slice(1) : phoneNumber,
+        address: {
+          city: billingAddress1,
+          country: 'JP',
+          line1: billingAddress1,
+          line2: billingAddress2 || '',
+          postal_code: billingPostalCode,
+          state: billingState,
+        },
+        shipping: {
+          name: shippingName,
+          address: {
+            city: shippingAddress1,
+            country: 'JP',
+            line1: shippingAddress1,
+            line2: shippingAddress2 || null,
+            postal_code: shippingPostalCode,
+            state: shippingState,
+          },
+        },
+        metadata: {
+          サロン名: storeName,
+          代理店名: agencyCode,
+        },
+      });
+
+      res.json({
+        message: '店舗が正常に登録されました',
+        customerId: customer.id,
+      });
+    } catch (error) {
+      console.error('Stripe顧客作成エラー:', error);
+      res.status(500).json({ message: 'Stripe顧客の作成に失敗しました' });
+    }
+  });
+
   // プロフィール編集のAPIエンドポイント
   app.put('/api/profile', async (req, res) => {
     if (!req.isAuthenticated()) {
