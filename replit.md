@@ -201,6 +201,14 @@ Changelog:
   - Comprehensive error handling with graceful application shutdown on database errors
   - Updated README.md to reflect automatic database initialization
   - COMPLETED: Zero-maintenance database setup with absolute safety guarantees
+- January 21, 2025. Fixed Salt error for user authentication
+  - Resolved password format inconsistency between registration and login
+  - Registration was using "salt:hash" format while login expected "hash.salt" format
+  - Updated registration.ts to use consistent "hash.salt" format
+  - Modified auth.ts to handle both formats for backward compatibility
+  - Existing users with old format (2 users) can still login
+  - New registrations will use the correct format
+  - COMPLETED: Salt error fixed, both new and existing users can login successfully
 ```
 
 ## User Preferences

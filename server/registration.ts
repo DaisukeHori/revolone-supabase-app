@@ -29,7 +29,7 @@ const scrypt = promisify(crypto.scrypt);
 async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16);
   const hash = (await scrypt(password, salt, 64)) as Buffer;
-  return salt.toString("hex") + ":" + hash.toString("hex");
+  return hash.toString("hex") + "." + salt.toString("hex");
 }
 
 // 認証コード生成
