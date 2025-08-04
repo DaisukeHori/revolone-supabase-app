@@ -15,7 +15,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-02-24.acacia",
 });
 
 export function registerRoutes(app: Express): Server {
@@ -114,6 +114,60 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Stripe顧客作成エラー:', error);
       res.status(500).json({ message: 'Stripe顧客の作成に失敗しました' });
+    }
+  });
+
+  // Stripe顧客削除のAPIエンドポイント
+  app.delete('/api/stores/delete-stripe-customer/:customerId', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'ログインが必要です' });
+    }
+
+    try {
+      const { customerId } = req.params;
+
+      // 削除前にサブスクリプションの確認
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        limit: 100,
+      });
+
+      // アクティブなサブスクリプションがあるかチェック
+      const activeSubscriptions = subscriptions.data.filter(
+        sub => sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due'
+      );
+
+      if (activeSubscriptions.length > 0) {
+        return res.status(400).json({
+          message: 'アクティブなサブスクリプションがあるため削除できません',
+          activeSubscriptions: activeSubscriptions.length,
+        });
+      }
+
+      // 未払いの請求書があるかチェック
+      const invoices = await stripe.invoices.list({
+        customer: customerId,
+        status: 'open',
+        limit: 100,
+      });
+
+      if (invoices.data.length > 0) {
+        return res.status(400).json({
+          message: '未払いの請求書があるため削除できません',
+          unpaidInvoices: invoices.data.length,
+        });
+      }
+
+      // 顧客を削除
+      await stripe.customers.del(customerId);
+
+      res.json({
+        message: '顧客が正常に削除されました',
+        customerId,
+      });
+    } catch (error) {
+      console.error('Stripe顧客削除エラー:', error);
+      res.status(500).json({ message: 'Stripe顧客の削除に失敗しました' });
     }
   });
 

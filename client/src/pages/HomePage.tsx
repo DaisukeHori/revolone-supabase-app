@@ -3,12 +3,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useUser } from "@/hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Building2, Clock, Loader2, Plus } from "lucide-react";
+import { CreditCard, Building2, Clock, Loader2, Plus, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AddStoreModal } from "@/components/store/AddStoreModal";
+import { DeleteStoreModal } from "@/components/store/DeleteStoreModal";
 import { useQueryClient } from "@tanstack/react-query";
 
 type StripeSubscription = {
@@ -58,6 +60,8 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const [showAddStoreModal, setShowAddStoreModal] = useState(false);
+  const [showDeleteStoreModal, setShowDeleteStoreModal] = useState(false);
+  const [selectedCustomerData, setSelectedCustomerData] = useState<any>(null);
   const queryClient = useQueryClient();
   const { data: stripeData, isLoading, error } = useQuery({
     queryKey: ['stripe-customer'],
@@ -203,7 +207,7 @@ export default function HomePage() {
                     }}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="space-y-2">
+                      <div className="space-y-2 flex-1">
                         <h3 className="text-lg sm:text-xl font-bold text-gray-800 break-words">
                           {customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定'}
                         </h3>
@@ -218,6 +222,31 @@ export default function HomePage() {
                           <span>登録日: {new Date(customerData.customer.created * 1000).toLocaleDateString("ja-JP")}</span>
                         </p>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem 
+                            className="text-red-600 focus:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCustomerData(customerData);
+                              setShowDeleteStoreModal(true);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            削除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     {customerData.subscriptions.length > 0 && (
                       <div className="grid gap-3 pt-4 border-t border-gray-200">
@@ -255,6 +284,17 @@ export default function HomePage() {
             queryClient.invalidateQueries({ queryKey: ['stripe-customer'] });
           }}
         />
+
+        {selectedCustomerData && (
+          <DeleteStoreModal
+            open={showDeleteStoreModal}
+            onOpenChange={setShowDeleteStoreModal}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['stripe-customer'] });
+            }}
+            customerData={selectedCustomerData}
+          />
+        )}
       </motion.div>
     </AppLayout>
   );
