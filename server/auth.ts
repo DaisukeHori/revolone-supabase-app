@@ -202,9 +202,14 @@ export function setupAuth(app: Express) {
               : null;
 
             if (twilioClient) {
+              // 日本の電話番号を国際形式に変換
+              const internationalPhone = user.phoneNumber.startsWith('0') 
+                ? '+81' + user.phoneNumber.slice(1) 
+                : user.phoneNumber;
+
               await twilioClient.messages.create({
                 body: `【RevolOne】認証コード：${verificationCode}\n\nこちらの認証コードを入力してログインを完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
-                to: user.phoneNumber,
+                to: internationalPhone,
                 from: process.env.TWILIO_PHONE_NUMBER
               });
 
