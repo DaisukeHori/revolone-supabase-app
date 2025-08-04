@@ -23,9 +23,14 @@ html, body {
     min-height: calc(100vh - env(safe-area-inset-bottom, 0px));
   }
   
-  /* コンテンツエリアに十分な下余白を確保 */
+  /* コンテンツエリアに十分な下余白を確保 - JavaScript で動的に設定 */
   main {
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(2rem + var(--mobile-bar-height, 0px)) !important;
+  }
+  
+  /* より確実にスクロール領域を確保 */
+  body {
+    padding-bottom: var(--mobile-bar-height, 0px);
   }
 }
 
