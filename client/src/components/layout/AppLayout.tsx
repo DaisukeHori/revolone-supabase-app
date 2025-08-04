@@ -86,7 +86,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed top-0 left-0 z-40 mobile-full-height",
+          "fixed top-0 left-0 z-40 h-screen",
           "bg-white border-r border-gray-200 shadow-lg",
           "hidden md:block md:translate-x-0 md:w-72" // モバイルでは完全に非表示
         )}

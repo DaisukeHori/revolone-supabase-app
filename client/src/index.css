@@ -4,24 +4,23 @@
 
 /* モバイル対応のビューポート修正 */
 html, body {
-  height: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  /* 高さは自動に設定してスクロール問題を回避 */
 }
 
-/* iOS Safari対応 */
-@supports (-webkit-touch-callout: none) {
-  html, body {
-    height: -webkit-fill-available;
-  }
-}
-
-/* 全高コンテナのモバイル対応 */
+/* 全高コンテナのモバイル対応 - min-heightを使用 */
 .mobile-full-height {
   min-height: 100vh; /* フォールバック */
-  min-height: 100dvh; /* モダンブラウザ */
-  min-height: -webkit-fill-available; /* iOS Safari */
+  /* 最小高さのみ設定し、コンテンツに応じて伸縮可能にする */
+}
+
+/* iOS Safari の動的ビューポート対応 */
+@supports (height: 100dvh) {
+  .mobile-full-height {
+    min-height: 100dvh;
+  }
 }
 
 @layer base {
