@@ -75,20 +75,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <Background className="fixed inset-0" />
 
-      {/* オーバーレイ（モバイル用） */}
-      <AnimatePresence>
-        {isMobile && isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
-          />
-        )}
-      </AnimatePresence>
+      {/* オーバーレイは不要（モバイルではサイドバーを使わないため） */}
 
-      {/* サイドバー */}
+      {/* サイドバー（デスクトップのみ） */}
       <motion.aside
         initial={false}
         animate={{ 
@@ -99,9 +88,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         className={cn(
           "fixed top-0 left-0 z-40 h-screen",
           "bg-white border-r border-gray-200 shadow-lg",
-          "md:translate-x-0 md:w-72",
-          !isMobile && "md:block",
-          isMobile && "hidden" // モバイルではサイドバーを非表示
+          "hidden md:block md:translate-x-0 md:w-72" // モバイルでは完全に非表示
         )}
       >
         <div className="flex h-full flex-col">
@@ -113,16 +100,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </div>
               <span className="text-xl font-bold text-white">Revonizer管理</span>
             </div>
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(false)}
-                className="md:hidden text-white hover:bg-white/20"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            )}
+            {/* モバイルでは閉じるボタンは不要 */}
           </div>
 
           {/* ナビゲーションメニュー */}
@@ -144,7 +122,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                   )}
                   onClick={() => {
                     setLocation(item.href);
-                    isMobile && setIsSidebarOpen(false);
                   }}
                 >
                   <div className={cn(
@@ -168,7 +145,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                   className="w-full justify-start gap-4 h-12 px-4 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 group"
                   onClick={() => {
                     setLocation("/");
-                    isMobile && setIsSidebarOpen(false);
                   }}
                 >
                   <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-colors">
@@ -210,22 +186,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* メインコンテンツ */}
       <div className={cn(
         "min-h-screen transition-all duration-200 bg-gray-50",
-        isSidebarOpen && isMobile ? "overflow-hidden" : "",
-        "md:ml-72"
+        "md:ml-72" // モバイルではマージンなし、デスクトップではサイドバー分のマージン
       )}>
         {/* ヘッダー */}
         <header className="sticky top-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
           <div className="flex h-20 items-center gap-4 px-6">
-            {/* ハンバーガーメニューボタン（モバイル） */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="md:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            
             {/* 戻るボタン（店舗詳細ページの場合） */}
             {storeId && (
               <Button
@@ -259,10 +224,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* コンテンツエリア */}
-        <main className={cn(
-          "container mx-auto p-6 md:p-8",
-          isMobile ? "pb-24" : "" // モバイルでボトムナビゲーションのスペースを確保
-        )}>
+        <main className="container mx-auto p-6 md:p-8">
           {children}
         </main>
       </div>
