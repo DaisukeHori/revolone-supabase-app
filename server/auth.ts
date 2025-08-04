@@ -36,24 +36,13 @@ const crypto = {
   hash: async (password: string) => {
     const salt = randomBytes(16).toString("hex");
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
+    return `${salt}:${buf.toString("hex")}`;
   },
   compare: async (suppliedPassword: string, storedPassword: string) => {
-    // 新形式（.区切り）と旧形式（:区切り）の両方に対応
-    let hashedPassword: string;
-    let salt: string;
-    
-    if (storedPassword.includes(".")) {
-      // 新形式: hash.salt
-      [hashedPassword, salt] = storedPassword.split(".");
-    } else if (storedPassword.includes(":")) {
-      // 旧形式: salt:hash
-      [salt, hashedPassword] = storedPassword.split(":");
-    } else {
-      // 不正な形式
+    const [salt, hashedPassword] = storedPassword.split(":");
+    if (!salt || !hashedPassword) {
       return false;
     }
-    
     const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
     const suppliedPasswordBuf = (await scryptAsync(
       suppliedPassword,
