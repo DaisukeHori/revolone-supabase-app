@@ -10,13 +10,26 @@ html, body {
   /* 高さは自動に設定してスクロール問題を回避 */
 }
 
-/* 全高コンテナのモバイル対応 - min-heightを使用 */
+/* 全高コンテナのモバイル対応 - 固定高さを使わずautoで自然な高さに */
 .mobile-full-height {
-  min-height: 100vh; /* フォールバック */
-  /* 最小高さのみ設定し、コンテンツに応じて伸縮可能にする */
+  min-height: calc(100vh - 0px); /* ブラウザバーを考慮しない最小高さ */
 }
 
-/* iOS Safari の動的ビューポート対応 */
+/* モバイルでのスクロール改善 */
+@media (max-width: 768px) {
+  .mobile-full-height {
+    min-height: 100vh;
+    /* iOS Safari での動的ビューポート対応 */
+    min-height: calc(100vh - env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* コンテンツエリアに十分な下余白を確保 */
+  main {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* iOS Safari の動的ビューポート対応（モダンブラウザ） */
 @supports (height: 100dvh) {
   .mobile-full-height {
     min-height: 100dvh;
