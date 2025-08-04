@@ -23,13 +23,13 @@ const resendCodeSchema = z.object({
   email: z.string().email(),
 });
 
-// 暗号化関数
+// 暗号化関数（auth.tsと同じ実装を使用）
 const scrypt = promisify(crypto.scrypt);
 
 async function hashPassword(password: string): Promise<string> {
-  const salt = crypto.randomBytes(16);
-  const hash = (await scrypt(password, salt, 64)) as Buffer;
-  return salt.toString("hex") + ":" + hash.toString("hex");
+  const salt = crypto.randomBytes(16).toString("hex");
+  const buf = (await scrypt(password, salt, 64)) as Buffer;
+  return `${salt}:${buf.toString("hex")}`;
 }
 
 // 認証コード生成
