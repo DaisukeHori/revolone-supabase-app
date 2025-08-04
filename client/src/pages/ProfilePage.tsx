@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle } from "lucide-react";
+import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle, Lock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
 
 const profileSchema = z.object({
   username: z.string().min(1, "名前は必須です"),
@@ -29,7 +30,7 @@ type VerificationCodeForm = z.infer<typeof verificationCodeSchema>;
 export default function ProfilePage() {
   const { user } = useUser();
   const { toast } = useToast();
-  const [editingField, setEditingField] = useState<'username' | 'email' | null>(null);
+  const [editingField, setEditingField] = useState<'username' | 'email' | 'password' | null>(null);
   const [emailChangeStep, setEmailChangeStep] = useState<'form' | 'verification' | 'success'>('form');
   const [pendingEmail, setPendingEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -374,6 +375,27 @@ export default function ProfilePage() {
             {editingField !== 'email' && (
               <Button variant="outline" size="sm" onClick={handleEmailEdit}>
                 <Edit2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* パスワード変更 */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex-1">
+              <Label className="text-sm font-medium text-gray-700">パスワード</Label>
+              {editingField === 'password' ? (
+                <div className="mt-2">
+                  <ChangePasswordForm onComplete={() => setEditingField(null)} />
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-lg text-gray-400">••••••••</p>
+                </div>
+              )}
+            </div>
+            {editingField !== 'password' && (
+              <Button variant="outline" size="sm" onClick={() => setEditingField('password')}>
+                <Lock className="w-4 h-4" />
               </Button>
             )}
           </div>
