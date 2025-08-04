@@ -17,6 +17,10 @@ import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
 const profileSchema = z.object({
   username: z.string().min(1, "名前は必須です"),
   email: z.string().email("有効なメールアドレスを入力してください"),
+  phoneNumber: z.string().optional().refine(
+    (val) => !val || /^\+[1-9]\d{1,14}$/.test(val),
+    "国際電話形式で入力してください（例：+818012345678）"
+  ),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -30,7 +34,7 @@ type VerificationCodeForm = z.infer<typeof verificationCodeSchema>;
 export default function ProfilePage() {
   const { user } = useUser();
   const { toast } = useToast();
-  const [editingField, setEditingField] = useState<'username' | 'email' | 'password' | null>(null);
+  const [editingField, setEditingField] = useState<'username' | 'email' | 'phoneNumber' | 'password' | null>(null);
   const [emailChangeStep, setEmailChangeStep] = useState<'form' | 'verification' | 'success'>('form');
   const [pendingEmail, setPendingEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +44,7 @@ export default function ProfilePage() {
     defaultValues: {
       username: user?.username || '',
       email: user?.email || '',
+      phoneNumber: user?.phoneNumber || '',
     },
   });
 
@@ -61,6 +66,11 @@ export default function ProfilePage() {
     profileForm.setValue('email', user?.email || '');
   };
 
+  const handlePhoneEdit = () => {
+    setEditingField('phoneNumber');
+    profileForm.setValue('phoneNumber', user?.phoneNumber || '');
+  };
+
   const handleCancelEdit = () => {
     setEditingField(null);
     setEmailChangeStep('form');
@@ -68,6 +78,7 @@ export default function ProfilePage() {
     profileForm.reset({
       username: user?.username || '',
       email: user?.email || '',
+      phoneNumber: user?.phoneNumber || '',
     });
     verificationForm.reset();
   };
@@ -174,6 +185,40 @@ export default function ProfilePage() {
         variant: "destructive",
         title: "エラー",
         description: "認証に失敗しました",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneSubmit = async (data: ProfileForm) => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('PUT', '/api/profile', {
+        phoneNumber: data.phoneNumber,
+      });
+
+      if (response.ok) {
+        toast({
+          title: "更新完了",
+          description: "電話番号が更新されました",
+        });
+        setEditingField(null);
+        // ユーザー情報を再取得
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast({
+          variant: "destructive",
+          title: "エラー",
+          description: error.message || "電話番号の更新に失敗しました",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: "電話番号の更新に失敗しました",
       });
     } finally {
       setIsLoading(false);
@@ -374,6 +419,44 @@ export default function ProfilePage() {
             
             {editingField !== 'email' && (
               <Button variant="outline" size="sm" onClick={handleEmailEdit}>
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* 電話番号の編集 */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex-1">
+              <Label className="text-sm font-medium text-gray-700">電話番号</Label>
+              {editingField === 'phoneNumber' ? (
+                <form onSubmit={profileForm.handleSubmit(handlePhoneSubmit)} className="mt-2">
+                  <div className="flex gap-2">
+                    <Input
+                      {...profileForm.register('phoneNumber')}
+                      placeholder="+818012345678"
+                      className="flex-1"
+                    />
+                    <Button type="submit" size="sm" disabled={isLoading}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={handleCancelEdit}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {profileForm.formState.errors.phoneNumber && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {profileForm.formState.errors.phoneNumber.message}
+                    </p>
+                  )}
+                </form>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-lg">{user?.phoneNumber || '未設定'}</p>
+                </div>
+              )}
+            </div>
+            {editingField !== 'phoneNumber' && (
+              <Button variant="outline" size="sm" onClick={handlePhoneEdit}>
                 <Edit2 className="w-4 h-4" />
               </Button>
             )}

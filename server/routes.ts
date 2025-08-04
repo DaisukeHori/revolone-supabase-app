@@ -44,26 +44,57 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const { username } = req.body;
+      const { username, phoneNumber } = req.body;
       
-      if (!username || typeof username !== 'string') {
-        return res.status(400).json({ message: '名前は必須です' });
+      // 更新するフィールドを構築
+      const updateData: any = {};
+      
+      if (username !== undefined) {
+        if (!username || typeof username !== 'string') {
+          return res.status(400).json({ message: '名前は必須です' });
+        }
+        if (username.trim().length === 0) {
+          return res.status(400).json({ message: '名前を入力してください' });
+        }
+        updateData.username = username.trim();
+      }
+      
+      if (phoneNumber !== undefined) {
+        if (phoneNumber && typeof phoneNumber === 'string') {
+          // 国際電話番号形式の検証
+          if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+            return res.status(400).json({ message: '国際電話形式で入力してください（例：+818012345678）' });
+          }
+          updateData.phoneNumber = phoneNumber;
+        } else {
+          updateData.phoneNumber = null; // 空文字列は null に変換
+        }
       }
 
-      if (username.trim().length === 0) {
-        return res.status(400).json({ message: '名前を入力してください' });
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: '更新する項目がありません' });
       }
 
-      // データベースのユーザー名を更新
+      // データベースを更新
       await db
         .update(users)
-        .set({ username: username.trim() })
+        .set({ ...updateData, updatedAt: new Date() })
         .where(eq(users.id, req.user!.id));
 
-      res.json({ message: '名前が更新されました' });
+      // 成功メッセージを構築
+      const updatedFields = Object.keys(updateData);
+      let message = '';
+      if (updatedFields.includes('username')) message += '名前';
+      if (updatedFields.includes('phoneNumber')) {
+        if (message) message += 'と';
+        message += '電話番号';
+      }
+      message += 'が更新されました';
+
+      res.json({ message });
     } catch (error) {
       console.error('Profile update error:', error);
-      res.status(500).json({ message: '名前の更新に失敗しました' });
+      res.status(500).json({ message: 'プロフィールの更新に失敗しました' });
     }
   });
 
