@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
-import { Bell, Moon, Shield, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Bell, Moon, Shield, ArrowLeft, Loader2, AlertCircle, Key } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
+import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
 
 interface MFAStatus {
   enabled: boolean;
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const { isDark, toggleTheme } = useTheme();
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [, setLocation] = useLocation();
@@ -315,6 +317,53 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   </div>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={item}>
+          <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                  <Key className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">パスワード変更</CardTitle>
+                  <CardDescription>
+                    アカウントのパスワードを変更します
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">現在のパスワード</Label>
+                  <p className="text-sm text-muted-foreground">
+                    セキュリティのため定期的にパスワードを変更することをお勧めします
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPasswordChange(true)}
+                >
+                  パスワード変更
+                </Button>
+              </div>
+
+              {/* パスワード変更モーダル */}
+              <Dialog open={showPasswordChange} onOpenChange={setShowPasswordChange}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>パスワードの変更</DialogTitle>
+                    <DialogDescription>
+                      新しいパスワードを設定してください。パスワードは8文字以上である必要があります。
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ChangePasswordForm onComplete={() => setShowPasswordChange(false)} />
                 </DialogContent>
               </Dialog>
             </CardContent>
