@@ -140,6 +140,7 @@ export function setupAuth(app: Express) {
           
           console.log(`[Auth] Attempting login for: ${email}`);
           console.log(`[Auth] Stored password format: ${user.password.substring(0, 20)}...`);
+          console.log(`[Auth] Supplied password: ${password}`);
           const isMatch = await crypto.compare(password, user.password);
           console.log(`[Auth] Password match result: ${isMatch}`);
           if (!isMatch) {
