@@ -189,7 +189,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         "md:ml-72" // モバイルではマージンなし、デスクトップではサイドバー分のマージン
       )}>
         {/* ヘッダー */}
-        <header className="sticky top-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
+        <header className="fixed top-0 left-0 right-0 z-30 h-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm md:left-72">
           <div className="flex h-20 items-center gap-4 px-6">
             {/* 戻るボタン（店舗詳細ページの場合） */}
             {storeId && (
@@ -224,7 +224,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* コンテンツエリア */}
-        <main className="container mx-auto p-6 md:p-8">
+        <main className="container mx-auto p-6 md:p-8 pt-24">
           {children}
         </main>
       </div>
