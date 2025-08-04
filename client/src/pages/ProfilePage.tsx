@@ -17,8 +17,8 @@ const profileSchema = z.object({
   username: z.string().min(1, "名前は必須です"),
   email: z.string().email("有効なメールアドレスを入力してください"),
   phoneNumber: z.string().optional().refine(
-    (val) => !val || /^\+[1-9]\d{1,14}$/.test(val),
-    "国際電話形式で入力してください（例：+818012345678）"
+    (val) => !val || /^0\d{9,10}$/.test(val),
+    "日本の電話番号形式で入力してください（例：09012345678）"
   ),
 });
 
@@ -432,7 +432,7 @@ export default function ProfilePage() {
                   <div className="flex gap-2">
                     <Input
                       {...profileForm.register('phoneNumber')}
-                      placeholder="+818012345678"
+                      placeholder="09012345678"
                       className="flex-1"
                     />
                     <Button type="submit" size="sm" disabled={isLoading}>

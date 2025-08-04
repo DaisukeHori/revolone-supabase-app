@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   </p>
                   {!user?.phoneNumber && (
                     <p className="text-sm text-red-500">
-                      ※プロフィールで電話番号を設定してください
+                      ※プロフィールで電話番号を設定してください（例：09012345678）
                     </p>
                   )}
                 </div>

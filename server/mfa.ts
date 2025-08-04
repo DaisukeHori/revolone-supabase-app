@@ -37,9 +37,14 @@ async function sendSMSCode(phoneNumber: string, code: string) {
     throw new Error("Twilio credentials not configured");
   }
 
+  // 日本の電話番号を国際形式に変換
+  const internationalPhone = phoneNumber.startsWith('0') 
+    ? '+81' + phoneNumber.slice(1) 
+    : phoneNumber;
+
   await twilioClient.messages.create({
     body: `【RevolOne】認証コード：${code}\n\nこちらの認証コードを入力して2段階認証の設定を完了してください。\n\n※このコードの有効期限は10分間です。\n※心当たりのない場合は、このメッセージを破棄してください。`,
-    to: phoneNumber,
+    to: internationalPhone,
     from: process.env.TWILIO_PHONE_NUMBER
   });
 }

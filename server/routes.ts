@@ -61,9 +61,9 @@ export function registerRoutes(app: Express): Server {
       
       if (phoneNumber !== undefined) {
         if (phoneNumber && typeof phoneNumber === 'string') {
-          // 国際電話番号形式の検証
-          if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
-            return res.status(400).json({ message: '国際電話形式で入力してください（例：+818012345678）' });
+          // 日本の電話番号形式の検証
+          if (!/^0\d{9,10}$/.test(phoneNumber)) {
+            return res.status(400).json({ message: '日本の電話番号形式で入力してください（例：09012345678）' });
           }
           updateData.phoneNumber = phoneNumber;
         } else {
