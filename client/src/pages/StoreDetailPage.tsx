@@ -339,14 +339,6 @@ export default function StoreDetailPage() {
         className="space-y-8"
       >
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/")}
-            className="hover:bg-primary/10 flex-shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <h1 className="text-xl sm:text-2xl font-semibold">店舗詳細</h1>
         </div>
 

@@ -189,14 +189,6 @@ export default function StoreDevicesPage() {
         className="space-y-8"
       >
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation(`/store/${storeId}`)}
-            className="hover:bg-primary/10 flex-shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">デバイス管理</h1>
             <p className="text-muted-foreground">レボナイザーデバイスの配送・返却状況</p>
