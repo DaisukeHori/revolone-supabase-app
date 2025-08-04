@@ -41,14 +41,18 @@ const crypto = {
   compare: async (suppliedPassword: string, storedPassword: string) => {
     const [salt, hashedPassword] = storedPassword.split(":");
     if (!salt || !hashedPassword) {
+      console.log("[Auth] Invalid password format");
       return false;
     }
+    console.log(`[Auth] Salt: ${salt}, Hash length: ${hashedPassword.length}`);
     const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
     const suppliedPasswordBuf = (await scryptAsync(
       suppliedPassword,
       salt,
       64
     )) as Buffer;
+    console.log(`[Auth] Computed hash: ${suppliedPasswordBuf.toString("hex").substring(0, 20)}...`);
+    console.log(`[Auth] Stored hash: ${hashedPassword.substring(0, 20)}...`);
     return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
   },
 };
