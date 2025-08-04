@@ -72,7 +72,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-full-height bg-background">
       <Background className="fixed inset-0" />
 
       {/* オーバーレイは不要（モバイルではサイドバーを使わないため） */}
@@ -86,7 +86,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen",
+          "fixed top-0 left-0 z-40 mobile-full-height",
           "bg-white border-r border-gray-200 shadow-lg",
           "hidden md:block md:translate-x-0 md:w-72" // モバイルでは完全に非表示
         )}
@@ -185,7 +185,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* メインコンテンツ */}
       <div className={cn(
-        "min-h-screen transition-all duration-200 bg-gray-50",
+        "mobile-full-height transition-all duration-200 bg-gray-50",
         "md:ml-72" // モバイルではマージンなし、デスクトップではサイドバー分のマージン
       )}>
         {/* ヘッダー */}

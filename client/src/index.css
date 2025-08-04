@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* モバイル対応のビューポート修正 */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* iOS Safari対応 */
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    height: -webkit-fill-available;
+  }
+}
+
+/* 全高コンテナのモバイル対応 */
+.mobile-full-height {
+  min-height: 100vh; /* フォールバック */
+  min-height: 100dvh; /* モダンブラウザ */
+  min-height: -webkit-fill-available; /* iOS Safari */
+}
+
 @layer base {
   * {
     @apply border-border;
