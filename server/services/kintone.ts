@@ -61,6 +61,7 @@ function getKintoneApiToken() {
   console.log('NODE_ENV:', process.env.NODE_ENV);
   console.log('KINTONE_API_TOKEN存在:', !!token);
   console.log('KINTONE_API_TOKEN長さ:', token?.length || 0);
+  console.log('KINTONE_API_TOKEN全体:', token);
   console.log('==================================');
   
   if (!token) {
@@ -73,8 +74,7 @@ function getKintoneApiToken() {
   console.log(`[Kintone] 環境: ${process.env.NODE_ENV || 'development'}`);
   console.log(`[Kintone] 元のトークン長: ${token.length}`);
   console.log(`[Kintone] トリム後のトークン長: ${trimmedToken.length}`);
-  console.log(`[Kintone] トークン先頭20文字: ${trimmedToken.substring(0, 20)}...`);
-  console.log(`[Kintone] トークン末尾10文字: ...${trimmedToken.substring(trimmedToken.length - 10)}`);
+  console.log(`[Kintone] トークン全体: ${trimmedToken}`);
   
   if (token.length !== trimmedToken.length) {
     console.log(`[Kintone] トークンに空白または改行が含まれていました（${token.length - trimmedToken.length}文字削除）`);
@@ -423,8 +423,7 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     console.error('環境変数KINTONE_API_TOKEN長さ:', process.env.KINTONE_API_TOKEN?.length || 0);
     
     const token = getKintoneApiToken();
-    console.error('使用したトークン先頭20文字:', token.substring(0, 20));
-    console.error('使用したトークン末尾10文字:', token.substring(token.length - 10));
+    console.error('使用したトークン全体:', token);
     console.error('使用したトークン全長:', token.length);
     
     // トークンに不正な文字が含まれているかチェック
