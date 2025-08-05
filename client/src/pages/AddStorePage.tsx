@@ -106,22 +106,85 @@ function AddStoreForm() {
     
     setIsAddressLoading(true);
     try {
+      console.log('郵便番号検索開始:', postalCode);
       const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${postalCode}`);
       const data = await response.json();
+      console.log('API レスポンス:', data);
       
       if (data.results && data.results.length > 0) {
         const result = data.results[0];
-        form.setValue('shippingState', result.address1);
-        form.setValue('shippingLine1', result.address2 + result.address3);
+        console.log('住所情報:', result);
+        
+        // フォームの値を更新
+        form.setValue('shippingState', result.address1, { shouldValidate: true });
+        form.setValue('shippingLine1', result.address2 + result.address3, { shouldValidate: true });
         
         // 同じ住所を使用する場合は請求先も更新
-        if (watchedValues.useSameAddress) {
-          form.setValue('billingState', result.address1);
-          form.setValue('billingLine1', result.address2 + result.address3);
+        if (form.getValues('useSameAddress')) {
+          form.setValue('billingState', result.address1, { shouldValidate: true });
+          form.setValue('billingLine1', result.address2 + result.address3, { shouldValidate: true });
         }
+        
+        toast({
+          title: "住所を自動入力しました",
+          description: `${result.address1} ${result.address2}${result.address3}`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "郵便番号が見つかりません",
+          description: "正しい7桁の郵便番号を入力してください",
+        });
       }
     } catch (error) {
       console.error('住所取得エラー:', error);
+      toast({
+        variant: "destructive",
+        title: "住所検索エラー",
+        description: "住所の検索に失敗しました。もう一度お試しください。",
+      });
+    } finally {
+      setIsAddressLoading(false);
+    }
+  };
+
+  // 請求先郵便番号による住所自動補完
+  const fetchBillingAddressFromPostalCode = async (postalCode: string) => {
+    if (!postalCode || postalCode.length !== 7) return;
+    
+    setIsAddressLoading(true);
+    try {
+      console.log('請求先郵便番号検索開始:', postalCode);
+      const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${postalCode}`);
+      const data = await response.json();
+      console.log('請求先API レスポンス:', data);
+      
+      if (data.results && data.results.length > 0) {
+        const result = data.results[0];
+        console.log('請求先住所情報:', result);
+        
+        // 請求先フォームの値を更新
+        form.setValue('billingState', result.address1, { shouldValidate: true });
+        form.setValue('billingLine1', result.address2 + result.address3, { shouldValidate: true });
+        
+        toast({
+          title: "請求先住所を自動入力しました",
+          description: `${result.address1} ${result.address2}${result.address3}`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "郵便番号が見つかりません",
+          description: "正しい7桁の郵便番号を入力してください",
+        });
+      }
+    } catch (error) {
+      console.error('請求先住所取得エラー:', error);
+      toast({
+        variant: "destructive",
+        title: "住所検索エラー",
+        description: "住所の検索に失敗しました。もう一度お試しください。",
+      });
     } finally {
       setIsAddressLoading(false);
     }
@@ -547,6 +610,14 @@ function AddStoreForm() {
                       placeholder="1234567"
                       maxLength={7}
                       pattern="[0-9]{7}"
+                      onChange={(e) => {
+                        // React Hook Formの値を更新
+                        form.setValue('shippingPostalCode', e.target.value);
+                        // 7桁入力時に住所検索を実行
+                        if (e.target.value.length === 7 && /^\d{7}$/.test(e.target.value)) {
+                          fetchAddressFromPostalCode(e.target.value);
+                        }
+                      }}
                     />
                     {isAddressLoading && (
                       <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
@@ -673,13 +744,29 @@ function AddStoreForm() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="billingPostalCode">郵便番号 *</Label>
-                      <Input
-                        id="billingPostalCode"
-                        {...form.register('billingPostalCode')}
-                        placeholder="1234567"
-                        maxLength={7}
-                        pattern="[0-9]{7}"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="billingPostalCode"
+                          {...form.register('billingPostalCode')}
+                          placeholder="1234567"
+                          maxLength={7}
+                          pattern="[0-9]{7}"
+                          onChange={(e) => {
+                            // React Hook Formの値を更新
+                            form.setValue('billingPostalCode', e.target.value);
+                            // 7桁入力時に住所検索を実行
+                            if (e.target.value.length === 7 && /^\d{7}$/.test(e.target.value)) {
+                              fetchBillingAddressFromPostalCode(e.target.value);
+                            }
+                          }}
+                        />
+                        {isAddressLoading && (
+                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">ハイフンなし7桁で入力してください（住所が自動入力されます）</p>
                     </div>
                     
                     <div>
