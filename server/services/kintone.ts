@@ -238,17 +238,14 @@ export async function getWorkRecordsByRepairTicketNumber(repairTicketNumber: str
       const query = `ルックアップ = "${repairTicketNumber}"`;
       console.log(`送信クエリ: ${query}`);
       
-      const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-        headers: {
-          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          app: KINTONE_WORK_RECORD_APP_ID,
-          query: query,
-          totalCount: true
+      const response = await axios.get(
+        `${KINTONE_BASE_URL}/records.json?app=${KINTONE_WORK_RECORD_APP_ID}&query=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+          },
         }
-      });
+      );
       
       console.log(`ルックアップフィールドでの検索結果: ${response.data.records.length}件`);
       
@@ -280,23 +277,20 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   try {
     console.log(`App22から製造番号${serialNumber}の修理履歴を検索中...`);
     
-    // POSTリクエストで完全一致検索を実行
-    console.log('POSTリクエストで完全一致検索を実行中...');
+    // 完全一致検索を実行
+    console.log('完全一致検索を実行中...');
     
     const query = `ルックアップ = "${serialNumber}"`;
     console.log(`送信クエリ: ${query}`);
     
-    const response = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-        'Content-Type': 'application/json'
-      },
-      params: {
-        app: KINTONE_REPAIR_HISTORY_APP_ID,
-        query: query,
-        totalCount: true
+    const response = await axios.get(
+      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        },
       }
-    });
+    );
     
     console.log(`検索結果: ${response.data.records.length}件`);
     
@@ -312,17 +306,14 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     const likeQuery = `ルックアップ like "${serialNumber}"`;
     console.log(`送信クエリ: ${likeQuery}`);
     
-    const likeResponse = await axios.get(`${KINTONE_BASE_URL}/records.json`, {
-      headers: {
-        'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
-        'Content-Type': 'application/json'
-      },
-      params: {
-        app: KINTONE_REPAIR_HISTORY_APP_ID,
-        query: likeQuery,
-        totalCount: true
+    const likeResponse = await axios.get(
+      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(likeQuery)}`,
+      {
+        headers: {
+          'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
+        },
       }
-    });
+    );
     
     console.log(`部分一致検索結果: ${likeResponse.data.records.length}件`);
     
