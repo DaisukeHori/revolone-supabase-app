@@ -224,7 +224,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* コンテンツエリア */}
-        <main className="container mx-auto p-6 md:p-8 pt-24">
+        <main className="container mx-auto p-6 md:p-8 pt-20">
           {children}
         </main>
       </div>
