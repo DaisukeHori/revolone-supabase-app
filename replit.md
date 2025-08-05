@@ -87,7 +87,7 @@ This is a comprehensive device and subscription management system for Revonizer,
 - `SENDGRID_API_KEY`: SendGrid API key
 - `TWILIO_ACCOUNT_SID`: Twilio account identifier
 - `TWILIO_AUTH_TOKEN`: Twilio authentication token
-- `KINTONE_API_TOKEN`: Kintone API access token (requires access to both App 40 and App 21)
+- `KINTONE_API_TOKEN_ALL`: Kintone API access token (requires access to App 21, App 22, App 23, and App 40)
 
 ## Deployment Strategy
 

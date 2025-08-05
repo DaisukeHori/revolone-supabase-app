@@ -55,13 +55,13 @@ const KINTONE_WORK_RECORD_APP_ID = '23'; // 修理履歴用のアプリID
 
 // APIトークンの取得（開発・本番共通）
 function getKintoneApiToken() {
-  const token = process.env.KINTONE_API_TOKEN;
+  const token = process.env.KINTONE_API_TOKEN_ALL;
   
   console.log('========== 環境変数詳細 ==========');
   console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('KINTONE_API_TOKEN存在:', !!token);
-  console.log('KINTONE_API_TOKEN長さ:', token?.length || 0);
-  console.log('KINTONE_API_TOKEN全体:', token);
+  console.log('KINTONE_API_TOKEN_ALL存在:', !!token);
+  console.log('KINTONE_API_TOKEN_ALL長さ:', token?.length || 0);
+  console.log('KINTONE_API_TOKEN_ALL全体:', token);
   console.log('==================================');
   
   if (!token) {
@@ -419,8 +419,8 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     console.error('エラーメッセージ:', error.response?.statusText);
     console.error('エラーレスポンスデータ:', JSON.stringify(error.response?.data, null, 2));
     console.error('リクエストURL:', error.config?.url);
-    console.error('環境変数KINTONE_API_TOKEN存在:', !!process.env.KINTONE_API_TOKEN);
-    console.error('環境変数KINTONE_API_TOKEN長さ:', process.env.KINTONE_API_TOKEN?.length || 0);
+    console.error('環境変数KINTONE_API_TOKEN_ALL存在:', !!process.env.KINTONE_API_TOKEN_ALL);
+    console.error('環境変数KINTONE_API_TOKEN_ALL長さ:', process.env.KINTONE_API_TOKEN_ALL?.length || 0);
     
     const token = getKintoneApiToken();
     console.error('使用したトークン全体:', token);

@@ -66,10 +66,10 @@ app.use((req, res, next) => {
       // 起動時に環境変数の状態を確認
       console.log('========== 環境変数チェック ==========');
       console.log('NODE_ENV:', process.env.NODE_ENV);
-      console.log('KINTONE_API_TOKEN存在:', !!process.env.KINTONE_API_TOKEN);
-      console.log('KINTONE_API_TOKEN長さ:', process.env.KINTONE_API_TOKEN?.length || 0);
-      if (process.env.KINTONE_API_TOKEN) {
-        console.log('KINTONE_API_TOKEN先頭20文字:', process.env.KINTONE_API_TOKEN.substring(0, 20) + '...');
+      console.log('KINTONE_API_TOKEN_ALL存在:', !!process.env.KINTONE_API_TOKEN_ALL);
+      console.log('KINTONE_API_TOKEN_ALL長さ:', process.env.KINTONE_API_TOKEN_ALL?.length || 0);
+      if (process.env.KINTONE_API_TOKEN_ALL) {
+        console.log('KINTONE_API_TOKEN_ALL先頭20文字:', process.env.KINTONE_API_TOKEN_ALL.substring(0, 20) + '...');
       }
       console.log('========================================');
     });

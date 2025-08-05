@@ -8,10 +8,10 @@ echo "開発環境で使用しているAPIトークンを使って、Kintone API
 echo ""
 
 # 環境変数のAPIトークンを使用
-API_TOKEN="${KINTONE_API_TOKEN}"
+API_TOKEN="${KINTONE_API_TOKEN_ALL}"
 
 if [ -z "$API_TOKEN" ]; then
-    echo "エラー: KINTONE_API_TOKEN が設定されていません"
+    echo "エラー: KINTONE_API_TOKEN_ALL が設定されていません"
     exit 1
 fi
 
