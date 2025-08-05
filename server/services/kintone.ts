@@ -243,7 +243,7 @@ export async function getWorkRecordsByRepairTicketNumber(repairTicketNumber: str
           'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
           'Content-Type': 'application/json'
         },
-        data: {
+        params: {
           app: KINTONE_WORK_RECORD_APP_ID,
           query: query,
           totalCount: true
@@ -291,7 +291,7 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
         'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
         'Content-Type': 'application/json'
       },
-      data: {
+      params: {
         app: KINTONE_REPAIR_HISTORY_APP_ID,
         query: query,
         totalCount: true
@@ -317,7 +317,7 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
         'X-Cybozu-API-Token': process.env.KINTONE_API_TOKEN,
         'Content-Type': 'application/json'
       },
-      data: {
+      params: {
         app: KINTONE_REPAIR_HISTORY_APP_ID,
         query: likeQuery,
         totalCount: true
