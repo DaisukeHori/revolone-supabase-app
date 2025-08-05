@@ -15,9 +15,18 @@ function getKintoneApiToken() {
     throw new Error('Kintone APIトークンが設定されていません');
   }
   
+  // トークンの前後の空白と改行を削除
+  const trimmedToken = token.trim().replace(/[\r\n]/g, '');
+  
   console.log(`[Kintone] 環境: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`[Kintone] トークン長: ${token.length}`);
-  return token;
+  console.log(`[Kintone] 元のトークン長: ${token.length}`);
+  console.log(`[Kintone] トリム後のトークン長: ${trimmedToken.length}`);
+  
+  if (token.length !== trimmedToken.length) {
+    console.log(`[Kintone] トークンに空白または改行が含まれていました（${token.length - trimmedToken.length}文字削除）`);
+  }
+  
+  return trimmedToken;
 }
 
 interface KintoneDeviceRecord {
@@ -303,11 +312,15 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     console.log(`送信クエリ: ${query}`);
     
     const url = `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`;
-    console.log(`[Kintone Debug] Request URL: ${url}`);
+    const apiToken = getKintoneApiToken();
     
+    console.log(`[Kintone Debug] Request URL: ${url}`);
+    console.log(`[Kintone Debug] Using token (trimmed): ${apiToken.substring(0, 20)}... (length: ${apiToken.length})`);
+    
+    // Axiosリクエストにインターセプターを追加して詳細なログを記録
     const response = await axios.get(url, {
       headers: {
-        'X-Cybozu-API-Token': getKintoneApiToken(),
+        'X-Cybozu-API-Token': apiToken,
       },
     });
     

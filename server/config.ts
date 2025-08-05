@@ -18,34 +18,34 @@ const envSchema = z.object({
   SENDGRID_API_KEY_PROD: z.string().optional(),
 });
 
-// 環境ごとの設定
+// 環境ごとの設定（実際はすべて同じ値を使用）
 const config = {
   development: {
     // 開発環境用の設定
     kintone: {
-      baseUrl: 'https://dev-revonizer.cybozu.com/k/v1',
-      apiToken: process.env.KINTONE_API_TOKEN_DEV || process.env.KINTONE_API_TOKEN,
+      baseUrl: 'https://e18p5.cybozu.com/k/v1',
+      apiToken: process.env.KINTONE_API_TOKEN,
     },
     stripe: {
-      secretKey: process.env.STRIPE_SECRET_KEY_DEV || process.env.STRIPE_SECRET_KEY,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY_DEV || process.env.STRIPE_PUBLISHABLE_KEY,
+      secretKey: process.env.STRIPE_SECRET_KEY,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     },
     sendgrid: {
-      apiKey: process.env.SENDGRID_API_KEY_DEV || process.env.SENDGRID_API_KEY,
+      apiKey: process.env.SENDGRID_API_KEY,
     },
   },
   production: {
-    // 本番環境用の設定
+    // 本番環境用の設定（開発と同じ）
     kintone: {
-      baseUrl: 'https://revonizer.cybozu.com/k/v1',
-      apiToken: process.env.KINTONE_API_TOKEN_PROD || process.env.KINTONE_API_TOKEN,
+      baseUrl: 'https://e18p5.cybozu.com/k/v1',
+      apiToken: process.env.KINTONE_API_TOKEN,
     },
     stripe: {
-      secretKey: process.env.STRIPE_SECRET_KEY_PROD || process.env.STRIPE_SECRET_KEY,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY_PROD || process.env.STRIPE_PUBLISHABLE_KEY,
+      secretKey: process.env.STRIPE_SECRET_KEY,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     },
     sendgrid: {
-      apiKey: process.env.SENDGRID_API_KEY_PROD || process.env.SENDGRID_API_KEY,
+      apiKey: process.env.SENDGRID_API_KEY,
     },
   },
 };
