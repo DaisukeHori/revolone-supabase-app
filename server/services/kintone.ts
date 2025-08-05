@@ -360,26 +360,25 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     return [];
     
   } catch (error: any) {
-    console.error('修理履歴取得エラー:', error);
-    console.error('エラーレスポンス:', error.response?.data);
+    console.error('========== 修理履歴取得エラー開始 ==========');
     console.error('エラーステータス:', error.response?.status);
-    console.error('APIトークン長:', process.env.KINTONE_API_TOKEN?.length || 0);
+    console.error('エラーメッセージ:', error.response?.statusText);
+    console.error('エラーレスポンスデータ:', JSON.stringify(error.response?.data, null, 2));
     console.error('リクエストURL:', error.config?.url);
-    console.error('使用したトークン（先頭20文字）:', getKintoneApiToken()?.substring(0, 20));
-    console.error('完全なエラー情報:', JSON.stringify({
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        headers: {
-          ...error.config?.headers,
-          'X-Cybozu-API-Token': error.config?.headers?.['X-Cybozu-API-Token'] ? '[HIDDEN]' : undefined
-        }
-      }
-    }, null, 2));
+    console.error('環境変数KINTONE_API_TOKEN存在:', !!process.env.KINTONE_API_TOKEN);
+    console.error('環境変数KINTONE_API_TOKEN長さ:', process.env.KINTONE_API_TOKEN?.length || 0);
+    
+    const token = getKintoneApiToken();
+    console.error('使用したトークン先頭20文字:', token.substring(0, 20));
+    console.error('使用したトークン末尾10文字:', token.substring(token.length - 10));
+    console.error('使用したトークン全長:', token.length);
+    
+    // トークンに不正な文字が含まれているかチェック
+    const hasWhitespace = /\s/.test(token);
+    const hasNewline = /[\r\n]/.test(token);
+    console.error('トークンに空白含む:', hasWhitespace);
+    console.error('トークンに改行含む:', hasNewline);
+    console.error('========== 修理履歴取得エラー終了 ==========');
     
     if (error.response?.status === 403) {
       throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');

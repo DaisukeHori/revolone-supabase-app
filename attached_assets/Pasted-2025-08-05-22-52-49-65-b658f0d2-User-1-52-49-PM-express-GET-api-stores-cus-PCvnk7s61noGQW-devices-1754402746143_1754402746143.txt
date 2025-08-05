@@ -1,0 +1,144 @@
+2025-08-05 22:52:49.65
+b658f0d2
+User
+1:52:49 PM [express] GET /api/stores/cus_PCvnk7s61noGQW/devices 304 in 1216ms :: [{"serialNumber":"2…
+2025-08-05 22:52:55.56
+b658f0d2
+User
+_readableState: [ReadableState],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+_maxListeners: undefined,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+socket: null,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+httpVersionMajor: 1,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+httpVersionMinor: 1,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+httpVersion: '1.1',
+2025-08-05 22:52:55.56
+b658f0d2
+User
+complete: true,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+rawHeaders: [Array],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+rawTrailers: [],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+joinDuplicateHeaders: undefined,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+aborted: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+upgrade: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+url: '',
+2025-08-05 22:52:55.56
+b658f0d2
+User
+method: null,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+statusCode: 403,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+statusMessage: 'Forbidden',
+2025-08-05 22:52:55.56
+b658f0d2
+User
+client: [TLSSocket],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+_consuming: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+_dumped: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+req: [Circular *1],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+_eventsCount: 4,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+responseUrl: 'https://e18p5.cybozu.com/k/v1/records.json?app=22&query=%E3%83%AB%E3%83%83%E3%82%AF%E3%82%A2%E3%83%83%E3%83%97%20%3D%20%222311010300%22',
+2025-08-05 22:52:55.56
+b658f0d2
+User
+redirects: [],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+[Symbol(shapeMode)]: true,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+[Symbol(kCapture)]: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+[Symbol(kHeaders)]: [Object],
+2025-08-05 22:52:55.56
+b658f0d2
+User
+[Symbol(kHeadersCount)]: 36,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+[Symbol(kTrailers)]: null,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+[Symbol(kTrailersCount)]: 0
+2025-08-05 22:52:55.56
+b658f0d2
+User
+},
+2025-08-05 22:52:55.56
+b658f0d2
+User
+aborted: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+timeoutCb: null,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+upgradeOrConnect: false,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+parser: null,
+2025-08-05 22:52:55.56
+b658f0d2
+User
+maxHeadersCount: null,
