@@ -37,6 +37,35 @@ export function registerRoutes(app: Express): Server {
   // メールアドレス変更関連のルートを設定
   setupEmailChangeRoutes(app);
 
+  // Kintoneトークンテスト用エンドポイント
+  app.get('/api/test-kintone', async (req, res) => {
+    try {
+      const { getRepairHistoryBySerialNumber } = await import('./services/kintone');
+      console.log('Kintoneテストエンドポイント呼び出し');
+      
+      // テスト用デバイス番号で修理履歴を取得
+      const testDeviceId = "RN-J00001";
+      const repairHistory = await getRepairHistoryBySerialNumber(testDeviceId);
+      
+      res.json({
+        success: true,
+        testDeviceId,
+        repairHistoryCount: repairHistory.length,
+        repairHistory: repairHistory.slice(0, 3), // 最初の3件のみ表示
+        message: 'Kintone APIトークンは正常に動作しています',
+        tokenLength: process.env.KINTONE_API_TOKEN?.length || 0
+      });
+    } catch (error: any) {
+      console.error('Kintoneテストエラー:', error.message);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Kintone APIトークンの設定に問題があります',
+        tokenLength: process.env.KINTONE_API_TOKEN?.length || 0
+      });
+    }
+  });
+
   // Stripe顧客作成のAPIエンドポイント
   app.post('/api/stores/create-stripe-customer', async (req, res) => {
     if (!req.isAuthenticated()) {
