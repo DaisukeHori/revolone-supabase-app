@@ -639,6 +639,8 @@ router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
     console.log(`[Device API] 修理履歴取得開始 - シリアル番号: ${serialNumber}`);
     console.log(`[Device API] 環境: ${process.env.NODE_ENV || 'development'}`);
     console.log(`[Device API] APIトークン存在: ${!!process.env.KINTONE_API_TOKEN}`);
+    console.log(`[Device API] APIトークン長: ${process.env.KINTONE_API_TOKEN?.length}`);
+    console.log(`[Device API] APIトークン先頭: ${process.env.KINTONE_API_TOKEN?.substring(0, 20)}...`);
     
     const repairHistory = await getRepairHistoryBySerialNumber(serialNumber);
     

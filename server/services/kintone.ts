@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// 実際に使用しているKintoneドメインを使用
 const KINTONE_BASE_URL = 'https://e18p5.cybozu.com/k/v1';
 const KINTONE_APP_ID = '40';
 const KINTONE_DEVICE_APP_ID = '21'; // レボナイザー情報用のアプリID
@@ -289,6 +290,11 @@ export async function getWorkRecordsByRepairTicketNumber(repairTicketNumber: str
 export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   try {
     console.log(`App22から製造番号${serialNumber}の修理履歴を検索中...`);
+    console.log(`[Kintone Debug] NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`[Kintone Debug] API Token (first 20 chars): ${process.env.KINTONE_API_TOKEN?.substring(0, 20)}...`);
+    console.log(`[Kintone Debug] API Token length: ${process.env.KINTONE_API_TOKEN?.length}`);
+    console.log(`[Kintone Debug] Base URL: ${KINTONE_BASE_URL}`);
+    console.log(`[Kintone Debug] App ID: ${KINTONE_REPAIR_HISTORY_APP_ID}`);
     
     // 完全一致検索を実行
     console.log('完全一致検索を実行中...');
@@ -296,14 +302,14 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     const query = `ルックアップ = "${serialNumber}"`;
     console.log(`送信クエリ: ${query}`);
     
-    const response = await axios.get(
-      `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          'X-Cybozu-API-Token': getKintoneApiToken(),
-        },
-      }
-    );
+    const url = `${KINTONE_BASE_URL}/records.json?app=${KINTONE_REPAIR_HISTORY_APP_ID}&query=${encodeURIComponent(query)}`;
+    console.log(`[Kintone Debug] Request URL: ${url}`);
+    
+    const response = await axios.get(url, {
+      headers: {
+        'X-Cybozu-API-Token': getKintoneApiToken(),
+      },
+    });
     
     console.log(`検索結果: ${response.data.records.length}件`);
     
@@ -346,6 +352,21 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     console.error('エラーステータス:', error.response?.status);
     console.error('APIトークン長:', process.env.KINTONE_API_TOKEN?.length || 0);
     console.error('リクエストURL:', error.config?.url);
+    console.error('使用したトークン（先頭20文字）:', getKintoneApiToken()?.substring(0, 20));
+    console.error('完全なエラー情報:', JSON.stringify({
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: {
+          ...error.config?.headers,
+          'X-Cybozu-API-Token': error.config?.headers?.['X-Cybozu-API-Token'] ? '[HIDDEN]' : undefined
+        }
+      }
+    }, null, 2));
     
     if (error.response?.status === 403) {
       throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
