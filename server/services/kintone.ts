@@ -6,17 +6,14 @@ const KINTONE_DEVICE_APP_ID = '21'; // レボナイザー情報用のアプリID
 const KINTONE_REPAIR_HISTORY_APP_ID = '22';
 const KINTONE_WORK_RECORD_APP_ID = '23'; // 修理履歴用のアプリID
 
-// APIトークンの取得（環境によって異なるトークンを使用）
+// APIトークンの取得（開発・本番共通）
 function getKintoneApiToken() {
-  const token = process.env.NODE_ENV === 'production' && process.env.KINTONE_API_TOKEN_PROD
-    ? process.env.KINTONE_API_TOKEN_PROD
-    : process.env.KINTONE_API_TOKEN;
+  const token = process.env.KINTONE_API_TOKEN;
   
   if (!token) {
     throw new Error('Kintone APIトークンが設定されていません');
   }
   
-  console.log(`[Kintone] 使用するAPIトークン: ${process.env.NODE_ENV === 'production' && process.env.KINTONE_API_TOKEN_PROD ? 'PROD' : 'DEFAULT'}`);
   console.log(`[Kintone] 環境: ${process.env.NODE_ENV || 'development'}`);
   console.log(`[Kintone] トークン長: ${token.length}`);
   return token;
@@ -347,7 +344,7 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
     console.error('修理履歴取得エラー:', error);
     console.error('エラーレスポンス:', error.response?.data);
     console.error('エラーステータス:', error.response?.status);
-    console.error('APIトークン長:', getKintoneApiToken()?.length || 0);
+    console.error('APIトークン長:', process.env.KINTONE_API_TOKEN?.length || 0);
     console.error('リクエストURL:', error.config?.url);
     
     if (error.response?.status === 403) {
