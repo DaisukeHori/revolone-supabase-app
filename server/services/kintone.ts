@@ -330,10 +330,18 @@ export async function getRepairHistoryBySerialNumber(serialNumber: string) {
   } catch (error: any) {
     console.error('修理履歴取得エラー:', error);
     console.error('エラーレスポンス:', error.response?.data);
+    console.error('エラーステータス:', error.response?.status);
+    console.error('APIトークン長:', process.env.KINTONE_API_TOKEN?.length || 0);
+    console.error('リクエストURL:', error.config?.url);
     
     if (error.response?.status === 403) {
       throw new Error('App 22へのAPIアクセス権限がありません。APIトークンの設定を確認してください。');
     }
-    throw new Error('修理履歴の取得に失敗しました');
+    if (error.response?.status === 400 && error.response?.data?.code === 'CB_IL02') {
+      throw new Error('Kintone APIリクエスト形式エラー。パラメータを確認してください。');
+    }
+    
+    const errorMessage = error.response?.data?.message || error.message || '修理履歴の取得に失敗しました';
+    throw new Error(`修理履歴取得エラー: ${errorMessage}`);
   }
 }

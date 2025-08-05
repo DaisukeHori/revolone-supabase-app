@@ -637,6 +637,8 @@ router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
     }
 
     console.log(`[Device API] 修理履歴取得開始 - シリアル番号: ${serialNumber}`);
+    console.log(`[Device API] 環境: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`[Device API] APIトークン存在: ${!!process.env.KINTONE_API_TOKEN}`);
     
     const repairHistory = await getRepairHistoryBySerialNumber(serialNumber);
     
@@ -644,8 +646,24 @@ router.get("/api/devices/:serialNumber/repair-history", async (req, res) => {
     
     res.json(repairHistory);
   } catch (error: any) {
-    console.error("修理履歴取得エラー:", error);
-    res.status(500).json({ message: "修理履歴の取得に失敗しました", error: error.message });
+    console.error("[Device API] 修理履歴取得エラー:", error);
+    console.error("[Device API] エラー詳細:", {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+    
+    // より詳細なエラーメッセージを返す
+    const errorResponse = {
+      message: "修理履歴の取得に失敗しました",
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: error.stack,
+        kintoneError: error.response?.data
+      } : undefined
+    };
+    
+    res.status(500).json(errorResponse);
   }
 });
 
