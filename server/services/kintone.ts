@@ -1,4 +1,50 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+
+// Axiosインターセプターでリクエスト/レスポンスをログ出力
+axios.interceptors.request.use(
+  (config) => {
+    console.log('========== Axios リクエスト開始 ==========');
+    console.log('URL:', config.url);
+    console.log('メソッド:', config.method);
+    console.log('ヘッダー:', JSON.stringify(config.headers, null, 2));
+    if (config.data) {
+      console.log('ボディ:', JSON.stringify(config.data, null, 2));
+    }
+    console.log('========================================');
+    return config;
+  },
+  (error) => {
+    console.error('リクエストエラー:', error);
+    return Promise.reject(error);
+  }
+);
+
+axios.interceptors.response.use(
+  (response) => {
+    console.log('========== Axios レスポンス ==========');
+    console.log('ステータス:', response.status);
+    console.log('ステータステキスト:', response.statusText);
+    console.log('ヘッダー:', JSON.stringify(response.headers, null, 2));
+    console.log('データ:', JSON.stringify(response.data, null, 2).substring(0, 1000) + '...');
+    console.log('=====================================');
+    return response;
+  },
+  (error) => {
+    console.error('========== Axios エラーレスポンス ==========');
+    if (error.response) {
+      console.error('ステータス:', error.response.status);
+      console.error('ステータステキスト:', error.response.statusText);
+      console.error('ヘッダー:', JSON.stringify(error.response.headers, null, 2));
+      console.error('データ:', JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error('リクエストエラー:', error.request);
+    } else {
+      console.error('エラー:', error.message);
+    }
+    console.error('==========================================');
+    return Promise.reject(error);
+  }
+);
 
 // 実際に使用しているKintoneドメインを使用
 const KINTONE_BASE_URL = 'https://e18p5.cybozu.com/k/v1';
@@ -11,6 +57,12 @@ const KINTONE_WORK_RECORD_APP_ID = '23'; // 修理履歴用のアプリID
 function getKintoneApiToken() {
   const token = process.env.KINTONE_API_TOKEN;
   
+  console.log('========== 環境変数詳細 ==========');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('KINTONE_API_TOKEN存在:', !!token);
+  console.log('KINTONE_API_TOKEN長さ:', token?.length || 0);
+  console.log('==================================');
+  
   if (!token) {
     throw new Error('Kintone APIトークンが設定されていません');
   }
@@ -21,6 +73,8 @@ function getKintoneApiToken() {
   console.log(`[Kintone] 環境: ${process.env.NODE_ENV || 'development'}`);
   console.log(`[Kintone] 元のトークン長: ${token.length}`);
   console.log(`[Kintone] トリム後のトークン長: ${trimmedToken.length}`);
+  console.log(`[Kintone] トークン先頭20文字: ${trimmedToken.substring(0, 20)}...`);
+  console.log(`[Kintone] トークン末尾10文字: ...${trimmedToken.substring(trimmedToken.length - 10)}`);
   
   if (token.length !== trimmedToken.length) {
     console.log(`[Kintone] トークンに空白または改行が含まれていました（${token.length - trimmedToken.length}文字削除）`);
