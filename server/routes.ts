@@ -343,7 +343,7 @@ export function registerRoutes(app: Express): Server {
         },
         metadata: {
           'サロン名': storeData.storeName,
-          '取引先代理店コード': storeData.dealerCode,
+          '代理店コード': storeData.dealerCode,
           userId: req.user.id.toString(),
           creationType: 'store-only'
         }
@@ -420,7 +420,7 @@ export function registerRoutes(app: Express): Server {
         },
         metadata: {
           'サロン名': storeData.storeName,
-          '取引先代理店コード': storeData.dealerCode,
+          '代理店コード': storeData.dealerCode,
           userId: req.user!.id.toString(),
           creationType: 'with-subscription'
         }
