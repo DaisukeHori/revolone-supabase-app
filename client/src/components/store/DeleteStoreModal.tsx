@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription 
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -29,18 +35,11 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // モーダルが開くときの状態初期化とクリーンアップ
+  // モーダルが開くときの状態初期化
   useEffect(() => {
     if (open) {
       setConfirmChecked(false);
       setIsLoading(false);
-    } else {
-      // モーダルが閉じたときにpointer-eventsを強制的にクリーンアップ
-      // Radix UIのバグ対策：body要素にpointer-events: noneが残る問題を解決
-      setTimeout(() => {
-        document.body.style.pointerEvents = '';
-        document.body.style.removeProperty('pointer-events');
-      }, 200); // アニメーション完了を待つ
     }
   }, [open]);
 
@@ -107,14 +106,17 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
             店舗削除の確認
-          </DialogTitle>
-        </DialogHeader>
+          </AlertDialogTitle>
+          <AlertDialogDescription className="sr-only">
+            店舗を削除すると、すべてのデータが失われます。この操作は取り消せません。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
         <div className="space-y-4">
           <Alert variant="destructive">
@@ -175,7 +177,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
