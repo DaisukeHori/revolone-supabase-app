@@ -675,50 +675,6 @@ function AddStoreForm() {
             </CardContent>
           </Card>
 
-          {/* 作成モード選択 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                作成タイプ
-              </CardTitle>
-              <CardDescription>
-                店舗の作成方法を選択してください
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="with-subscription"
-                    value="with-subscription"
-                    {...form.register('creationMode')}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <label htmlFor="with-subscription" className="flex-1">
-                    <div className="font-medium">今すぐサブスクリプションを開始する</div>
-                    <div className="text-sm text-gray-600">店舗作成と同時にRevonizerのサブスクリプションを契約します（35日間無料）</div>
-                  </label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="store-only"
-                    value="store-only"
-                    {...form.register('creationMode')}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <label htmlFor="store-only" className="flex-1">
-                    <div className="font-medium">店舗情報だけを登録する</div>
-                    <div className="text-sm text-gray-600">後でサブスクリプションを設定する場合はこちらを選択してください</div>
-                  </label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* 配送先住所 */}
           <Card>
             <CardHeader>
@@ -949,6 +905,50 @@ function AddStoreForm() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* 作成タイプ選択 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                作成タイプ
+              </CardTitle>
+              <CardDescription>
+                店舗の作成方法を選択してください
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="with-subscription"
+                    value="with-subscription"
+                    {...form.register('creationMode')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <label htmlFor="with-subscription" className="flex-1">
+                    <div className="font-medium">今すぐサブスクリプションを開始する</div>
+                    <div className="text-sm text-gray-600">店舗作成と同時にRevonizerのサブスクリプションを契約します（35日間無料）</div>
+                  </label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="store-only"
+                    value="store-only"
+                    {...form.register('creationMode')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <label htmlFor="store-only" className="flex-1">
+                    <div className="font-medium">店舗情報だけを登録する</div>
+                    <div className="text-sm text-gray-600">後でサブスクリプションを設定する場合はこちらを選択してください</div>
+                  </label>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
