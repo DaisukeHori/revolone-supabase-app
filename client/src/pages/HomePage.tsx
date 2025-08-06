@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AddStoreModal } from "@/components/store/AddStoreModal";
+
 import { DeleteStoreModal } from "@/components/store/DeleteStoreModal";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -59,7 +59,6 @@ const item = {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
-  const [showAddStoreModal, setShowAddStoreModal] = useState(false);
   const [showDeleteStoreModal, setShowDeleteStoreModal] = useState(false);
   const [selectedCustomerData, setSelectedCustomerData] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -153,7 +152,7 @@ export default function HomePage() {
                     <p className="text-gray-600 text-sm sm:text-base">まだ店舗が登録されていません</p>
                   </div>
                   <Button 
-                    onClick={() => setShowAddStoreModal(true)}
+                    onClick={() => setLocation('/stores/new')}
                     className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-200"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -165,7 +164,7 @@ export default function HomePage() {
                 <Building2 className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-500 text-base mb-6">店舗を登録してサービスを開始しましょう</p>
                 <Button 
-                  onClick={() => setShowAddStoreModal(true)}
+                  onClick={() => setLocation('/stores/new')}
                   className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <Plus className="h-5 w-5 mr-2" />
@@ -187,7 +186,7 @@ export default function HomePage() {
                     <p className="text-gray-600 text-sm sm:text-base">管理中の店舗とサービス状況</p>
                   </div>
                   <Button 
-                    onClick={() => setShowAddStoreModal(true)}
+                    onClick={() => setLocation('/stores/new')}
                     className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-200"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -276,14 +275,6 @@ export default function HomePage() {
             </Card>
           </motion.div>
         ) : null}
-
-        <AddStoreModal
-          open={showAddStoreModal}
-          onOpenChange={setShowAddStoreModal}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['stripe-customer'] });
-          }}
-        />
 
         {selectedCustomerData && (
           <DeleteStoreModal
