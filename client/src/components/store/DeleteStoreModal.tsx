@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +27,23 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   const [confirmChecked, setConfirmChecked] = useState(false);
   const { toast } = useToast();
 
+  // モーダルが閉じるときに状態をリセット
+  const handleModalClose = (newOpen: boolean) => {
+    if (!newOpen) {
+      setConfirmChecked(false);
+      setIsLoading(false);
+    }
+    onOpenChange(newOpen);
+  };
+
+  // モーダルが開くときの状態初期化
+  useEffect(() => {
+    if (open) {
+      setConfirmChecked(false);
+      setIsLoading(false);
+    }
+  }, [open]);
+
   const storeName = customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定';
 
   const handleDelete = async () => {
@@ -48,8 +65,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
           title: "店舗削除完了",
           description: "店舗が正常に削除されました",
         });
-        setConfirmChecked(false);
-        onOpenChange(false);
+        handleModalClose(false);
         onSuccess();
       } else {
         const error = await response.json();
@@ -86,8 +102,8 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={handleModalClose}>
+      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -132,9 +148,10 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                setConfirmChecked(false);
-                onOpenChange(false);
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleModalClose(false);
               }}
               disabled={isLoading}
             >
@@ -143,7 +160,11 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleDelete();
+              }}
               disabled={isLoading || !confirmChecked}
             >
               {isLoading ? (
