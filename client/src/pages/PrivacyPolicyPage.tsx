@@ -34,29 +34,29 @@ export default function PrivacyPolicyPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4 max-w-4xl">
-        <div className="mb-6">
+      <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
+        <div className="mb-4 flex-shrink-0">
           <Button
             variant="outline"
             onClick={handleBack}
-            className="mb-4"
+            className="mb-3"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             戻る
           </Button>
           <h1 className="text-2xl font-bold">プライバシーポリシー</h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 mt-1 text-sm">
             個人情報の取り扱いについて、最後までお読みください。
           </p>
         </div>
 
-        <Card className="min-h-[50vh] max-h-[70vh] h-auto">
-          <CardHeader>
+        <Card className="flex-1 min-h-0 flex flex-col">
+          <CardHeader className="flex-shrink-0">
             <CardTitle>プライバシーポリシー</CardTitle>
           </CardHeader>
-          <CardContent className="h-full flex flex-col">
+          <CardContent className="flex-1 min-h-0 flex flex-col p-0">
             <ScrollArea 
-              className="flex-1 min-h-[40vh] max-h-[55vh] pr-4"
+              className="flex-1 min-h-0 px-6 py-4"
               onScrollCapture={handleScroll}
             >
               <div className="text-sm leading-relaxed space-y-4">
@@ -209,7 +209,7 @@ export default function PrivacyPolicyPage() {
               </div>
             </ScrollArea>
             
-            <div className="pt-4 border-t mt-auto">
+            <div className="flex-shrink-0 px-6 py-4 border-t bg-white">
               <Button 
                 onClick={handleAgree}
                 disabled={!hasScrolledToBottom}
