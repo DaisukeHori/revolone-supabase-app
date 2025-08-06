@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import { 
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription 
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -40,32 +34,26 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
     if (open) {
       setConfirmChecked(false);
       setIsLoading(false);
-    } else {
-      // モーダルが閉じたときの強制クリーンアップ
-      const forceCleanup = () => {
-        // bodyのすべてのスタイル属性を確認してpointer-eventsを削除
+    }
+    
+    // モーダルの状態が変わったときにクリーンアップ
+    return () => {
+      // コンポーネントがアンマウントされるときや、openがfalseになったときに実行
+      const cleanup = () => {
+        document.body.style.pointerEvents = '';
+        document.body.style.removeProperty('pointer-events');
+        
+        // bodyのstyle属性を完全にチェック
         const bodyStyle = document.body.getAttribute('style');
         if (bodyStyle && bodyStyle.includes('pointer-events')) {
-          const newStyle = bodyStyle.replace(/pointer-events:[^;]+;?/g, '').trim();
-          if (newStyle) {
-            document.body.setAttribute('style', newStyle);
-          } else {
-            document.body.removeAttribute('style');
-          }
+          document.body.setAttribute('style', bodyStyle.replace(/pointer-events:[^;]+;?/g, '').trim());
         }
-        
-        // data属性も確実にクリア
-        document.body.removeAttribute('data-scroll-locked');
-        document.body.removeAttribute('data-radix-dialog-open');
-        document.body.removeAttribute('data-radix-alert-dialog-open');
       };
       
-      // 複数のタイミングで実行して確実にクリーンアップ
-      forceCleanup();
-      requestAnimationFrame(forceCleanup);
-      setTimeout(forceCleanup, 100);
-      setTimeout(forceCleanup, 300);
-    }
+      cleanup();
+      // アニメーション完了後にも実行
+      setTimeout(cleanup, 500);
+    };
   }, [open]);
 
   const storeName = customerData.customer.metadata?.サロン名 || customerData.customer.name || '店舗名未設定';
@@ -131,17 +119,14 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
             店舗削除の確認
-          </AlertDialogTitle>
-          <AlertDialogDescription className="sr-only">
-            店舗を削除すると、すべてのデータが失われます。この操作は取り消せません。
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          </DialogTitle>
+        </DialogHeader>
 
         <div className="space-y-4">
           <Alert variant="destructive">
@@ -202,7 +187,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
             </Button>
           </div>
         </div>
-      </AlertDialogContent>
-    </AlertDialog>
+      </DialogContent>
+    </Dialog>
   );
 }
