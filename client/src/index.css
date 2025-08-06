@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Radix UI Dialog/AlertDialog pointer-events バグ修正 */
+/* bodyのpointer-eventsが強制的にnoneになる問題を防ぐ */
+body {
+  pointer-events: auto !important;
+}
+
+/* ただし、モーダルが開いているときは適切に処理 */
+body[data-scroll-locked] > *:not([data-radix-portal]) {
+  pointer-events: none !important;
+}
+
+body[data-scroll-locked] [data-radix-portal] {
+  pointer-events: auto !important;
+}
+
 /* モバイル対応のビューポート修正 */
 html, body {
   margin: 0;

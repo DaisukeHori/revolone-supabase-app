@@ -35,11 +35,36 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // モーダルが開くときの状態初期化
+  // モーダルが開くときの状態初期化とクリーンアップ
   useEffect(() => {
     if (open) {
       setConfirmChecked(false);
       setIsLoading(false);
+    } else {
+      // モーダルが閉じたときの強制クリーンアップ
+      const forceCleanup = () => {
+        // bodyのすべてのスタイル属性を確認してpointer-eventsを削除
+        const bodyStyle = document.body.getAttribute('style');
+        if (bodyStyle && bodyStyle.includes('pointer-events')) {
+          const newStyle = bodyStyle.replace(/pointer-events:[^;]+;?/g, '').trim();
+          if (newStyle) {
+            document.body.setAttribute('style', newStyle);
+          } else {
+            document.body.removeAttribute('style');
+          }
+        }
+        
+        // data属性も確実にクリア
+        document.body.removeAttribute('data-scroll-locked');
+        document.body.removeAttribute('data-radix-dialog-open');
+        document.body.removeAttribute('data-radix-alert-dialog-open');
+      };
+      
+      // 複数のタイミングで実行して確実にクリーンアップ
+      forceCleanup();
+      requestAnimationFrame(forceCleanup);
+      setTimeout(forceCleanup, 100);
+      setTimeout(forceCleanup, 300);
     }
   }, [open]);
 
