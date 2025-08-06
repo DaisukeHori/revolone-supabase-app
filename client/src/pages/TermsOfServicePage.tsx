@@ -47,13 +47,13 @@ export default function TermsOfServicePage() {
           </p>
         </div>
 
-        <Card>
+        <Card className="min-h-[50vh] max-h-[70vh] h-auto">
           <CardHeader>
             <CardTitle>Revol One サブスクリプション利用規約</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-full flex flex-col">
             <ScrollArea 
-              className="h-64 pr-4"
+              className="flex-1 min-h-[40vh] max-h-[55vh] pr-4"
               onScrollCapture={handleScroll}
             >
               <div className="text-sm leading-relaxed space-y-4">
@@ -245,21 +245,20 @@ export default function TermsOfServicePage() {
               </div>
             </ScrollArea>
             
-            <div className="mt-6 flex justify-center">
-              <Button
+            <div className="pt-4 border-t mt-auto">
+              <Button 
                 onClick={handleAgree}
                 disabled={!hasScrolledToBottom}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+                className="w-full"
               >
-                {hasScrolledToBottom ? (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    同意して次へ
-                  </>
-                ) : (
-                  "最後までお読みください"
-                )}
+                <Check className="h-4 w-4 mr-2" />
+                利用規約に同意する
               </Button>
+              {!hasScrolledToBottom && (
+                <p className="text-sm text-gray-500 mt-2 text-center">
+                  最後までお読みください
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
