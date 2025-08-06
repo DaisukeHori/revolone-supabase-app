@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface DeleteStoreModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   const [isLoading, setIsLoading] = useState(false);
   const [confirmChecked, setConfirmChecked] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // モーダルが開くときの状態初期化
   useEffect(() => {
@@ -56,6 +58,11 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
           title: "店舗削除完了",
           description: "店舗が正常に削除されました",
         });
+        
+        // キャッシュを強制的に無効化
+        await queryClient.invalidateQueries({ queryKey: ['stripe-customer'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/stripe/customer'] });
+        
         onOpenChange(false);
         onSuccess();
       } else {
