@@ -27,15 +27,6 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   const [confirmChecked, setConfirmChecked] = useState(false);
   const { toast } = useToast();
 
-  // モーダルが閉じるときに状態をリセット
-  const handleModalClose = (newOpen: boolean) => {
-    if (!newOpen) {
-      setConfirmChecked(false);
-      setIsLoading(false);
-    }
-    onOpenChange(newOpen);
-  };
-
   // モーダルが開くときの状態初期化
   useEffect(() => {
     if (open) {
@@ -65,7 +56,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
           title: "店舗削除完了",
           description: "店舗が正常に削除されました",
         });
-        handleModalClose(false);
+        onOpenChange(false);
         onSuccess();
       } else {
         const error = await response.json();
@@ -102,8 +93,8 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleModalClose}>
-      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -148,11 +139,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
             <Button
               type="button"
               variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleModalClose(false);
-              }}
+              onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
               キャンセル
@@ -160,11 +147,7 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
             <Button
               type="button"
               variant="destructive"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDelete();
-              }}
+              onClick={handleDelete}
               disabled={isLoading || !confirmChecked}
             >
               {isLoading ? (

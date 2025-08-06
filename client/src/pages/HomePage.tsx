@@ -63,18 +63,7 @@ export default function HomePage() {
   const [selectedCustomerData, setSelectedCustomerData] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // モーダル状態の安全な管理
-  const handleDeleteModalOpen = (customerData: any) => {
-    setSelectedCustomerData(customerData);
-    setShowDeleteStoreModal(true);
-  };
 
-  const handleDeleteModalClose = (open: boolean) => {
-    if (!open) {
-      setSelectedCustomerData(null);
-    }
-    setShowDeleteStoreModal(open);
-  };
   const { data: stripeData, isLoading, error } = useQuery({
     queryKey: ['stripe-customer'],
     queryFn: async () => {
@@ -249,9 +238,9 @@ export default function HomePage() {
                           <DropdownMenuItem 
                             className="text-red-600 focus:text-red-600"
                             onClick={(e) => {
-                              e.preventDefault();
                               e.stopPropagation();
-                              handleDeleteModalOpen(customerData);
+                              setSelectedCustomerData(customerData);
+                              setShowDeleteStoreModal(true);
                             }}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -292,10 +281,16 @@ export default function HomePage() {
         {selectedCustomerData && (
           <DeleteStoreModal
             open={showDeleteStoreModal}
-            onOpenChange={handleDeleteModalClose}
+            onOpenChange={(open) => {
+              setShowDeleteStoreModal(open);
+              if (!open) {
+                setSelectedCustomerData(null);
+              }
+            }}
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: ['stripe-customer'] });
-              handleDeleteModalClose(false);
+              setShowDeleteStoreModal(false);
+              setSelectedCustomerData(null);
             }}
             customerData={selectedCustomerData}
           />
