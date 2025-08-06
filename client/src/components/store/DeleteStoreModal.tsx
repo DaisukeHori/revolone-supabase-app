@@ -29,11 +29,18 @@ export function DeleteStoreModal({ open, onOpenChange, onSuccess, customerData }
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // モーダルが開くときの状態初期化
+  // モーダルが開くときの状態初期化とクリーンアップ
   useEffect(() => {
     if (open) {
       setConfirmChecked(false);
       setIsLoading(false);
+    } else {
+      // モーダルが閉じたときにpointer-eventsを強制的にクリーンアップ
+      // Radix UIのバグ対策：body要素にpointer-events: noneが残る問題を解決
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.removeProperty('pointer-events');
+      }, 200); // アニメーション完了を待つ
     }
   }, [open]);
 
