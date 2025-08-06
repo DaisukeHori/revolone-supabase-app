@@ -192,14 +192,18 @@ function AddStoreForm() {
 
   // Check for legal document acceptance on component mount
   useEffect(() => {
+    console.log('AddStorePage: Checking legal document acceptance');
     const termsAccepted = localStorage.getItem('termsAccepted');
     const privacyAccepted = localStorage.getItem('privacyAccepted');
+    console.log('Terms accepted:', termsAccepted, 'Privacy accepted:', privacyAccepted);
     
     if (!termsAccepted || !privacyAccepted) {
+      console.log('Legal documents not accepted. Redirecting to /stores/new');
       // Redirect to terms of service if not accepted
       setLocation('/stores/new');
       return;
     }
+    console.log('Legal documents accepted. AddStorePage loaded successfully.');
   }, [setLocation]);
 
   // 郵便番号変更時の住所自動補完
@@ -611,10 +615,12 @@ function AddStoreForm() {
                       maxLength={7}
                       pattern="[0-9]{7}"
                       onChange={(e) => {
+                        console.log('郵便番号入力:', e.target.value);
                         // React Hook Formの値を更新
                         form.setValue('shippingPostalCode', e.target.value);
                         // 7桁入力時に住所検索を実行
                         if (e.target.value.length === 7 && /^\d{7}$/.test(e.target.value)) {
+                          console.log('7桁郵便番号検出、検索開始:', e.target.value);
                           fetchAddressFromPostalCode(e.target.value);
                         }
                       }}
