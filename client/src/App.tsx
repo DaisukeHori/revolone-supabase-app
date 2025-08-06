@@ -23,6 +23,7 @@ import { useUser } from "./hooks/use-user";
 import { Background } from "@/components/ui/background";
 import { useTheme } from "./hooks/use-theme";
 import { useEffect } from "react";
+import { initErrorRecovery, cleanupErrorRecovery } from "./utils/errorRecovery";
 
 function App() {
   const { user, isLoading } = useUser();
@@ -33,6 +34,14 @@ function App() {
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(theme);
   }, [theme]);
+
+  // エラー回復システムの初期化
+  useEffect(() => {
+    initErrorRecovery();
+    return () => {
+      cleanupErrorRecovery();
+    };
+  }, []);
 
   if (isLoading) {
     return (
