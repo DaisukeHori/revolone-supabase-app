@@ -20,6 +20,9 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import { loadStripe } from "@stripe/stripe-js";
 
 const storeSchema = z.object({
+  // 作成モード
+  creationMode: z.enum(["with-subscription", "store-only"]),
+  
   storeName: z.string().min(1, "店舗名は必須です"),
   dealerCode: z.string()
     .min(1, "取引先代理店コードは必須です")
@@ -41,14 +44,23 @@ const storeSchema = z.object({
   billingLine1: z.string().optional(),
   billingLine2: z.string().optional(),
   
-  // カード名義人
-  cardholderName: z.string().min(1, "カード名義人名は必須です"),
+  // カード名義人（サブスクリプションありの場合のみ必須）
+  cardholderName: z.string().optional(),
   
-  // サブスクリプション
-  revonizerQuantity: z.number().min(1, "1台以上選択してください").max(20, "20台まで選択可能です"),
+  // サブスクリプション（サブスクリプションありの場合のみ必須）
+  revonizerQuantity: z.number().optional(),
   
   // オプション
   promoCode: z.string().optional(),
+}).refine((data) => {
+  // サブスクリプションありの場合は必須項目をチェック
+  if (data.creationMode === "with-subscription") {
+    return data.cardholderName && data.revonizerQuantity && data.revonizerQuantity >= 1 && data.revonizerQuantity <= 20;
+  }
+  return true;
+}, {
+  message: "サブスクリプション作成時は、カード名義人名とレボナイザー数量（1-20台）が必要です",
+  path: ["cardholderName"]
 });
 
 type StoreForm = z.infer<typeof storeSchema>;
@@ -79,6 +91,7 @@ function AddStoreForm() {
   const form = useForm<StoreForm>({
     resolver: zodResolver(storeSchema),
     defaultValues: {
+      creationMode: 'with-subscription',
       storeName: '',
       dealerCode: '',
       shippingName: '',
@@ -253,7 +266,7 @@ function AddStoreForm() {
           title: "プロモーションコードを適用しました",
           description: `${data.type === 'percent' ? data.amount + '%' : '¥' + data.amount}の割引が適用されます`,
         });
-        calculatePricing(watchedValues.revonizerQuantity, promoCode);
+        calculatePricing(watchedValues.revonizerQuantity || 1, promoCode);
       } else {
         const error = await response.json();
         toast({
@@ -277,6 +290,55 @@ function AddStoreForm() {
     calculatePricing(quantity, watchedValues.promoCode);
   };
 
+  // 店舗のみ作成処理
+  const handleStoreOnlySubmit = async (data: StoreForm) => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/stores/create-store-only', {
+        storeData: {
+          storeName: data.storeName,
+          dealerCode: data.dealerCode,
+          shippingName: data.shippingName,
+          shippingPostalCode: data.shippingPostalCode,
+          shippingState: data.shippingState,
+          shippingLine1: data.shippingLine1,
+          shippingLine2: data.shippingLine2,
+          shippingPhone: data.shippingPhone,
+          useSameAddress: data.useSameAddress,
+          billingName: data.billingName,
+          billingPostalCode: data.billingPostalCode,
+          billingState: data.billingState,
+          billingLine1: data.billingLine1,
+          billingLine2: data.billingLine2,
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        toast({
+          title: "店舗を追加しました",
+          description: result.message,
+        });
+
+        // ホームページに戻る
+        setLocation('/');
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || '店舗作成に失敗しました');
+      }
+    } catch (error: any) {
+      console.error('Store only creation error:', error);
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: error.message || "店舗作成中にエラーが発生しました",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // 確認画面表示
   const handleShowConfirmation = () => {
     setShowConfirmation(true);
@@ -284,6 +346,12 @@ function AddStoreForm() {
 
   // 最終的な店舗追加処理
   const handleSubmit = async (data: StoreForm) => {
+    // 店舗のみ作成モードの場合
+    if (data.creationMode === 'store-only') {
+      return handleStoreOnlySubmit(data);
+    }
+
+    // サブスクリプション作成モードの場合
     if (!stripe || !elements) {
       toast({
         variant: "destructive",
@@ -460,16 +528,17 @@ function AddStoreForm() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>サブスクリプション</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium">Revonizer</Label>
-                    <p className="text-lg">{watchedValues.revonizerQuantity}台</p>
-                  </div>
+            {watchedValues.creationMode === 'with-subscription' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>サブスクリプション</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Revonizer</Label>
+                      <p className="text-lg">{watchedValues.revonizerQuantity}台</p>
+                    </div>
                   
                   {priceBreakdown && (
                     <div className="space-y-2">
@@ -503,18 +572,21 @@ function AddStoreForm() {
                   </Alert>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>支払い情報</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  カード名義人: {watchedValues.cardholderName}
-                </p>
-              </CardContent>
-            </Card>
+            {watchedValues.creationMode === 'with-subscription' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>支払い情報</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg">
+                    カード名義人: {watchedValues.cardholderName}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex gap-4">
               <Button 
@@ -529,7 +601,9 @@ function AddStoreForm() {
                 disabled={isLoading}
                 className="flex-1"
               >
-                {isLoading ? '処理中...' : 'サブスクリプションを契約して店舗を追加'}
+                {isLoading ? '処理中...' : 
+                  watchedValues.creationMode === 'store-only' ? '店舗を追加' : 'サブスクリプションを契約して店舗を追加'
+                }
               </Button>
             </div>
           </div>
@@ -597,6 +671,50 @@ function AddStoreForm() {
                     {form.formState.errors.dealerCode.message}
                   </p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 作成モード選択 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                作成タイプ
+              </CardTitle>
+              <CardDescription>
+                店舗の作成方法を選択してください
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="with-subscription"
+                    value="with-subscription"
+                    {...form.register('creationMode')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <label htmlFor="with-subscription" className="flex-1">
+                    <div className="font-medium">今すぐサブスクリプションを開始する</div>
+                    <div className="text-sm text-gray-600">店舗作成と同時にRevonizerのサブスクリプションを契約します（35日間無料）</div>
+                  </label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="store-only"
+                    value="store-only"
+                    {...form.register('creationMode')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <label htmlFor="store-only" className="flex-1">
+                    <div className="font-medium">店舗情報だけを登録する</div>
+                    <div className="text-sm text-gray-600">後でサブスクリプションを設定する場合はこちらを選択してください</div>
+                  </label>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -834,14 +952,15 @@ function AddStoreForm() {
             </CardContent>
           </Card>
 
-          {/* サブスクリプション */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="w-5 h-5" />
-                サブスクリプション
-              </CardTitle>
-            </CardHeader>
+          {/* サブスクリプション（サブスクリプション作成モード時のみ表示） */}
+          {watchedValues.creationMode === 'with-subscription' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="w-5 h-5" />
+                  サブスクリプション
+                </CardTitle>
+              </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="revonizerQuantity">Revonizer台数 *</Label>
@@ -922,10 +1041,12 @@ function AddStoreForm() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          )}
 
-          {/* 支払い方法 */}
-          <Card>
+          {/* 支払い方法（サブスクリプション作成モード時のみ表示） */}
+          {watchedValues.creationMode === 'with-subscription' && (
+            <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
@@ -962,7 +1083,8 @@ function AddStoreForm() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          )}
 
           <div className="flex gap-4">
             <Button 

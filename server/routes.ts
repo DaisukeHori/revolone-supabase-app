@@ -306,6 +306,89 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // 店舗のみ作成のAPIエンドポイント（サブスクリプションなし）
+  app.post('/api/stores/create-store-only', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'ログインが必要です' });
+    }
+
+    try {
+      const { storeData } = req.body;
+
+      // 必須項目の確認
+      if (!storeData || !storeData.storeName || !storeData.dealerCode) {
+        return res.status(400).json({ message: '店舗名と取引先代理店コードは必須です' });
+      }
+
+      // Stripeカスタマーを作成（サブスクリプションなし）
+      const customer = await stripe.customers.create({
+        email: req.user.email,
+        name: storeData.storeName,
+        address: {
+          line1: storeData.shippingLine1,
+          line2: storeData.shippingLine2 || undefined,
+          city: storeData.shippingState,
+          postal_code: storeData.shippingPostalCode,
+          country: 'JP',
+        },
+        shipping: {
+          name: storeData.shippingName,
+          address: {
+            line1: storeData.shippingLine1,
+            line2: storeData.shippingLine2 || undefined,
+            city: storeData.shippingState,
+            postal_code: storeData.shippingPostalCode,
+            country: 'JP',
+          }
+        },
+        metadata: {
+          userId: req.user.id.toString(),
+          dealerCode: storeData.dealerCode,
+          creationType: 'store-only'
+        }
+      });
+
+      // データベースに店舗情報を保存
+      const [newStore] = await db.insert(stores).values({
+        userId: req.user.id,
+        name: storeData.storeName,
+        address: `${storeData.shippingState} ${storeData.shippingLine1}${storeData.shippingLine2 ? ' ' + storeData.shippingLine2 : ''}`,
+        phoneNumber: storeData.shippingPhone,
+        stripeCustomerId: customer.id,
+        metadata: {
+          dealerCode: storeData.dealerCode,
+          shippingAddress: {
+            name: storeData.shippingName,
+            postalCode: storeData.shippingPostalCode,
+            state: storeData.shippingState,
+            line1: storeData.shippingLine1,
+            line2: storeData.shippingLine2,
+            phone: storeData.shippingPhone
+          },
+          billingAddress: storeData.useSameAddress ? null : {
+            name: storeData.billingName,
+            postalCode: storeData.billingPostalCode,
+            state: storeData.billingState,
+            line1: storeData.billingLine1,
+            line2: storeData.billingLine2
+          },
+          creationType: 'store-only'
+        }
+      }).returning();
+
+      res.json({
+        success: true,
+        customerId: customer.id,
+        storeId: newStore.id,
+        message: '店舗情報を登録しました。後でサブスクリプションを設定できます。'
+      });
+
+    } catch (error: any) {
+      console.error('Store-only creation error:', error);
+      res.status(500).json({ message: '店舗作成中にエラーが発生しました: ' + error.message });
+    }
+  });
+
   // 店舗とサブスクリプションの作成APIエンドポイント（新フロー用）
   app.post('/api/stores/create-with-subscription', async (req, res) => {
     if (!req.isAuthenticated()) {
