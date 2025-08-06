@@ -72,6 +72,7 @@ function AddStoreForm() {
   const [promoDiscount, setPromoDiscount] = useState<{ amount: number; type: string } | null>(null);
   const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
   const [isAddressLoading, setIsAddressLoading] = useState(false);
+  const [isLegalCheckLoading, setIsLegalCheckLoading] = useState(true);
   const stripe = useStripe();
   const elements = useElements();
 
@@ -197,13 +198,16 @@ function AddStoreForm() {
     const privacyAccepted = localStorage.getItem('privacyAccepted');
     console.log('Terms accepted:', termsAccepted, 'Privacy accepted:', privacyAccepted);
     
-    if (!termsAccepted || !privacyAccepted) {
+    if (termsAccepted !== 'true' || privacyAccepted !== 'true') {
       console.log('Legal documents not accepted. Redirecting to /stores/new');
-      // Redirect to terms of service if not accepted
+      // Clear any partial acceptance and redirect
+      localStorage.removeItem('termsAccepted');
+      localStorage.removeItem('privacyAccepted');
       setLocation('/stores/new');
       return;
     }
     console.log('Legal documents accepted. AddStorePage loaded successfully.');
+    setIsLegalCheckLoading(false);
   }, [setLocation]);
 
   // 郵便番号変更時の住所自動補完
@@ -390,6 +394,22 @@ function AddStoreForm() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
+    );
+  }
+
+  // Show loading screen while checking legal document acceptance
+  if (isLegalCheckLoading) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto p-4 max-w-4xl">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-gray-600">利用規約の確認中...</p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
     );
   }
 
