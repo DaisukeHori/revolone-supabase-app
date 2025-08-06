@@ -31,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useUser();
 
   // 店舗詳細ページかどうかを判定し、店舗IDを取得
-  const storeMatch = location.match(/^\/store\/([^\/]+)/);
+  const storeMatch = location.match(/^\/store\/([^\/]+)/) || location.match(/^\/payment-history\/([^\/]+)/);
   const storeId = storeMatch ? storeMatch[1] : null;
 
   // 店舗情報を取得（店舗詳細ページの場合のみ）
