@@ -111,7 +111,8 @@ export function useUser() {
         });
       }
       if (result.ok) {
-        queryClient.invalidateQueries({ queryKey: ['user'] });
+        // すべてのキャッシュをクリア（前のユーザーのデータが残らないように）
+        queryClient.clear();
       }
     },
   });
