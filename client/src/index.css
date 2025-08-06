@@ -2,7 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ヘッダー高さの一元管理 */
+:root {
+  --header-height: 80px; /* h-20 = 5rem = 80px */
+}
 
+/* スクロール時のアンカーリンク対策 */
+html {
+  scroll-padding-top: var(--header-height);
+}
 
 /* モバイル対応のビューポート修正 */
 html, body {
