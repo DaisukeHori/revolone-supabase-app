@@ -5,7 +5,6 @@ import { useUser } from "@/hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Building2, Clock, Loader2, Plus, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { useModalRecovery } from "@/hooks/useModalRecovery";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -63,7 +62,6 @@ export default function HomePage() {
   const [showDeleteStoreModal, setShowDeleteStoreModal] = useState(false);
   const [selectedCustomerData, setSelectedCustomerData] = useState<any>(null);
   const queryClient = useQueryClient();
-  const { scheduleRecovery } = useModalRecovery();
 
   // モーダル状態の安全な管理
   const handleDeleteModalOpen = (customerData: any) => {
@@ -74,8 +72,6 @@ export default function HomePage() {
   const handleDeleteModalClose = (open: boolean) => {
     if (!open) {
       setSelectedCustomerData(null);
-      // モーダル閉じる際にボタン回復をスケジュール
-      scheduleRecovery();
     }
     setShowDeleteStoreModal(open);
   };
