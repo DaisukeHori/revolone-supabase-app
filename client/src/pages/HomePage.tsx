@@ -126,7 +126,7 @@ export default function HomePage() {
               <CardHeader className="bg-flat-accent pb-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Building2 className="h-6 w-6 text-green-600" />
+                    <Building2 className="h-6 w-6 text-orange-primary" />
                   </div>
                   <div className="text-center sm:text-left">
                     <CardTitle className="text-xl sm:text-2xl text-slate-800">店舗一覧</CardTitle>
@@ -135,7 +135,7 @@ export default function HomePage() {
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-green-500 mb-4" />
+                <Loader2 className="h-8 w-8 animate-spin text-orange-primary mb-4" />
                 <p className="text-slate-500 text-sm">店舗情報を読み込み中...</p>
               </CardContent>
             </Card>
@@ -146,7 +146,7 @@ export default function HomePage() {
               <CardHeader className="bg-flat-accent pb-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Building2 className="h-6 w-6 text-green-600" />
+                    <Building2 className="h-6 w-6 text-orange-primary" />
                   </div>
                   <div className="text-center sm:text-left flex-1">
                     <CardTitle className="text-xl sm:text-2xl text-slate-800">店舗一覧</CardTitle>
@@ -154,7 +154,7 @@ export default function HomePage() {
                   </div>
                   <Button 
                     onClick={() => setLocation('/stores/new')}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
+                    className="bg-orange-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     最初の店舗を登録
@@ -162,13 +162,13 @@ export default function HomePage() {
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-12">
-                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4">
-                  <Building2 className="h-10 w-10 text-green-400" />
+                <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+                  <Building2 className="h-10 w-10 text-orange-400" />
                 </div>
                 <p className="text-slate-600 text-base mb-6">店舗を登録してサービスを開始しましょう</p>
                 <Button 
                   onClick={() => setLocation('/stores/new')}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                  className="bg-orange-primary hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   店舗を登録する
@@ -190,7 +190,7 @@ export default function HomePage() {
                   </div>
                   <Button 
                     onClick={() => setLocation('/stores/new')}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
+                    className="bg-green-secondary hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     新規追加

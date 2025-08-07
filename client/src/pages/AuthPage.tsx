@@ -22,7 +22,7 @@ export default function AuthPage() {
               Revonizer
             </h1>
             <p className="text-white/90">
-              デバイス管理システム
+              美容サロン機器管理システム
             </p>
           </div>
           <div className="p-8">

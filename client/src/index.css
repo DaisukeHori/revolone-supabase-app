@@ -57,14 +57,14 @@ html, body {
 }
 
 @layer utilities {
-  /* Revolスタイルのグラデーション背景 */
+  /* Revolスタイルのグラデーション背景 - オレンジ基調 */
   .bg-modern-gradient {
-    background: linear-gradient(135deg, hsl(140, 60%, 45%) 0%, hsl(150, 55%, 40%) 100%);
+    background: linear-gradient(135deg, #ED8F0B 0%, #D47A00 100%);
   }
 
   /* フラットなアクセント背景 */
   .bg-flat-accent {
-    background: linear-gradient(to right, hsl(140, 30%, 97%) 0%, hsl(150, 25%, 98%) 100%);
+    background: linear-gradient(to right, #FFF7ED 0%, #FFF9F0 100%);
   }
 
   /* カードのホバーエフェクト */
@@ -74,7 +74,7 @@ html, body {
 
   .modern-card-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px -8px rgba(34, 139, 34, 0.2);
+    box-shadow: 0 8px 20px -8px rgba(237, 143, 11, 0.25);
   }
 
   /* 入力フィールドのライトスタイル */
@@ -85,6 +85,33 @@ html, body {
 
   .input-light:focus {
     background-color: white;
-    border-color: hsl(140, 60%, 45%);
+    border-color: #ED8F0B;
+  }
+
+  /* オレンジ系カラー */
+  .text-orange-primary {
+    color: #ED8F0B;
+  }
+
+  .bg-orange-primary {
+    background-color: #ED8F0B;
+  }
+
+  /* 黄緑系カラー */
+  .text-green-secondary {
+    color: #B6D01C;
+  }
+
+  .bg-green-secondary {
+    background-color: #B6D01C;
+  }
+
+  /* 茶色系カラー */
+  .text-brown-accent {
+    color: #8B4513;
+  }
+
+  .bg-brown-accent {
+    background-color: #8B4513;
   }
 }
