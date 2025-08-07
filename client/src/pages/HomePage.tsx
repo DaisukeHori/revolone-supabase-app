@@ -90,16 +90,16 @@ export default function HomePage() {
         className="space-y-8"
       >
         <motion.div variants={item}>
-          <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-2xl p-8 text-white shadow-xl">
+          <div className="bg-modern-gradient rounded-xl p-8 text-white shadow-lg">
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
+              <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center flex-shrink-0">
                 <Clock className="h-8 w-8 text-white" />
               </div>
               <div className="text-center sm:text-left">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2">
                   おかえりなさい、{user?.username}さん
                 </h1>
-                <p className="text-gray-200 text-base sm:text-lg">
+                <p className="text-white/90 text-base sm:text-lg">
                   {new Date().toLocaleDateString("ja-JP", {
                     year: "numeric",
                     month: "long",
@@ -109,7 +109,6 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-
           </div>
         </motion.div>
 
@@ -123,39 +122,39 @@ export default function HomePage() {
           </motion.div>
         ) : isLoading ? (
           <motion.div variants={item}>
-            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
+            <Card className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden modern-card-hover">
+              <CardHeader className="bg-flat-accent pb-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-6 w-6 text-gray-600" />
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Building2 className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="text-center sm:text-left">
-                    <CardTitle className="text-xl sm:text-2xl text-gray-800">店舗一覧</CardTitle>
-                    <p className="text-gray-600 text-sm sm:text-base">管理中の店舗とサービス状況</p>
+                    <CardTitle className="text-xl sm:text-2xl text-slate-800">店舗一覧</CardTitle>
+                    <p className="text-slate-600 text-sm sm:text-base">管理中の店舗とサービス状況</p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
-                <p className="text-gray-500 text-sm">店舗情報を読み込み中...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+                <p className="text-slate-500 text-sm">店舗情報を読み込み中...</p>
               </CardContent>
             </Card>
           </motion.div>
         ) : stripeData === null || (Array.isArray(stripeData) && stripeData.length === 0) ? (
           <motion.div variants={item}>
-            <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 pb-6">
+            <Card className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden modern-card-hover">
+              <CardHeader className="bg-flat-accent pb-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-6 w-6 text-gray-600" />
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Building2 className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="text-center sm:text-left flex-1">
-                    <CardTitle className="text-xl sm:text-2xl text-gray-800">店舗一覧</CardTitle>
-                    <p className="text-gray-600 text-sm sm:text-base">まだ店舗が登録されていません</p>
+                    <CardTitle className="text-xl sm:text-2xl text-slate-800">店舗一覧</CardTitle>
+                    <p className="text-slate-600 text-sm sm:text-base">まだ店舗が登録されていません</p>
                   </div>
                   <Button 
                     onClick={() => setLocation('/stores/new')}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     最初の店舗を登録
@@ -163,11 +162,13 @@ export default function HomePage() {
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-12">
-                <Building2 className="h-16 w-16 text-gray-300 mb-4" />
-                <p className="text-gray-500 text-base mb-6">店舗を登録してサービスを開始しましょう</p>
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                  <Building2 className="h-10 w-10 text-blue-400" />
+                </div>
+                <p className="text-slate-600 text-base mb-6">店舗を登録してサービスを開始しましょう</p>
                 <Button 
                   onClick={() => setLocation('/stores/new')}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   店舗を登録する

@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Background } from "@/components/ui/background";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
+import logoUrl from '@/assets/logo.png';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -93,12 +94,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         <div className="flex h-full flex-col">
           {/* ロゴ/ブランド部分 */}
-          <div className="flex h-20 items-center justify-between px-6 border-b border-gray-200 bg-gradient-to-r from-gray-800 to-gray-700">
+          <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200 bg-white">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <div className="w-6 h-6 bg-gradient-to-br from-gray-600 to-gray-800 rounded-md"></div>
-              </div>
-              <span className="text-xl font-bold text-white">Revonizer管理</span>
+              <img src={logoUrl} alt="Revonizer" className="w-10 h-10 object-contain" />
+              <span className="text-xl font-bold text-slate-800">Revonizer</span>
             </div>
             {/* モバイルでは閉じるボタンは不要 */}
           </div>
@@ -115,20 +114,20 @@ export function AppLayout({ children }: AppLayoutProps) {
                   key={item.href}
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start gap-4 h-12 px-4 rounded-xl transition-all duration-200 group",
+                    "w-full justify-start gap-4 h-12 px-4 rounded-lg transition-all duration-200 group",
                     isActive 
-                      ? "bg-gray-100 text-gray-900 shadow-sm" 
-                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                   onClick={() => {
                     setLocation(item.href);
                   }}
                 >
                   <div className={cn(
-                    "p-2 rounded-lg transition-colors",
+                    "p-2 rounded-md transition-colors",
                     isActive 
-                      ? "bg-gray-200 text-gray-900" 
-                      : "bg-gray-100 group-hover:bg-gray-200"
+                      ? "bg-blue-100 text-blue-700" 
+                      : "bg-slate-100 group-hover:bg-slate-200"
                   )}>
                     <Icon className="h-5 w-5" />
                   </div>
@@ -157,21 +156,21 @@ export function AppLayout({ children }: AppLayoutProps) {
           </nav>
 
           {/* ユーザー情報とログアウト */}
-          <div className="border-t border-gray-200 p-6">
-            <div className="mb-4 p-4 bg-gray-50 rounded-xl">
+          <div className="border-t border-slate-200 p-6">
+            <div className="mb-4 p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full flex items-center justify-center text-white font-semibold">
+                <div className="w-10 h-10 bg-modern-gradient rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
                   {user?.username?.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800">{user?.username}</div>
-                  <div className="text-sm text-gray-500">{user?.email}</div>
+                  <div className="font-semibold text-slate-800">{user?.username}</div>
+                  <div className="text-sm text-slate-500">{user?.email}</div>
                 </div>
               </div>
             </div>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-3 h-12 px-4 rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+              className="w-full justify-start gap-3 h-11 px-4 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
               onClick={() => logout()}
             >
               <div className="p-2 rounded-lg bg-red-100">
