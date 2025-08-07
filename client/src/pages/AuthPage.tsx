@@ -19,10 +19,10 @@ export default function AuthPage() {
               <img src={logoUrl} alt="Revonizer" className="w-16 h-16 object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              Revonizer
+              Revol One
             </h1>
             <p className="text-white/90">
-              美容サロン機器管理システム
+              サブスクリプション管理システム
             </p>
           </div>
           <div className="p-8">
