@@ -8,7 +8,7 @@ import { setupDeviceRoutes } from "./devices";
 import { setupEmailChangeRoutes } from "./emailChange";
 import { db } from "@db";
 import { users, stores } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Stripe from "stripe";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -37,7 +37,50 @@ export function registerRoutes(app: Express): Server {
   // メールアドレス変更関連のルートを設定
   setupEmailChangeRoutes(app);
 
+  // Health check endpoint for deployment verification
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      server: 'running'
+    });
+  });
 
+  // Detailed health check with database connectivity
+  app.get('/health/detailed', async (req, res) => {
+    try {
+      // Test database connection
+      const dbTest = await db.execute(sql`SELECT 1 as test`);
+      
+      // Check required environment variables
+      const requiredSecrets = {
+        STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
+        KINTONE_API_TOKEN_ALL: !!process.env.KINTONE_API_TOKEN_ALL,
+        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+        DATABASE_URL: !!process.env.DATABASE_URL,
+      };
+
+      res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        database: 'connected',
+        secrets: requiredSecrets,
+        server: 'running'
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(500).json({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        database: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        server: 'running'
+      });
+    }
+  });
 
   // Stripe顧客削除のAPIエンドポイント
   app.delete('/api/stores/delete-stripe-customer/:customerId', async (req, res) => {
