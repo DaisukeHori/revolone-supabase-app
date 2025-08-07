@@ -171,6 +171,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   placeholder="example@email.com"
+                  className="bg-slate-50 border-slate-200 focus:border-primary focus:bg-white"
                   {...registerForm.register('email')}
                 />
                 {registerForm.formState.errors.email && (
@@ -183,6 +184,7 @@ export default function RegisterPage() {
                 <Input
                   id="username"
                   placeholder="ユーザー名"
+                  className="bg-slate-50 border-slate-200 focus:border-primary focus:bg-white"
                   {...registerForm.register('username')}
                 />
                 {registerForm.formState.errors.username && (
@@ -196,6 +198,7 @@ export default function RegisterPage() {
                   id="password"
                   type="password"
                   placeholder="パスワード"
+                  className="bg-slate-50 border-slate-200 focus:border-primary focus:bg-white"
                   {...registerForm.register('password')}
                 />
                 {registerForm.formState.errors.password && (
@@ -260,7 +263,7 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="123456"
                   maxLength={6}
-                  className="text-center text-2xl font-mono"
+                  className="text-center text-2xl font-mono bg-slate-50 border-slate-200 focus:border-primary focus:bg-white"
                   {...verificationForm.register('verificationCode')}
                 />
                 {verificationForm.formState.errors.verificationCode && (

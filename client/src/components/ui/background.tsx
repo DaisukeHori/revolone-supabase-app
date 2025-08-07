@@ -5,7 +5,7 @@ export function Background({ className }: { className?: string }) {
     <div
       className={cn(
         "fixed inset-0 -z-10",
-        "bg-gradient-to-br from-slate-50 via-white to-blue-50",
+        "bg-gradient-to-br from-slate-50 via-white to-green-50",
         className
       )}
     />

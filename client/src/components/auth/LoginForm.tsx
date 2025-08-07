@@ -116,7 +116,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
                   {...field}
                   type="email"
                   placeholder="example@email.com"
-                  className="bg-background/80 border-primary/20 focus:border-primary/40"
+                  className="bg-slate-50 border-slate-200 focus:border-primary focus:bg-white"
                   disabled={isSubmitting}
                 />
               </FormControl>
@@ -136,7 +136,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
                   {...field}
                   type="password"
                   placeholder="********"
-                  className="bg-background/80 border-primary/20 focus:border-primary/40"
+                  className="bg-slate-50 border-slate-200 focus:border-primary focus:bg-white"
                   disabled={isSubmitting}
                 />
               </FormControl>
@@ -147,7 +147,7 @@ export function LoginForm({ onComplete }: LoginFormProps) {
 
         <Button
           type="submit"
-          className="w-full bg-primary/90 hover:bg-primary transition-colors"
+          className="w-full bg-primary hover:bg-primary/90 transition-colors"
           disabled={isSubmitting}
         >
           {isSubmitting ? (

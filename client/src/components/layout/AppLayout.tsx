@@ -116,7 +116,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   className={cn(
                     "w-full justify-start gap-4 h-12 px-4 rounded-lg transition-all duration-200 group",
                     isActive 
-                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                      ? "bg-green-50 text-green-700 border border-green-200" 
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                   onClick={() => {
@@ -126,7 +126,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <div className={cn(
                     "p-2 rounded-md transition-colors",
                     isActive 
-                      ? "bg-blue-100 text-blue-700" 
+                      ? "bg-green-100 text-green-700" 
                       : "bg-slate-100 group-hover:bg-slate-200"
                   )}>
                     <Icon className="h-5 w-5" />
