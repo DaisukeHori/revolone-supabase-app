@@ -1,8 +1,8 @@
-# Revonizer Management System
+# Revol One Management System
 
 ## 概要
 
-Revonizer Management Systemは、レボナイザーデバイスの包括的な管理を行うフルスタックWebアプリケーションです。デバイスの追跡、サブスクリプション管理、修理履歴の追跡、店舗管理などの機能を提供します。
+Revol One Management Systemは、Revol Oneサブスクリプションの包括的な管理を行うフルスタックWebアプリケーションです。デバイスの追跡、サブスクリプション管理、修理履歴の追跡、店舗管理などの機能を提供します。
 
 ## 主な機能
 

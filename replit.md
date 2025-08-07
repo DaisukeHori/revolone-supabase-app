@@ -1,8 +1,8 @@
-# Revonizer Management System
+# Revol One Management System
 
 ## Overview
 
-This is a comprehensive device and subscription management system for Revonizer, built as a full-stack TypeScript application. The system handles authentication, device tracking, subscription management via Stripe, and multi-factor authentication (MFA) capabilities. It integrates with external services including Kintone for device records, SendGrid for email communications, and Twilio for SMS services.
+This is a comprehensive subscription management system for Revol One, built as a full-stack TypeScript application. The system handles authentication, device tracking, subscription management via Stripe, and multi-factor authentication (MFA) capabilities. It integrates with external services including Kintone for device records, SendGrid for email communications, and Twilio for SMS services.
 
 ## System Architecture
 

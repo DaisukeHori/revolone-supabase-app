@@ -16,7 +16,7 @@ export default function AuthPage() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
           <div className="bg-modern-gradient p-8 text-center">
             <div className="mx-auto w-20 h-20 bg-white rounded-lg flex items-center justify-center mb-4 shadow-md">
-              <img src={logoUrl} alt="Revonizer" className="w-16 h-16 object-contain" />
+              <img src={logoUrl} alt="Revol One" className="w-16 h-16 object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
               Revol One
