@@ -467,7 +467,7 @@ export default function ProfilePage() {
       {/* ログアウトセクション */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-600">
+          <CardTitle className="flex items-center gap-2 text-slate-700">
             <LogOut className="w-5 h-5" />
             ログアウト
           </CardTitle>
@@ -477,9 +477,9 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <Button
-            variant="destructive"
+            variant="outline"
             onClick={() => logout()}
-            className="w-full md:w-auto"
+            className="w-full md:w-auto text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-300"
           >
             <LogOut className="w-4 h-4 mr-2" />
             ログアウト
