@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle } from "lucide-react";
+import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle, LogOut } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AppLayout } from "@/components/layout/AppLayout";
 
@@ -31,7 +31,7 @@ const verificationCodeSchema = z.object({
 type VerificationCodeForm = z.infer<typeof verificationCodeSchema>;
 
 export default function ProfilePage() {
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const { toast } = useToast();
   const [editingField, setEditingField] = useState<'username' | 'email' | 'phoneNumber' | null>(null);
   const [emailChangeStep, setEmailChangeStep] = useState<'form' | 'verification' | 'success'>('form');
@@ -461,6 +461,29 @@ export default function ProfilePage() {
             )}
           </div>
 
+        </CardContent>
+      </Card>
+
+      {/* ログアウトセクション */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <LogOut className="w-5 h-5" />
+            ログアウト
+          </CardTitle>
+          <CardDescription>
+            アカウントからログアウトします
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="destructive"
+            onClick={() => logout()}
+            className="w-full md:w-auto"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            ログアウト
+          </Button>
         </CardContent>
       </Card>
       </div>

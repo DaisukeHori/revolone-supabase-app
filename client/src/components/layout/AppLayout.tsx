@@ -155,10 +155,10 @@ export function AppLayout({ children }: AppLayoutProps) {
             )}
           </nav>
 
-          {/* ユーザー情報とログアウト */}
+          {/* ユーザー情報 */}
           <div className="border-t border-slate-200 p-6">
-            <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-3 mb-2">
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-modern-gradient rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
                   {user?.username?.charAt(0).toUpperCase()}
                 </div>
@@ -168,16 +168,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </div>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 h-11 px-4 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
-              onClick={() => logout()}
-            >
-              <div className="p-2 rounded-lg bg-red-100">
-                <LogOut className="h-4 w-4" />
-              </div>
-              <span className="font-medium">ログアウト</span>
-            </Button>
           </div>
         </div>
       </motion.aside>
