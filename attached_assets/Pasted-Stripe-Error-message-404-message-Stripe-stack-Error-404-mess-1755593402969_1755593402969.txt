@@ -1,0 +1,60 @@
+Stripe初期化エラー: 
+Error {}
+message: "404: {"message":"Stripeの顧客情報が見つかりません"}"
+stack: "Error: 404: {"message":"Stripeの顧客情報が見つかりません"}↵ at apiRequest (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/lib/queryClient.ts:18:11)↵ at async initializeStripe (https://4e56d1d1-d1a9-4066-bb2f-2af5288c23a8-00-24gsjhthsy0o7.sisko.replit.dev/src/pages/AddStorePage.tsx:2079:26)"
+get stack: ƒ ()
+length: 0
+name: ""
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ get arguments()
+set arguments: ƒ set arguments()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ get caller()
+set caller: ƒ set caller()
+constructor: ƒ Function()
+length: 0
+name: ""
+toString: ƒ toString()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+set stack: ƒ ()
+length: 1
+name: ""
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ get arguments()
+set arguments: ƒ set arguments()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ get caller()
+set caller: ƒ set caller()
+constructor: ƒ Function()
+length: 0
+name: ""
+toString: ƒ toString()
+length: 0
+name: "toString"
+[[Prototype]]: ƒ ()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+constructor: ƒ Function()
+hasOwnProperty: ƒ hasOwnProperty()
+isPrototypeOf: ƒ isPrototypeOf()
+propertyIsEnumerable: ƒ propertyIsEnumerable()
+toLocaleString: ƒ toLocaleString()
+toString: ƒ toString()
+valueOf: ƒ valueOf()
+__defineGetter__: ƒ __defineGetter__()
+__defineSetter__: ƒ __defineSetter__()
+__lookupGetter__: ƒ __lookupGetter__()
+__lookupSetter__: ƒ __lookupSetter__()
+__proto__: ƒ ()
+get __proto__: ƒ get __proto__()
+set __proto__: ƒ set __proto__()
+[[Prototype]]: Object
