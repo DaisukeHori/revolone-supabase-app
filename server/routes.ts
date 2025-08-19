@@ -6,6 +6,7 @@ import { setupStoreRoutes } from "./stores";
 import { setupMFARoutes } from "./mfa";
 import { setupDeviceRoutes } from "./devices";
 import { setupEmailChangeRoutes } from "./emailChange";
+import { setupUserManagementRoutes } from "./user-management";
 import { db } from "@db";
 import { users, stores } from "@db/schema";
 import { eq, sql } from "drizzle-orm";
@@ -36,6 +37,9 @@ export function registerRoutes(app: Express): Server {
 
   // メールアドレス変更関連のルートを設定
   setupEmailChangeRoutes(app);
+
+  // ユーザー管理関連のルートを設定
+  setupUserManagementRoutes(app);
 
   // Health check endpoint for deployment verification
   app.get('/health', (req, res) => {

@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle, LogOut } from "lucide-react";
+import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle, LogOut, Trash2, AlertTriangle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
@@ -53,6 +53,9 @@ export default function ProfilePage() {
   const [emailChangeStep, setEmailChangeStep] = useState<'form' | 'verification' | 'success'>('form');
   const [pendingEmail, setPendingEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -526,6 +529,159 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* アカウント削除セクション */}
+      <motion.div variants={item}>
+        <Card className="bg-red-50/50 backdrop-blur-sm border-red-200">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="bg-red-100 p-3 rounded-lg">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-red-900">アカウント削除</CardTitle>
+                <CardDescription className="text-red-700">
+                  アカウントを完全に削除します
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Alert className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  この操作は取り消すことができません。すべてのデータが完全に削除されます。
+                </AlertDescription>
+              </Alert>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base text-red-900">アカウントの完全削除</Label>
+                  <p className="text-sm text-red-700">
+                    すべてのデータとアカウント情報が削除されます
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  削除する
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* 削除確認モーダル */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-red-600">アカウント削除の確認</CardTitle>
+              <CardDescription>
+                本当にアカウントを削除しますか？この操作は取り消すことができません。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    削除されるもの：
+                    <ul className="list-disc list-inside mt-2">
+                      <li>アカウント情報</li>
+                      <li>すべての設定</li>
+                      <li>登録されたデータ</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="delete-password">パスワードを入力して確認</Label>
+                  <Input
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="パスワード"
+                  />
+                  {deleteError && (
+                    <p className="text-sm text-red-600">{deleteError}</p>
+                  )}
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={async () => {
+                      setIsLoading(true);
+                      setDeleteError('');
+                      
+                      try {
+                        // 削除可能かチェック
+                        const checkResponse = await fetch('/api/user/can-delete', {
+                          credentials: 'include'
+                        });
+                        const checkData = await checkResponse.json();
+                        
+                        if (!checkData.canDelete) {
+                          setDeleteError(checkData.reason);
+                          setIsLoading(false);
+                          return;
+                        }
+                        
+                        // アカウント削除実行
+                        const deleteResponse = await fetch('/api/user', {
+                          method: 'DELETE',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          credentials: 'include',
+                          body: JSON.stringify({ password: deletePassword }),
+                        });
+                        
+                        if (deleteResponse.ok) {
+                          toast({
+                            title: "アカウントを削除しました",
+                            description: "ご利用ありがとうございました",
+                          });
+                          // ログイン画面へリダイレクト
+                          window.location.href = '/login';
+                        } else {
+                          const error = await deleteResponse.json();
+                          setDeleteError(error.message || 'アカウントの削除に失敗しました');
+                        }
+                      } catch (error) {
+                        setDeleteError('アカウントの削除中にエラーが発生しました');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={!deletePassword || isLoading}
+                  >
+                    {isLoading ? '削除中...' : 'アカウントを削除'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeletePassword('');
+                      setDeleteError('');
+                    }}
+                    disabled={isLoading}
+                  >
+                    キャンセル
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       </motion.div>
     </AppLayout>
   );
