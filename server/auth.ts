@@ -68,7 +68,6 @@ export const updateProfileSchema = z.object({
 });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "現在のパスワードを入力してください"),
   newPassword: z.string().min(8, "パスワードは8文字以上である必要があります"),
 });
 
@@ -490,15 +489,9 @@ export function setupAuth(app: Express) {
       });
     }
 
-    const { currentPassword, newPassword } = result.data;
+    const { newPassword } = result.data;
 
     try {
-      // 現在のパスワードを検証
-      const isMatch = await crypto.compare(currentPassword, req.user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "現在のパスワードが正しくありません" });
-      }
-
       // 新しいパスワードをハッシュ化
       const hashedPassword = await crypto.hash(newPassword);
 

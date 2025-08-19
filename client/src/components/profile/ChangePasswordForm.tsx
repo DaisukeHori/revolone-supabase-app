@@ -16,7 +16,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "現在のパスワードを入力してください"),
   newPassword: z.string().min(8, "パスワードは8文字以上である必要があります"),
   confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
@@ -37,7 +36,6 @@ export function ChangePasswordForm({ onComplete }: Props) {
   const form = useForm<FormData>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: {
-      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -50,7 +48,6 @@ export function ChangePasswordForm({ onComplete }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          currentPassword: data.currentPassword,
           newPassword: data.newPassword,
         }),
         credentials: "include",
@@ -92,24 +89,7 @@ export function ChangePasswordForm({ onComplete }: Props) {
           </Alert>
         )}
 
-        <FormField
-          control={form.control}
-          name="currentPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-foreground/90">現在のパスワード</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="********"
-                  {...field}
-                  className="bg-background/80 border-primary/20 focus:border-primary/40"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
 
         <FormField
           control={form.control}
