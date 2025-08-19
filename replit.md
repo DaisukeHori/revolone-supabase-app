@@ -227,6 +227,12 @@ Changelog:
   - Added comprehensive meta tags for SEO and social sharing
   - Updated site title and description for beauty salon management focus
   - COMPLETED: Design system successfully aligned with revol-one.com actual branding colors
+- August 19, 2025. SendGrid API key configuration updates
+  - Updated API key name from SENDGRID_API_KEY to SENDGRID_REVOLONE_API_KEY for better service identification
+  - Added backward compatibility fallback to existing SENDGRID_API_KEY
+  - Fixed email sending functionality after previous API key reached credit limits
+  - Updated config.ts to prioritize new SENDGRID_REVOLONE_API_KEY over legacy key
+  - COMPLETED: Email verification system now functional with new API key configuration
 ```
 
 ## User Preferences

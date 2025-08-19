@@ -7,6 +7,7 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
+  SENDGRID_REVOLONE_API_KEY: z.string().optional(),
   MASTER_PASSWORD: z.string().optional(),
   KINTONE_API_TOKEN_DEV: z.string().optional(),
   STRIPE_SECRET_KEY_DEV: z.string().optional(),
@@ -31,7 +32,7 @@ const config = {
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     },
     sendgrid: {
-      apiKey: process.env.SENDGRID_API_KEY,
+      apiKey: process.env.SENDGRID_REVOLONE_API_KEY || process.env.SENDGRID_API_KEY,
     },
   },
   production: {
@@ -45,7 +46,7 @@ const config = {
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     },
     sendgrid: {
-      apiKey: process.env.SENDGRID_API_KEY,
+      apiKey: process.env.SENDGRID_REVOLONE_API_KEY || process.env.SENDGRID_API_KEY,
     },
   },
 };
