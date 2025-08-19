@@ -62,6 +62,7 @@ export default function HomePage() {
   const [showDeleteStoreModal, setShowDeleteStoreModal] = useState(false);
   const [selectedCustomerData, setSelectedCustomerData] = useState<any>(null);
   const [showFirstTimeMessage, setShowFirstTimeMessage] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const queryClient = useQueryClient();
 
 
@@ -84,8 +85,16 @@ export default function HomePage() {
 
   // 初回ユーザーの自動リダイレクト処理
   useEffect(() => {
+    // すでに初期化済みの場合は何もしない
+    if (hasInitialized) {
+      return;
+    }
+    
     // ユーザー情報が読み込まれ、初回設定が完了していない場合のみリダイレクト
     if (user && !user.hasCompletedSetup && !isLoading && stripeData === null) {
+      // 初期化フラグを立てる（二度と実行しない）
+      setHasInitialized(true);
+      
       // データ取得完了後、店舗がない場合
       setShowFirstTimeMessage(true);
       
@@ -93,6 +102,9 @@ export default function HomePage() {
       fetch('/api/mark-setup-complete', {
         method: 'POST',
         credentials: 'include'
+      }).then(() => {
+        // フラグ更新後にユーザー情報を再取得
+        queryClient.invalidateQueries({ queryKey: ['user'] });
       }).catch(error => {
         console.error('初回設定フラグ更新エラー:', error);
       });
@@ -105,14 +117,19 @@ export default function HomePage() {
       return () => clearTimeout(timer);
     } else if (user && !user.hasCompletedSetup && !isLoading && stripeData !== null) {
       // Stripe顧客が既に存在する場合は、ウィザードを表示せずにフラグだけ更新
+      setHasInitialized(true);
+      
       fetch('/api/mark-setup-complete', {
         method: 'POST',
         credentials: 'include'
+      }).then(() => {
+        // フラグ更新後にユーザー情報を再取得
+        queryClient.invalidateQueries({ queryKey: ['user'] });
       }).catch(error => {
         console.error('初回設定フラグ更新エラー:', error);
       });
     }
-  }, [user, isLoading, stripeData, setLocation]);
+  }, [user, isLoading, stripeData, setLocation, hasInitialized, queryClient]);
 
   return (
     <AppLayout>
