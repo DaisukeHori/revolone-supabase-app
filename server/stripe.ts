@@ -271,7 +271,8 @@ export function setupStripeRoutes(app: Express, options: SetupOptions = {}) {
   });
 
   // 支払い方法変更用のSetup Intentを作成
-  app.post("/api/stripe/setup-intent", async (req, res) => {
+  // 既存顧客向けのSetup Intent作成エンドポイント（別のパスに変更）
+  app.post("/api/stripe/customer-setup-intent", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "ログインが必要です" });
     }
