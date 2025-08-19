@@ -563,11 +563,42 @@ export default function ProfilePage() {
                 </div>
                 <Button
                   variant="destructive"
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      // 削除可能かチェック
+                      const checkResponse = await fetch('/api/user/can-delete', {
+                        credentials: 'include'
+                      });
+                      const checkData = await checkResponse.json();
+                      
+                      if (!checkData.canDelete) {
+                        toast({
+                          title: "削除できません",
+                          description: checkData.reason || "先に登録されている店舗を削除してください。",
+                          variant: "destructive",
+                        });
+                        setIsLoading(false);
+                        return;
+                      }
+                      
+                      // 削除可能な場合のみモーダルを表示
+                      setShowDeleteModal(true);
+                    } catch (error) {
+                      toast({
+                        title: "エラーが発生しました",
+                        description: "削除可能かどうかの確認中にエラーが発生しました",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  disabled={isLoading}
                   className="bg-red-600 hover:bg-red-700"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  削除する
+                  {isLoading ? '確認中...' : '削除する'}
                 </Button>
               </div>
             </div>
@@ -622,19 +653,7 @@ export default function ProfilePage() {
                       setDeleteError('');
                       
                       try {
-                        // 削除可能かチェック
-                        const checkResponse = await fetch('/api/user/can-delete', {
-                          credentials: 'include'
-                        });
-                        const checkData = await checkResponse.json();
-                        
-                        if (!checkData.canDelete) {
-                          setDeleteError(checkData.reason);
-                          setIsLoading(false);
-                          return;
-                        }
-                        
-                        // アカウント削除実行
+                        // アカウント削除実行（すでにチェック済み）
                         const deleteResponse = await fetch('/api/user', {
                           method: 'DELETE',
                           headers: {
