@@ -3,18 +3,30 @@ import { db } from "@db";
 import { users } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import crypto from "crypto";
+import { scrypt, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-02-24.acacia",
 });
 
-// パスワード比較関数
-function comparePassword(inputPassword: string, storedPassword: string): boolean {
-  const [salt, hash] = storedPassword.split(':');
-  const inputHash = crypto.pbkdf2Sync(inputPassword, salt, 100000, 64, 'sha256').toString('hex');
-  return hash === inputHash;
+const scryptAsync = promisify(scrypt);
+
+// パスワード比較関数（auth.tsと同じアルゴリズムを使用）
+async function comparePassword(inputPassword: string, storedPassword: string): Promise<boolean> {
+  try {
+    const [salt, hashedPassword] = storedPassword.split(":");
+    if (!salt || !hashedPassword) {
+      return false;
+    }
+    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
+    const suppliedPasswordBuf = (await scryptAsync(inputPassword, salt, 64)) as Buffer;
+    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
+  } catch (error) {
+    console.error("パスワード比較エラー:", error);
+    return false;
+  }
 }
 
 interface AuthenticatedRequest extends Express.Request {
@@ -87,7 +99,7 @@ export function setupUserManagementRoutes(app: Express) {
       }
 
       // パスワード確認
-      const isValidPassword = comparePassword(
+      const isValidPassword = await comparePassword(
         result.data.password,
         currentUser.password
       );
