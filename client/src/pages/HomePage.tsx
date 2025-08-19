@@ -252,14 +252,7 @@ export default function HomePage() {
                 <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-4">
                   <Building2 className="h-10 w-10 text-orange-400" />
                 </div>
-                <p className="text-slate-600 text-base mb-6">店舗を登録してサービスを開始しましょう</p>
-                <Button 
-                  onClick={() => setLocation('/stores/new')}
-                  className="bg-orange-primary hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  店舗を登録する
-                </Button>
+                <p className="text-slate-600 text-base">店舗を登録してサービスを開始しましょう</p>
               </CardContent>
             </Card>
           </motion.div>
