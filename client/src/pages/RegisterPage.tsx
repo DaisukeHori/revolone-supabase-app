@@ -94,11 +94,24 @@ export default function RegisterPage() {
       const result = await response.json();
       
       if (response.ok) {
-        setStep('success');
-        toast({
-          title: "登録完了",
-          description: "新規登録が完了しました",
-        });
+        if (result.autoLogin && result.user) {
+          // 自動ログインが成功した場合
+          toast({
+            title: "登録完了",
+            description: `${result.user.username}さん、ようこそ！`,
+          });
+          // ユーザー情報を保存してホームページへ
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
+        } else {
+          // 自動ログインに失敗した場合は従来通り
+          setStep('success');
+          toast({
+            title: "登録完了",
+            description: "新規登録が完了しました。ログインしてください。",
+          });
+        }
       } else {
         toast({
           title: "エラー",

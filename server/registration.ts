@@ -134,22 +134,46 @@ export function setupRegistrationRoutes(app: Express) {
       }
 
       // トランザクションで処理
-      await db.transaction(async (tx) => {
+      const [newUser] = await db.transaction(async (tx) => {
         // ユーザーを作成
-        await tx.insert(users).values({
+        const [createdUser] = await tx.insert(users).values({
           email: verification.email,
           username: verification.username,
           password: verification.hashedPassword,
           emailVerified: true,
-        });
+        }).returning();
 
         // 認証レコードを認証済みにマーク
         await tx.update(registrationVerifications)
           .set({ verified: true })
           .where(eq(registrationVerifications.id, verification.id));
+        
+        return [createdUser];
       });
 
-      res.json({ message: "新規登録が完了しました。ログインできます。" });
+      // 自動的にログイン処理を行う
+      req.login(newUser, (err) => {
+        if (err) {
+          console.error("[Registration] Auto-login error:", err);
+          // ログインに失敗しても登録は成功しているので、通常のレスポンスを返す
+          return res.json({ 
+            message: "新規登録が完了しました。ログインページからログインしてください。",
+            autoLogin: false 
+          });
+        }
+
+        // ログイン成功 - ユーザー情報を返す
+        res.json({ 
+          message: "新規登録が完了しました",
+          autoLogin: true,
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            phoneNumber: newUser.phoneNumber
+          }
+        });
+      });
     } catch (error) {
       console.error("[Registration] Verify error:", error);
       
