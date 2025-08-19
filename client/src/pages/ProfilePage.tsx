@@ -12,6 +12,7 @@ import { useUser } from "@/hooks/use-user";
 import { User, Mail, Edit2, Check, X, AlertCircle, CheckCircle, LogOut } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { motion } from "framer-motion";
 
 const profileSchema = z.object({
   username: z.string().min(1, "名前は必須です"),
@@ -29,6 +30,21 @@ const verificationCodeSchema = z.object({
 });
 
 type VerificationCodeForm = z.infer<typeof verificationCodeSchema>;
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 export default function ProfilePage() {
   const { user, logout } = useUser();
@@ -265,24 +281,34 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4 max-w-2xl">
+      <motion.div 
+        className="container mx-auto p-4 max-w-2xl space-y-6"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
         {/* ヘッダー */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">プロフィール</h1>
-          <p className="text-gray-600">アカウント情報を管理できます</p>
+          <h1 className="text-2xl font-semibold mb-2">プロフィール</h1>
+          <p className="text-muted-foreground">アカウント情報を管理できます</p>
         </div>
 
-      {/* プロフィール情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            アカウント情報
-          </CardTitle>
-          <CardDescription>
-            基本的な情報を編集できます
-          </CardDescription>
-        </CardHeader>
+        {/* プロフィール情報 */}
+        <motion.div variants={item}>
+        <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-3 rounded-lg">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl">アカウント情報</CardTitle>
+                <CardDescription>
+                  基本的な情報を編集できます
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
         <CardContent className="space-y-6">
           
           {/* 名前の編集 */}
@@ -462,31 +488,45 @@ export default function ProfilePage() {
           </div>
 
         </CardContent>
-      </Card>
+        </Card>
+      </motion.div>
 
       {/* ログアウトセクション */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-slate-700">
-            <LogOut className="w-5 h-5" />
-            ログアウト
-          </CardTitle>
-          <CardDescription>
-            アカウントからログアウトします
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="outline"
-            onClick={() => logout()}
-            className="w-full md:w-auto text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-300"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            ログアウト
-          </Button>
-        </CardContent>
-      </Card>
-      </div>
+      <motion.div variants={item}>
+        <Card className="bg-background/95 backdrop-blur-sm border-primary/10">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-3 rounded-lg">
+                <LogOut className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl">ログアウト</CardTitle>
+                <CardDescription>
+                  アカウントからログアウトします
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base">セッション終了</Label>
+                <p className="text-sm text-muted-foreground">
+                  現在のセッションを終了してログイン画面に戻ります
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => logout()}
+                className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-300"
+              >
+                ログアウト
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+      </motion.div>
     </AppLayout>
   );
 }
