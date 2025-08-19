@@ -6,6 +6,13 @@ This is a comprehensive subscription management system for Revol One, designed a
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Progress Update (Aug 19, 2025)
+- ✓ パスワード変更フォームを簡素化（現在のパスワード入力不要）
+- ✓ 新規登録時のエラーメッセージを改善（重複メールアドレス時）
+- ✓ 自動ログイン機能の実装（登録完了後）
+- ✓ ローディングメッセージの改善（「ロード中」）
+- ✓ デプロイメント互換性の完全確保
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -33,6 +40,8 @@ Preferred communication style: Simple, everyday language.
 - **Multi-payment Method Integration**: Supports various payment options via Stripe PaymentElement.
 - **Master Password Authentication**: For administrative access.
 - **First-time Login Wizard**: Guides new users through initial setup.
+- **Auto-Database Migration**: Automatic schema initialization ensures GitHubデプロイメント互換性.
+- **Environment-Agnostic Design**: Works seamlessly across development, staging, and production environments.
 
 ### Key Features
 - **Authentication System**: Local login, MFA (SMS/TOTP), password reset, email verification, and master password for admin access.
