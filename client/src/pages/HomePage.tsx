@@ -89,12 +89,28 @@ export default function HomePage() {
       // データ取得完了後、店舗がない場合
       setShowFirstTimeMessage(true);
       
+      // 初回設定フラグを更新（二度と自動表示しないように）
+      fetch('/api/mark-setup-complete', {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(error => {
+        console.error('初回設定フラグ更新エラー:', error);
+      });
+      
       // 2秒後に初回設定ページへリダイレクト
       const timer = setTimeout(() => {
         setLocation('/stores/new?firstTime=true');
       }, 2000);
 
       return () => clearTimeout(timer);
+    } else if (user && !user.hasCompletedSetup && !isLoading && stripeData !== null) {
+      // Stripe顧客が既に存在する場合は、ウィザードを表示せずにフラグだけ更新
+      fetch('/api/mark-setup-complete', {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(error => {
+        console.error('初回設定フラグ更新エラー:', error);
+      });
     }
   }, [user, isLoading, stripeData, setLocation]);
 

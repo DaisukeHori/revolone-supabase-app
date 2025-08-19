@@ -233,6 +233,14 @@ Changelog:
   - Fixed email sending functionality after previous API key reached credit limits
   - Updated config.ts to prioritize new SENDGRID_REVOLONE_API_KEY over legacy key
   - COMPLETED: Email verification system now functional with new API key configuration
+- August 19, 2025. First-time login wizard with one-time execution
+  - Added hasCompletedSetup field to users table for tracking setup status
+  - Implemented automatic wizard display for first-time users only
+  - Wizard displays once and never again, even if cancelled or closed
+  - Added /api/mark-setup-complete endpoint to update setup flag
+  - Wizard is skipped for users with existing Stripe customer data
+  - After first display, users must manually click store registration button
+  - COMPLETED: One-time wizard system prevents repeated automatic redirects
 ```
 
 ## User Preferences

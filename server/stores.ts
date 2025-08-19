@@ -56,13 +56,7 @@ export function setupStoreRoutes(app: Express) {
         })
         .returning();
 
-      // 初回設定完了フラグを更新（まだ完了していない場合のみ）
-      if (!req.user!.hasCompletedSetup) {
-        await db
-          .update(users)
-          .set({ hasCompletedSetup: true, updatedAt: new Date() })
-          .where(eq(users.id, req.user!.id));
-      }
+      // 初回設定完了フラグは既にHomePageで更新済みなので、ここでは更新不要
 
       res.json({
         message: "店舗を登録しました",

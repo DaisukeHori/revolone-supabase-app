@@ -270,6 +270,25 @@ export function setupAuth(app: Express) {
     res.status(401).json({ message: "ログインが必要です" });
   });
 
+  // 初回設定完了フラグを更新するエンドポイント
+  app.post("/api/mark-setup-complete", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "ログインが必要です" });
+    }
+
+    try {
+      await db
+        .update(users)
+        .set({ hasCompletedSetup: true, updatedAt: new Date() })
+        .where(eq(users.id, req.user!.id));
+
+      res.json({ message: "初回設定フラグを更新しました" });
+    } catch (error) {
+      console.error("初回設定フラグ更新エラー:", error);
+      res.status(500).json({ message: "更新中にエラーが発生しました" });
+    }
+  });
+
   app.post("/api/request-reset", async (req, res) => {
     const { email } = req.body;
 
