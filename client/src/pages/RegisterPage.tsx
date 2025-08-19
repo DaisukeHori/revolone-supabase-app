@@ -55,7 +55,13 @@ export default function RegisterPage() {
   const handleRegistration = async (data: RegistrationForm) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/registration/request', data);
+      const response = await fetch('/api/registration/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      
       const result = await response.json();
       
       if (response.ok) {
@@ -67,6 +73,7 @@ export default function RegisterPage() {
           description: "メールを確認して認証コードを入力してください",
         });
       } else {
+        // サーバーからのエラーメッセージを表示
         toast({
           title: "エラー",
           description: result.message || "新規登録に失敗しました",
@@ -74,9 +81,10 @@ export default function RegisterPage() {
         });
       }
     } catch (error) {
+      console.error('Registration error:', error);
       toast({
         title: "エラー",
-        description: "新規登録に失敗しました",
+        description: "通信エラーが発生しました",
         variant: "destructive",
       });
     } finally {
