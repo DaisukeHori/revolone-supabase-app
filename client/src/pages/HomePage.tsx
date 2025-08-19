@@ -85,51 +85,59 @@ export default function HomePage() {
 
   // 初回ユーザーの自動リダイレクト処理
   useEffect(() => {
-    // すでに初期化済みの場合は何もしない
-    if (hasInitialized) {
+    // データ読み込み中はスキップ
+    if (isLoading || !user) {
       return;
     }
     
-    // ユーザー情報が読み込まれ、初回設定が完了していない場合のみリダイレクト
-    if (user && !user.hasCompletedSetup && !isLoading && stripeData === null) {
-      // 初期化フラグを立てる（二度と実行しない）
-      setHasInitialized(true);
+    // LocalStorageでこのユーザーのウィザード表示済みフラグを確認
+    const wizardShownKey = `wizard_shown_${user.id}`;
+    const wizardAlreadyShown = localStorage.getItem(wizardShownKey) === 'true';
+    
+    // すでにウィザードを表示済みの場合は何もしない
+    if (wizardAlreadyShown) {
+      return;
+    }
+    
+    // Stripe顧客が既に存在する場合はウィザードをスキップ
+    if (stripeData !== null) {
+      localStorage.setItem(wizardShownKey, 'true');
+      // DBのフラグも更新
+      if (!user.hasCompletedSetup) {
+        fetch('/api/mark-setup-complete', {
+          method: 'POST',
+          credentials: 'include'
+        }).catch(error => {
+          console.error('初回設定フラグ更新エラー:', error);
+        });
+      }
+      return;
+    }
+    
+    // 初回ユーザーかつStripe顧客がない場合のみウィザードを表示
+    if (!user.hasCompletedSetup && stripeData === null) {
+      // ウィザード表示済みフラグを立てる（二度と表示しない）
+      localStorage.setItem(wizardShownKey, 'true');
       
       // データ取得完了後、店舗がない場合
       setShowFirstTimeMessage(true);
       
       // 2秒後に初回設定ページへリダイレクト
       const timer = setTimeout(() => {
+        // DBのフラグも更新（リダイレクト後に）
+        fetch('/api/mark-setup-complete', {
+          method: 'POST',
+          credentials: 'include'
+        }).catch(error => {
+          console.error('初回設定フラグ更新エラー:', error);
+        });
+        
         setLocation('/stores/new?firstTime=true');
       }, 2000);
-      
-      // 初回設定フラグを更新（二度と自動表示しないように）
-      fetch('/api/mark-setup-complete', {
-        method: 'POST',
-        credentials: 'include'
-      }).then(() => {
-        // フラグ更新後にユーザー情報を再取得
-        queryClient.invalidateQueries({ queryKey: ['user'] });
-      }).catch(error => {
-        console.error('初回設定フラグ更新エラー:', error);
-      });
 
       return () => clearTimeout(timer);
-    } else if (user && !user.hasCompletedSetup && !isLoading && stripeData !== null) {
-      // Stripe顧客が既に存在する場合は、ウィザードを表示せずにフラグだけ更新
-      setHasInitialized(true);
-      
-      fetch('/api/mark-setup-complete', {
-        method: 'POST',
-        credentials: 'include'
-      }).then(() => {
-        // フラグ更新後にユーザー情報を再取得
-        queryClient.invalidateQueries({ queryKey: ['user'] });
-      }).catch(error => {
-        console.error('初回設定フラグ更新エラー:', error);
-      });
     }
-  }, [user, isLoading, stripeData, setLocation, hasInitialized, queryClient]);
+  }, [user, isLoading, stripeData, setLocation]);
 
   return (
     <AppLayout>
