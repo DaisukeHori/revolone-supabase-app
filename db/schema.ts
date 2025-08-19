@@ -19,6 +19,8 @@ export const users = pgTable("users", {
   mfaSecret: text("mfa_secret"),
   phoneNumber: text("phone_number"),
   backupCodes: jsonb("backup_codes"),
+  // 初回設定完了フラグ
+  hasCompletedSetup: boolean("has_completed_setup").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

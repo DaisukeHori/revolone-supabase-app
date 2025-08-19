@@ -84,7 +84,8 @@ export default function HomePage() {
 
   // 初回ユーザーの自動リダイレクト処理
   useEffect(() => {
-    if (!isLoading && stripeData === null) {
+    // ユーザー情報が読み込まれ、初回設定が完了していない場合のみリダイレクト
+    if (user && !user.hasCompletedSetup && !isLoading && stripeData === null) {
       // データ取得完了後、店舗がない場合
       setShowFirstTimeMessage(true);
       
@@ -95,7 +96,7 @@ export default function HomePage() {
 
       return () => clearTimeout(timer);
     }
-  }, [isLoading, stripeData, setLocation]);
+  }, [user, isLoading, stripeData, setLocation]);
 
   return (
     <AppLayout>

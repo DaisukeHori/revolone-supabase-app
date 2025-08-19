@@ -1,6 +1,6 @@
 import { type Express } from "express";
 import { db } from "@db";
-import { stores, insertStoreSchema, updateStoreSchema } from "@db/schema";
+import { stores, users, insertStoreSchema, updateStoreSchema } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -9,6 +9,7 @@ interface AuthenticatedRequest extends Express.Request {
     id: number;
     username: string;
     email: string;
+    hasCompletedSetup: boolean;
   };
   isAuthenticated(): boolean;
 }
@@ -54,6 +55,14 @@ export function setupStoreRoutes(app: Express) {
           userId: req.user!.id,
         })
         .returning();
+
+      // 初回設定完了フラグを更新（まだ完了していない場合のみ）
+      if (!req.user!.hasCompletedSetup) {
+        await db
+          .update(users)
+          .set({ hasCompletedSetup: true, updatedAt: new Date() })
+          .where(eq(users.id, req.user!.id));
+      }
 
       res.json({
         message: "店舗を登録しました",
