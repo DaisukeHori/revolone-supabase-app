@@ -77,7 +77,7 @@ export function setupRegistrationRoutes(app: Express) {
       });
 
       if (existingUser) {
-        return res.status(400).json({ message: "このメールアドレスは既に登録されています" });
+        return res.status(400).json({ message: "このメールアドレスで既にアカウントが作成されています。ログインをお試しください。" });
       }
 
       // 既存の認証を無効化（同じメールアドレスの未認証データを削除）
