@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Building2, CreditCard, MapPin, Truck, Calculator, Gift, Clock } from "lucide-react";
+import { Building2, CreditCard, MapPin, Truck, Calculator, Gift, Clock, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { calculateRevonizerQuantities } from "@/lib/revonizerCalculation";
@@ -87,6 +87,10 @@ function AddStoreForm() {
   const [isLegalCheckLoading, setIsLegalCheckLoading] = useState(true);
   const stripe = useStripe();
   const elements = useElements();
+  
+  // URLパラメータから初回設定モードを判定
+  const searchParams = new URLSearchParams(window.location.search);
+  const isFirstTime = searchParams.get('firstTime') === 'true';
 
   const form = useForm<StoreForm>({
     resolver: zodResolver(storeSchema),
@@ -616,8 +620,22 @@ function AddStoreForm() {
     <AppLayout>
       <div className="container mx-auto p-4 max-w-4xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">新規店舗追加</h1>
-          <p className="text-gray-600">店舗情報とサブスクリプションを設定します</p>
+          {isFirstTime ? (
+            <>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-primary to-yellow-green rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold">初回店舗設定</h1>
+              </div>
+              <p className="text-gray-600">最初の店舗情報を登録してRevol Oneの利用を開始しましょう</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold mb-2">新規店舗追加</h1>
+              <p className="text-gray-600">店舗情報とサブスクリプションを設定します</p>
+            </>
+          )}
         </div>
 
         <form onSubmit={form.handleSubmit(handleShowConfirmation)} className="space-y-6">
@@ -1087,13 +1105,15 @@ function AddStoreForm() {
           )}
 
           <div className="flex gap-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setLocation('/')}
-            >
-              キャンセル
-            </Button>
+            {!isFirstTime && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setLocation('/')}
+              >
+                キャンセル
+              </Button>
+            )}
             <Button type="submit" className="flex-1">
               確認画面へ
             </Button>

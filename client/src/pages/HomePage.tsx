@@ -3,8 +3,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { motion } from "framer-motion";
 import { useUser } from "@/hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Building2, Clock, Loader2, Plus, MoreVertical, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { CreditCard, Building2, Clock, Loader2, Plus, MoreVertical, Trash2, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -61,6 +61,7 @@ export default function HomePage() {
   const { user } = useUser();
   const [showDeleteStoreModal, setShowDeleteStoreModal] = useState(false);
   const [selectedCustomerData, setSelectedCustomerData] = useState<any>(null);
+  const [showFirstTimeMessage, setShowFirstTimeMessage] = useState(false);
   const queryClient = useQueryClient();
 
 
@@ -80,6 +81,21 @@ export default function HomePage() {
       return response.json() as Promise<StripeCustomerData>;
     }
   });
+
+  // 初回ユーザーの自動リダイレクト処理
+  useEffect(() => {
+    if (!isLoading && stripeData === null) {
+      // データ取得完了後、店舗がない場合
+      setShowFirstTimeMessage(true);
+      
+      // 2秒後に初回設定ページへリダイレクト
+      const timer = setTimeout(() => {
+        setLocation('/stores/new?firstTime=true');
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, stripeData, setLocation]);
 
   return (
     <AppLayout>
@@ -141,27 +157,56 @@ export default function HomePage() {
             </Card>
           </motion.div>
         ) : stripeData === null || (Array.isArray(stripeData) && stripeData.length === 0) ? (
-          <motion.div variants={item}>
-            <Card className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden modern-card-hover">
-              <CardHeader className="bg-flat-accent pb-6">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Building2 className="h-6 w-6 text-orange-primary" />
-                  </div>
-                  <div className="text-center sm:text-left flex-1">
-                    <CardTitle className="text-xl sm:text-2xl text-slate-800">店舗一覧</CardTitle>
-                    <p className="text-slate-600 text-sm sm:text-base">まだ店舗が登録されていません</p>
-                  </div>
-                  <Button 
-                    onClick={() => setLocation('/stores/new')}
-                    className="bg-orange-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
+          showFirstTimeMessage ? (
+            // 初回設定メッセージ表示
+            <motion.div variants={item}>
+              <Card className="bg-gradient-to-br from-orange-50 to-yellow-50 shadow-lg border border-orange-200 rounded-xl overflow-hidden">
+                <CardContent className="flex flex-col items-center justify-center p-16">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.5, type: "spring" }}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    最初の店舗を登録
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center p-12">
+                    <div className="w-24 h-24 bg-gradient-to-br from-orange-primary to-yellow-green rounded-full flex items-center justify-center mb-6 shadow-lg">
+                      <Sparkles className="h-12 w-12 text-white" />
+                    </div>
+                  </motion.div>
+                  <h2 className="text-2xl font-bold text-slate-800 mb-3">
+                    ようこそ！初回設定を開始します
+                  </h2>
+                  <p className="text-slate-600 text-center mb-6 max-w-md">
+                    Revol Oneをご利用いただくために、まず最初の店舗情報を登録していただきます
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-orange-primary" />
+                    <span className="text-slate-600">自動的に設定画面へ移動します...</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : (
+            // 通常の店舗なし表示（手動で店舗追加する場合）
+            <motion.div variants={item}>
+              <Card className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden modern-card-hover">
+                <CardHeader className="bg-flat-accent pb-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <Building2 className="h-6 w-6 text-orange-primary" />
+                    </div>
+                    <div className="text-center sm:text-left flex-1">
+                      <CardTitle className="text-xl sm:text-2xl text-slate-800">店舗一覧</CardTitle>
+                      <p className="text-slate-600 text-sm sm:text-base">まだ店舗が登録されていません</p>
+                    </div>
+                    <Button 
+                      onClick={() => setLocation('/stores/new')}
+                      className="bg-orange-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      最初の店舗を登録
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center p-12">
                 <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-4">
                   <Building2 className="h-10 w-10 text-orange-400" />
                 </div>
@@ -176,6 +221,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </motion.div>
+          )
         ) : stripeData && stripeData.length > 0 ? (
           <motion.div variants={item}>
             <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
