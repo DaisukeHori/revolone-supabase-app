@@ -15,6 +15,7 @@ import { ConfirmUpdateDialog } from "@/components/subscription/ConfirmUpdateDial
 import { DeviceActionModal } from "@/components/devices/DeviceActionModal";
 import { PurchasedDeviceModal } from "@/components/devices/PurchasedDeviceModal";
 import { toast } from "@/hooks/use-toast";
+import ActionBar from "@/components/native/ActionBar";
 
 interface Device {
   serialNumber: string;
@@ -379,6 +380,16 @@ export default function StoreDevicesPage() {
             }}
           />
         )}
+        
+        {/* 共有とQR読み取りボタン */}
+        <ActionBar
+          shareText="この店舗の端末ページです"
+          shareUrl={window.location.href}
+          onScanned={(serial) => {
+            // 読み取ったシリアルで端末詳細/登録画面へ
+            setLocation(`/devices/${encodeURIComponent(serial)}`);
+          }}
+        />
     </AppLayout>
   );
 }

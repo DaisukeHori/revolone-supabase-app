@@ -6,12 +6,12 @@ This is a comprehensive subscription management system for Revol One, designed a
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Progress Update (Aug 19, 2025)
-- ✓ パスワード変更フォームを簡素化（現在のパスワード入力不要）
-- ✓ 新規登録時のエラーメッセージを改善（重複メールアドレス時）
-- ✓ 自動ログイン機能の実装（登録完了後）
-- ✓ ローディングメッセージの改善（「ロード中」）
-- ✓ デプロイメント互換性の完全確保
+## Recent Progress Update (Aug 21, 2025)
+- ✓ Capacitor導入（iOS/Androidアプリ対応）
+- ✓ 共有機能（Share API）の実装
+- ✓ QRコード読み取り機能の実装
+- ✓ ActionBarコンポーネントの作成（全ページ対応）
+- ✓ iOS/Androidプラットフォーム権限設定の追加
 
 ## System Architecture
 
@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 - **Store Management**: Multi-store support, store information management, and device assignment.
 - **Email Change System**: Secure email updates with Stripe synchronization and rollback.
 - **Legal Compliance**: Integration of Terms of Service and Privacy Policy acceptance.
+- **Mobile App Support**: Capacitor integration for iOS/Android apps with Share API and QR code scanning capabilities.
 
 ## External Dependencies
 

@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { DeleteStoreModal } from "@/components/store/DeleteStoreModal";
 import { useQueryClient } from "@tanstack/react-query";
+import ActionBar from "@/components/native/ActionBar";
 
 type StripeSubscription = {
   id: string;
@@ -378,6 +379,28 @@ export default function HomePage() {
           />
         )}
       </motion.div>
+      
+      {/* 共有とQR読み取りボタン */}
+      {stripeData && stripeData.length > 0 && (
+        <ActionBar
+          shareText="お客様のポータルはこちらです"
+          shareUrl={window.location.origin}
+          onScanned={(content) => {
+            // QRコードの内容に応じて処理
+            if (content.startsWith('cus_')) {
+              // Stripe顧客IDの場合は店舗ページに遷移
+              setLocation(`/store/${content}`);
+            } else if (content.includes('/payment-history/')) {
+              // 支払い履歴URLの場合はそのページに遷移
+              const customerId = content.split('/payment-history/')[1];
+              setLocation(`/payment-history/${customerId}`);
+            } else {
+              // その他のQRコードの場合はデバイスシリアルとして扱う
+              setLocation(`/devices/${encodeURIComponent(content)}`);
+            }
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

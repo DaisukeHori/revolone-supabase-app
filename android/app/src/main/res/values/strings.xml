@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Revol Portal</string>
+    <string name="title_activity_main">Revol Portal</string>
+    <string name="package_name">jp.revol.portal</string>
+    <string name="custom_url_scheme">jp.revol.portal</string>
+</resources>
