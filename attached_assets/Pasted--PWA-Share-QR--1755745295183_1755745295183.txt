@@ -1,0 +1,428 @@
+￥**PWA は使わない前提**で、これまでの「最初から最後まで」手順に、**共有（Share）**と**QR読み取り**の\*\*実務での使い所（ユースケース）**と**実装コード（全文）\*\*を追記して完成版を提示します。
+※ 既存リポジトリの構成・主要エントリは `client/src/main.tsx` と `client/src/App.tsx` で確認しました（Wouter でルーティング）  。トップ画面や店舗・端末画面も把握済みです（例：`HomePage.tsx`、`StoreDevicesPage.tsx` など）。 &#x20;
+パッケージ管理は Vite + React + TanStack Query、バックエンド同居（Express）という構成です（`package.json` 参照）。&#x20;
+
+---
+
+# 0. 使うサービスと役割（変更なし）
+
+* **Replit**：ブラウザIDE（コード編集・npm/npx・git push すべてここ）
+* **GitHub**：ソース管理（Appflow が読む）
+* **Ionic Appflow**：クラウド CI/CD（iOS/Android をクラウドでビルド→TestFlight/Play へ）
+* **Apple Developer / App Store Connect**、**Google Play Console**：初期登録・公開操作
+
+> 以降、**ローカル一切不要**、**PWA も一切不要**。
+
+---
+
+# 1. リポジトリの最終形（変更なし）
+
+```
+/（React プロジェクト）
+├─ client/src/                 # 既存のフロント
+│  ├─ App.tsx                  # Wouter でルーティング（確認済）  :contentReference[oaicite:5]{index=5}
+│  ├─ main.tsx                 # エントリ（確認済）              :contentReference[oaicite:6]{index=6}
+│  └─ ...                      # 画面: HomePage, StoreDevicesPage 等
+├─ capacitor.config.ts         # ← 新規（全文下記）
+├─ ios/                        # ← npx cap add ios（自動生成・殻）
+└─ android/                    # ← npx cap add android（自動生成・殻）
+```
+
+---
+
+# 2. Replit：Capacitor とプラグイン（共有/QR）を導入
+
+## コマンド（Replit のターミナルで実行）
+
+```bash
+npm i -D @capacitor/cli
+npm i @capacitor/core @capacitor/app @capacitor/device @capacitor/preferences
+npm i @capacitor/share
+npm i @capacitor-community/barcode-scanner
+```
+
+### これは何か / 何をするか
+
+* Capacitor 本体と、**共有**／**QRスキャン**のプラグインを追加します。
+
+### 反映
+
+* Replit でそのまま実行します（`package.json` 反映）。
+
+---
+
+# 3. Replit：Capacitor 初期化
+
+## コマンド
+
+```bash
+npx cap init jp.revol.portal "Revol Portal" --web-dir=build
+```
+
+### これは何か / 何をするか
+
+* Capacitor プロジェクトの初期化です。`webDir` は React の build 出力先（`build/`）を指します。
+
+### 反映
+
+* そのまま実行。
+
+---
+
+# 4. Capacitor 設定ファイルを作成（**全文**）
+
+## 追加するファイル：`capacitor.config.ts`
+
+```ts
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'jp.revol.portal',
+  appName: 'Revol Portal',
+  webDir: 'build',
+  server: {
+    // 本番WebのURL。アプリはこのURLを表示（Web更新＝アプリ即時反映）
+    url: 'https://app.revol-one.com',
+    androidScheme: 'https',
+    cleartext: false
+  }
+};
+
+export default config;
+```
+
+### これは何か / 何をするか
+
+* **リモートURL**を指定し、**Web更新がアプリに即反映**される運用にします（ストア再提出を最小化）。
+
+### 反映
+
+* Replit のエディタで保存。
+
+---
+
+# 5. iOS/Android の殻を生成
+
+## コマンド
+
+```bash
+npx cap add ios
+npx cap add android
+```
+
+### これは何か / 何をするか
+
+* `ios/` と `android/` の「**最小殻**」を自動生成します。これを Appflow がクラウドでビルドします。
+
+### 反映
+
+* そのまま実行。
+
+---
+
+# 6. **ユースケース（何に使う？）**：共有（Share）
+
+あなたの既存画面・業務フローから、**共有**は下記が実務で刺さります（ページ名は実装済ファイルに合わせて記載）。
+
+1. **顧客・店舗の共有リンクを送る**（例：`HomePage.tsx`／`StoresPage.tsx`）
+
+   * 営業・サポートが店舗詳細や請求設定ページの URL を**LINE・メール**で即共有。
+   * 例：`HomePage.tsx` は Stripe 顧客データを取得しているので（`/api/stripe/customer`）共有対象のページ URL を合成しやすい。&#x20;
+
+2. **サブスク請求・決済ページの共有**（`StoreServicesPage.tsx`, `SubscriptionDetailPage.tsx`）
+
+   * お客様に**支払い方法更新／数量変更申請ページ**を共有。Stripe連携画面と相性よし。 &#x20;
+
+3. **端末（デバイス）操作手順の共有**（`StoreDevicesPage.tsx`）
+
+   * 端末引き渡し・回収時に、スタッフ間で**端末手順ページ**（社内Wiki）や**該当デバイス URL**を共有。&#x20;
+
+---
+
+# 7. **ユースケース（何に使う？）**：QR 読み取り
+
+1. **端末シリアルの現場登録**（`StoreDevicesPage.tsx`）
+
+   * 端末本体の QR（シリアル番号）を**その場で読み取り**→ `/devices/:serial` に遷移して登録/更新。&#x20;
+
+2. **店舗受付でのチェックイン**（`HomePage.tsx`）
+
+   * 店舗に貼った QR（`/store/:id`）をスキャン→**対象店舗画面**へ直接遷移して作業。&#x20;
+
+3. **Stripe 顧客 QR**
+
+   * Stripe 顧客 ID を埋めた QR をスキャン→**請求履歴**や**決済設定**にダイレクト遷移（`/payment-history/:customerId` 等）。ルーティングは既に存在。&#x20;
+
+---
+
+# 8. 共有/QR を React から呼ぶアダプタを追加（**新規ファイル・全文**）
+
+## 追加：`client/src/native.ts`
+
+```ts
+export function isNative(): boolean {
+  return Boolean((window as any)?.Capacitor?.isNativePlatform);
+}
+
+// 共有シートを開く（アプリ）/ クリップボードにコピーして案内（Web）
+export async function share(opts: { title?: string; text?: string; url?: string; dialogTitle?: string }) {
+  if (isNative()) {
+    const { Share } = await import('@capacitor/share');
+    return Share.share(opts);
+  } else {
+    const clip = [opts.text, opts.url].filter(Boolean).join('\n');
+    if (clip) {
+      await navigator.clipboard.writeText(clip);
+      alert('共有はアプリ版で動作します。内容をクリップボードにコピーしました。');
+    } else {
+      alert('共有はアプリ版でご利用ください。');
+    }
+  }
+}
+
+// QR コード/バーコードを読み取る（アプリ）/ 案内（Web）
+export async function scanQr(onResult: (content: string) => void) {
+  if (!isNative()) {
+    alert('QR読み取りはアプリ版でご利用ください');
+    return;
+  }
+  const { BarcodeScanner } = await import('@capacitor-community/barcode-scanner');
+
+  // カメラ権限の確認と要求
+  const perm = await BarcodeScanner.checkPermission({ force: true });
+  if (!perm.granted) {
+    alert('カメラ権限が必要です');
+    return;
+  }
+
+  await BarcodeScanner.hideBackground();
+  try {
+    const result = await BarcodeScanner.startScan();
+    if (result?.hasContent) onResult(result.content);
+  } finally {
+    await BarcodeScanner.showBackground();
+  }
+}
+```
+
+### これは何か / 何をするか
+
+* `isNative()` で **Capacitor 殻内かどうか判定**。
+* `share()` は **共有シート**（アプリ）／**コピー**（Web）。
+* `scanQr()` は **スキャン→コールバック**（アプリ）／**案内**（Web）。
+
+### 反映
+
+* Replit のエディタで保存。
+
+---
+
+# 9. **UI コンポーネント**として 2 ボタンを提供（**新規ファイル・全文**）
+
+> 既存ページ（`HomePage.tsx`、`StoreDevicesPage.tsx` など）に**貼るだけ**で使える最小 UI を用意します。
+
+## 追加：`client/src/components/native/ActionBar.tsx`
+
+```tsx
+import React from 'react';
+import { share, scanQr } from '../../native';
+
+type Props = {
+  shareText?: string;
+  shareUrl?: string;
+  onScanned?: (content: string) => void;
+};
+
+export default function ActionBar({ shareText, shareUrl, onScanned }: Props) {
+  return (
+    <div style={{ position: 'fixed', right: 16, bottom: 16, display: 'flex', gap: 12, zIndex: 9999 }}>
+      <button
+        onClick={() => share({ text: shareText, url: shareUrl, title: '共有', dialogTitle: '共有' })}
+        style={{ padding: '10px 14px', borderRadius: 12 }}
+      >
+        共有
+      </button>
+      <button
+        onClick={() => scanQr((c) => onScanned ? onScanned(c) : (location.href = `/devices/${encodeURIComponent(c)}`))}
+        style={{ padding: '10px 14px', borderRadius: 12 }}
+      >
+        QR読み取り
+      </button>
+    </div>
+  );
+}
+```
+
+### これは何か / 何をするか
+
+* **固定配置の 2 ボタン**（共有／QR）を、どの画面にも簡単に貼れるようにしたコンポーネントです。
+* `shareText`/`shareUrl` を渡せば共有に利用、`onScanned` を渡せばスキャン後の処理を上書き可能。
+
+### 反映
+
+* Replit のエディタで保存。
+
+---
+
+# 10. 既存ページへの組み込み例（**差し込みポイントの明示**）
+
+> 既存の画面コード全文は大きいので、**追記行**を明示します。
+> ファイル構造・ルーティングは把握済（`App.tsx` 参照：`/payment-history/:customerId` や `/store/:id/devices` 等） 。
+
+### 例 A：`HomePage.tsx` に「共有＋QR」
+
+（Stripe 顧客データを取得しているため、**請求履歴ページ**などの共有に最適）&#x20;
+
+**追記するコード（ファイル末尾の `return` のすぐ内側、`<AppLayout>` の子要素として）**：
+
+```tsx
+// 先頭に追加
+import ActionBar from "@/components/native/ActionBar";
+
+// ... HomePage の return JSX の末尾付近に追加
+<ActionBar
+  shareText="お客様のポータルはこちらです"
+  shareUrl="https://YOUR-PROD-DOMAIN.example.com/payment-history/＜顧客ID＞"
+  onScanned={(content) => {
+    // 例：スキャンした ID を顧客IDとして扱い、請求履歴に遷移
+    location.href = `/payment-history/${encodeURIComponent(content)}`;
+  }}
+/>
+```
+
+### 例 B：`StoreDevicesPage.tsx` に「共有＋QR」
+
+（**端末シリアル**を QR で読み取り → `/devices/:serial` へ。画面と強い親和性）&#x20;
+
+**追記するコード（同様に末尾へ）**：
+
+```tsx
+import ActionBar from "@/components/native/ActionBar";
+
+<ActionBar
+  shareText="この店舗の端末ページです"
+  shareUrl={location.href}
+  onScanned={(serial) => {
+    // 読み取ったシリアルで端末詳細/登録画面へ
+    location.href = `/devices/${encodeURIComponent(serial)}`;
+  }}
+/>
+```
+
+> **ポイント**：ActionBar を使えば、**どのページにも一切のレイアウト崩れなく 2 ボタンを常設**できます。
+> 必要に応じて、`shareUrl` は該当ページの URL（`location.href`）や、特定の操作ページに差し替えてください。
+
+---
+
+# 11. iOS の権限（**QR を使うなら必須**）
+
+## 追記するコード：`ios/App/App/Info.plist`
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>QRコードを読み取るためにカメラを使用します。</string>
+```
+
+### これは何か / 何をするか
+
+* iOS に「カメラを使う理由」を伝えます。**初回使用時のポップアップ文言**になり、審査で必須です。
+
+### 反映（Replit のターミナル）
+
+```bash
+npx cap sync ios
+```
+
+---
+
+# 12. Android の権限（**QR を使うなら必須**）
+
+## 追記するコード：`android/app/src/main/AndroidManifest.xml`
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+```
+
+### これは何か / 何をするか
+
+* Android に「カメラを使う権限」を宣言します。ないとカメラが呼べません。
+
+### 反映（Replit のターミナル）
+
+```bash
+npx cap sync android
+```
+
+---
+
+# 13. GitHub へ反映（Appflow が読む）
+
+## コマンド
+
+```bash
+git add .
+git commit -m "feat: capacitor share & qr + action bar + permissions"
+git push origin main
+```
+
+### これは何か / 何をするか
+
+* ここまでの追加（`capacitor.config.ts`、`native.ts`、`ActionBar.tsx`、iOS/Android 権限）を GitHub に保存します。
+
+### 反映
+
+* Replit のターミナルで実行。
+
+---
+
+# 14. Ionic Appflow：初回設定（変更なし・要点だけ再掲）
+
+* **GitHub リポジトリ接続**
+* **署名情報**を登録（iOS：証明書+プロビジョニング／Android：keystore or Play App Signing）
+* **ストア連携**（任意・自動アップロードしたい場合）
+
+  * iOS：App Store Connect API キー
+  * Android：Google Play API（サービスアカウント JSON）
+* **Build Hooks（Prebuild）** に以下を保存
+
+  ```bash
+  npm ci
+  npm run build
+  npx cap sync
+  ```
+* 以降、**push で自動ビルド→TestFlight/Play 内部テスト**へ
+
+---
+
+# 15. 日々の運用（変更なし）
+
+* **Web の更新は即アプリ反映**（`server.url` 方式）
+* **新しい端末機能や権限変更時のみ再ビルド**（Appflow の Prebuild で `npx cap sync` 実行）
+* **秘密鍵はサーバ側のみ**。クライアントは最小限のトークン運用。
+
+---
+
+# 16. 審査で落ちない最小要件（要点）
+
+* 端末機能（**共有/QR**）は**ネイティブ機能の実体**として有効
+* iOS の `NSCameraUsageDescription` は**必須**
+* プライバシー申告（iOS App Privacy / Android Data Safety）を**実態どおり**に
+* アカウント削除導線が必要なアプリは**アプリ内から**リンクを用意
+
+---
+
+## ここまでの追加コード一覧（再掲・全文）
+
+* `client/src/native.ts`（共有/QRアダプタ）…**全文上記**
+* `client/src/components/native/ActionBar.tsx`（2ボタンUI）…**全文上記**
+* iOS `Info.plist` のカメラ権限…**全文上記**
+* Android `AndroidManifest.xml` のカメラ権限…**全文上記**
+
+---
+
+### 仕上げ
+
+* まずは `ActionBar` を **`HomePage.tsx`** か **`StoreDevicesPage.tsx`** の末尾に貼って、**共有**と**QR**の挙動を確認してください（それぞれのページの役割は上のファイルで確認済み）。 &#x20;
+* その後、必要に応じて `onScanned` の遷移先を、**`/payment-history/:customerId`** や **`/store/:id/devices`** などに合わせて調整（ルート定義は `App.tsx` を参照）。&#x20;
+
+
