@@ -3,10 +3,13 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { env, isDevelopment } from "./config";
 import { ensureDatabaseReady } from "./database-init";
+import { attachSupabaseUser } from "./supabaseMiddleware";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+// Supabase Auth のJWTをBearerで受け取り、req.userを付与（Passport未認証時のみ上書き）
+app.use(attachSupabaseUser);
 
 app.use((req, res, next) => {
   const start = Date.now();
