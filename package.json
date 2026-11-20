@@ -15,7 +15,7 @@
     "@capacitor-community/barcode-scanner": "^4.0.1",
     "@capacitor/android": "^5.7.8",
     "@capacitor/app": "^5.0.8",
-    "@capacitor/cli": "^5.7.8",
+    "@capacitor/cli": "^8.6.2",
     "@capacitor/core": "^5.7.8",
     "@capacitor/device": "^5.0.8",
     "@capacitor/ios": "^5.7.8",
